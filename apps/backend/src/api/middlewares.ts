@@ -5,13 +5,10 @@ import {
   validateAndTransformBody,
 } from "@medusajs/framework/http"
 import {
-  CharacterBody,
   ContentBlockBody,
   NewsletterBody,
   PageBody,
   PostBody,
-  ProductCharacterBody,
-  UpdateCharacterBody,
   UpdateContentBlockBody,
   UpdatePageBody,
   UpdatePostBody,
@@ -79,16 +76,6 @@ export default defineMiddlewares({
     },
     {
       method: ["POST"],
-      matcher: "/admin/characters",
-      middlewares: [validateAndTransformBody(CharacterBody)],
-    },
-    {
-      method: ["POST"],
-      matcher: "/admin/characters/:id",
-      middlewares: [validateAndTransformBody(UpdateCharacterBody)],
-    },
-    {
-      method: ["POST"],
       matcher: "/admin/content-blocks",
       middlewares: [validateAndTransformBody(ContentBlockBody)],
     },
@@ -96,11 +83,6 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/content-blocks/:id",
       middlewares: [validateAndTransformBody(UpdateContentBlockBody)],
-    },
-    {
-      method: ["POST"],
-      matcher: "/admin/products/:id/character",
-      middlewares: [validateAndTransformBody(ProductCharacterBody)],
     },
     {
       method: ["POST"],

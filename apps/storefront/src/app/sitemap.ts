@@ -1,10 +1,10 @@
 import type { MetadataRoute } from "next"
-import { getCharacters, getPosts, getProductCards } from "@/lib/data"
+import { getPosts, getProductCards } from "@/lib/data"
 import { SITE_URL } from "@/lib/site"
 
-const HELP = ["delivery-and-assembly", "returns-and-warranty", "faqs", "privacy", "terms"]
+const HELP = ["delivery", "returns-and-warranty", "faqs", "privacy", "terms"]
 
-// The list of pages Google should know about. Updates by itself as products, characters
+// The list of pages Google should know about. Updates by itself as products
 // and blog posts are added in the admin.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const safe = async <T,>(p: Promise<T>, fallback: T) => {
@@ -14,9 +14,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       return fallback
     }
   }
-  const [products, characters, posts] = await Promise.all([
+  const [products, posts] = await Promise.all([
     safe(getProductCards(), []),
-    safe(getCharacters(), []),
     safe(getPosts(200), { posts: [], count: 0 }),
   ])
   const url = (path: string, priority: number): MetadataRoute.Sitemap[number] => ({
@@ -26,12 +25,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     url("", 1),
     url("/shop", 0.9),
-    url("/characters", 0.8),
     url("/about", 0.6),
     url("/blog", 0.6),
     url("/contact", 0.5),
     ...products.map((p) => url(`/products/${p.handle}`, 0.8)),
-    ...characters.filter((c) => c.status === "live").map((c) => url(`/characters/${c.handle}`, 0.7)),
     ...posts.posts.map((p) => url(`/blog/${p.handle}`, 0.5)),
     ...HELP.map((h) => url(`/help/${h}`, 0.3)),
   ]

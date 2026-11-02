@@ -12,8 +12,6 @@ export type FooterLink = NavLink & { same_line?: boolean }
 
 export type SiteNavigation = {
   menu: {
-    characters_label: string
-    characters_show: boolean
     categories_label: string
     all_label: string
     about_label: string
@@ -42,8 +40,6 @@ export type SiteNavigation = {
 
 export const DEFAULT_SITE_NAVIGATION: SiteNavigation = {
   menu: {
-    characters_label: "Shop By Character",
-    characters_show: true,
     categories_label: "Shop By Categories",
     all_label: "All furniture",
     about_label: "About",
@@ -63,7 +59,7 @@ export const DEFAULT_SITE_NAVIGATION: SiteNavigation = {
     ],
     col2_title: "Customer Support",
     col2_links: [
-      { label: "Delivery & assembly", href: "/help/delivery-and-assembly" },
+      { label: "Delivery", href: "/help/delivery" },
       { label: "Returns & warranty", href: "/help/returns-and-warranty" },
       { label: "FAQs", href: "/help/faqs" },
       { label: "Privacy", href: "/help/privacy", same_line: true },

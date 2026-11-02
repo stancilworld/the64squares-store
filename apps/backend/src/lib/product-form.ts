@@ -12,7 +12,6 @@ import {
   updateProductOptionsWorkflow,
   updateProductsWorkflow,
 } from "@medusajs/medusa/core-flows"
-import { setProductCharacterWorkflow } from "../workflows/character"
 
 // The simple Stancil product form (admin → Products → Add product (simple)).
 //
@@ -42,7 +41,6 @@ export type ProductForm = {
   width?: number | null
   height?: number | null
   weight?: number | null
-  character_id: string | null
   collection_id: string | null
   category_ids: string[]
   materials: string[]
@@ -98,8 +96,7 @@ export const loadSharedOptions = async (container: MedusaContainer) => {
 
 export const loadLookups = async (container: MedusaContainer) => {
   const q = query(container)
-  const [{ data: characters }, { data: collections }, { data: categories }, shared] = await Promise.all([
-    q.graph({ entity: "character", fields: ["id", "name"] }).catch(() => ({ data: [] })),
+  const [{ data: collections }, { data: categories }, shared] = await Promise.all([
     q.graph({ entity: "product_collection", fields: ["id", "title"] }),
     q.graph({ entity: "product_category", fields: ["id", "name", "parent_category_id"] }),
     loadSharedOptions(container),
@@ -107,7 +104,6 @@ export const loadLookups = async (container: MedusaContainer) => {
   const values = (o: Row | null) =>
     [...((o?.values ?? []) as Row[])].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0) || String(a.value).localeCompare(b.value))
   return {
-    characters: (characters as Row[]).map((c) => ({ id: c.id, name: c.name })),
     collections: (collections as Row[]).map((c) => ({ id: c.id, title: c.title })),
     categories: (categories as Row[]).map((c) => ({ id: c.id, name: c.name })),
     colours: values(shared.colour).map((v) => ({ name: v.value as string, hex: swatchOf(v.value, v.metadata) })),
@@ -150,7 +146,6 @@ const PRODUCT_FIELDS = [
   "variants.prices.currency_code",
   "variants.prices.rules",
   "variants.inventory_items.inventory_item_id",
-  "character.id",
 ]
 
 const loadProduct = async (container: MedusaContainer, id: string) => {
@@ -240,7 +235,6 @@ export const loadForm = async (container: MedusaContainer, id: string): Promise<
     width: p.width ?? null,
     height: p.height ?? null,
     weight: p.weight ?? null,
-    character_id: p.character?.id ?? null,
     collection_id: p.collection_id ?? null,
     category_ids: ((p.categories ?? []) as Row[]).map((c) => c.id),
     materials,
@@ -536,15 +530,7 @@ export const saveForm = async (
     }
   }
 
-  // 3. Character.
-  const currentCharacter = existing?.character?.id ?? null
-  if ((f.character_id || null) !== currentCharacter) {
-    await setProductCharacterWorkflow(container).run({
-      input: { product_id: productId!, character_id: f.character_id || null },
-    })
-  }
-
-  // 4. Colour photos and stock, using the saved variants.
+  // 3. Colour photos and stock, using the saved variants.
   const saved = await loadProduct(container, productId!)
   const urlToId = new Map(((saved.images ?? []) as Row[]).map((i) => [i.url as string, i.id as string]))
   const savedLinks = linkedImages(saved)

@@ -1,9 +1,8 @@
 import type { Metadata } from "next"
-import { FillMedia } from "@/components/media"
 import { Suspense } from "react"
 import { ProductGrid } from "@/components/product-grid"
 import { ShopFilters, type FilterGroup } from "@/components/shop-filters"
-import { getCategories, getCharacters, getProductCards } from "@/lib/data"
+import { getCategories, getProductCards } from "@/lib/data"
 
 export const metadata: Metadata = { title: "Shop" }
 
@@ -14,14 +13,12 @@ const list = (v: string | string[] | undefined) =>
 
 async function Shop({ searchParams }: { searchParams: Promise<Search> }) {
   const sp = await searchParams
-  const [products, characters, categories] = await Promise.all([
+  const [products, categories] = await Promise.all([
     getProductCards(),
-    getCharacters(),
     getCategories(),
   ])
 
   const wanted = {
-    character: list(sp.character),
     category: list(sp.category),
     material: list(sp.material),
     colour: list(sp.colour),
@@ -29,13 +26,11 @@ async function Shop({ searchParams }: { searchParams: Promise<Search> }) {
   }
   const q = (typeof sp.q === "string" ? sp.q : "").trim().toLowerCase()
 
-  const charIds = characters.filter((c) => wanted.character.includes(c.handle)).map((c) => c.id)
   const catIds = categories.filter((c) => wanted.category.includes(c.handle)).map((c) => c.id)
 
   const filtered = products.filter(
     (p) =>
       (!q || p.title.toLowerCase().includes(q)) &&
-      (!charIds.length || (p.characterId && charIds.includes(p.characterId))) &&
       (!catIds.length || p.categoryIds.some((id) => catIds.includes(id))) &&
       (!wanted.material.length || p.materials.some((m) => wanted.material.includes(m))) &&
       (!wanted.colour.length || p.colours.some((c) => wanted.colour.includes(c))) &&
@@ -48,16 +43,7 @@ async function Shop({ searchParams }: { searchParams: Promise<Search> }) {
   const allColours = [...new Set(products.flatMap((p) => p.colours))].sort()
 
   const groups: FilterGroup[] = [
-    {
-      key: "character",
-      label: "Characters",
-      options: characters.map((c) => ({
-        value: c.handle,
-        label: c.status === "live" ? c.name : `${c.name} (soon)`,
-        disabled: c.status !== "live",
-      })),
-    },
-    { key: "category", label: "Furniture", options: categories.map((c) => ({ value: c.handle, label: c.name })) },
+    { key: "category", label: "Category", options: categories.map((c) => ({ value: c.handle, label: c.name })) },
     { key: "material", label: "Material", options: allMaterials.map((m) => ({ value: m, label: m })) },
     { key: "colour", label: "Colour", options: allColours.map((c) => ({ value: c, label: c, swatch: true })) },
     {
@@ -76,24 +62,17 @@ async function Shop({ searchParams }: { searchParams: Promise<Search> }) {
     },
   ]
 
-  const oneCharacter =
-    wanted.character.length === 1 ? characters.find((c) => c.handle === wanted.character[0]) : undefined
   const oneCategory =
     wanted.category.length === 1 ? categories.find((c) => c.handle === wanted.category[0]) : undefined
   const title = q
     ? `results for "${sp.q}"`
-    : oneCharacter
-      ? oneCharacter.collection_title || `${oneCharacter.name}'s furniture`
-      : oneCategory
-        ? oneCategory.name.toLowerCase()
-        : "all furniture"
+    : oneCategory
+      ? oneCategory.name.toLowerCase()
+      : "all products"
 
   return (
     <>
       <div className="relative h-[180px] w-full bg-placeholder md:h-[347px]">
-        {oneCharacter?.banner_url && (
-          <FillMedia src={oneCharacter.banner_url} sizes="100vw" priority />
-        )}
       </div>
       <div className="mx-auto max-w-[1440px] px-5 pb-[96px] lg:grid lg:grid-cols-[192px_1fr] lg:pl-[53px] lg:pr-[88px] lg:pb-[150px]">
         <h1 className="col-start-2 py-10 text-center font-display text-[56px] lg:pb-[50px] lg:pt-[59px] lg:text-[96px]">

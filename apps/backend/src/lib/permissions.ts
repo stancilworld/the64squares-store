@@ -32,7 +32,7 @@ export const PERMISSIONS: Permission[] = [
   { key: "payments.manage", group: "Orders", label: "Payments & refunds", description: "Capture payments, give refunds, mark orders as paid.", default: false },
 
   // Products
-  { key: "products.edit", group: "Products", label: "Add & edit products", description: "Titles, descriptions, photos, options, variants, categories, collections, tags, types and character links. Not prices.", default: true },
+  { key: "products.edit", group: "Products", label: "Add & edit products", description: "Titles, descriptions, photos, options, variants, categories, collections, tags and types. Not prices.", default: true },
   { key: "products.prices", group: "Products", label: "Change prices", description: "Set or change product prices and price lists (sales).", default: false },
   { key: "products.delete", group: "Products", label: "Delete products", description: "Delete products, variants, categories, collections, tags and types.", default: false },
   { key: "products.import", group: "Products", label: "Import & export products", description: "Bulk import or export products as a spreadsheet file.", default: false },
@@ -51,7 +51,6 @@ export const PERMISSIONS: Permission[] = [
   { key: "content.homepage", group: "Website", label: "Edit Homepage", description: "Banner, featured collection, gang band and newsletter section.", default: true },
   { key: "content.about", group: "Website", label: "Edit About us & team faces", description: "Who are we?, Faces Behind Stancil and Get in touch.", default: true },
   { key: "content.footer", group: "Website", label: "Edit menu, footer & announcement bar", description: "Top-menu words and links, footer links and social links, the announcement strip, and the footer animation.", default: true },
-  { key: "content.characters", group: "Website", label: "Edit characters", description: "Character pages, artwork, banners and stories.", default: true },
   { key: "content.blog", group: "Website", label: "Write blog posts", description: "Create and edit draft posts.", default: true },
   { key: "content.blog_publish", group: "Website", label: "Publish blog posts", description: "Put posts live, edit live posts, delete posts. Without this, posts stay drafts for the admin to publish.", default: false },
   { key: "content.contact", group: "Website", label: "Edit Contact page", description: "The ways to reach you, the form's questions, and where messages are emailed.", default: false },
@@ -133,7 +132,6 @@ const RULES: Rule[] = [
   r("write", /^\/(inventory-items|reservations)(\/|$)/, "inventory.edit"),
 
   // Website (our pages). Content blocks and posts get a closer look in the guard.
-  r("write", /^\/characters(\/|$)/, "content.characters"),
   r("write", /^\/team-members(\/|$)/, "content.about"),
   r("write", /^\/site-navigation(\/|$)/, "content.footer"),
   r("write", /^\/contact-page(\/|$)/, "content.contact"),

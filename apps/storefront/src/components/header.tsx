@@ -17,8 +17,6 @@ export async function Header() {
   const aboutLinks = m.about_links
   // Words and extra links set in the admin (Website → Menu & footer).
   const menu = {
-    charactersLabel: m.characters_label,
-    charactersShow: m.characters_show,
     categoriesLabel: m.categories_label,
     aboutLabel: m.about_label,
     extraLinks: m.extra_links,

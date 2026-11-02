@@ -1,19 +1,3 @@
-export type Character = {
-  id: string
-  name: string
-  handle: string
-  greeting: string
-  tagline: string | null
-  story: string | null
-  image_url: string | null
-  banner_url: string | null
-  collection_title: string | null
-  status: "live" | "coming_soon"
-  coming_soon_text: string
-  rank: number
-  product_count?: number
-}
-
 export type ContentSection = string
 
 export type ContentBlock = {

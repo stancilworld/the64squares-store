@@ -6,7 +6,6 @@ import { previewHeaders } from "./preview"
 import type {
   Category,
   ChatbotConfig,
-  Character,
   ContactPage,
   ContentBlock,
   Post,
@@ -48,16 +47,6 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
   return team_members
 }
 
-export async function getCharacters(): Promise<Character[]> {
-  "use cache"
-  cacheLife("minutes")
-  cacheTag("characters")
-  const { characters } = await sdk.client.fetch<{ characters: Character[] }>(
-    "/store/characters"
-  )
-  return characters
-}
-
 export async function getCategories(): Promise<Category[]> {
   "use cache"
   cacheLife("minutes")
@@ -93,9 +82,7 @@ export async function getProductCards(): Promise<ProductCard[]> {
   "use cache"
   cacheLife("minutes")
   cacheTag("products")
-  const [region, characters] = await Promise.all([getRegion(), getCharacters()])
-  const characterOf = new Map<string, string>()
-  characters.forEach((c) => c.product_ids.forEach((id) => characterOf.set(id, c.id)))
+  const region = await getRegion()
 
   const { products } = await sdk.store.product.list({
     region_id: region?.id,
@@ -119,7 +106,6 @@ export async function getProductCards(): Promise<ProductCard[]> {
       colours: unique(variants.map((v) => optionValue(v, "Colour"))),
       materials: unique(variants.map((v) => optionValue(v, "Material"))),
       categoryIds: (p.categories ?? []).map((c) => c.id),
-      characterId: characterOf.get(p.id) ?? null,
       inStock: variants.some(
         (v) =>
           !v.manage_inventory ||
@@ -242,8 +228,6 @@ export type NavLink = { label: string; href: string }
 export type FooterLink = NavLink & { same_line?: boolean }
 export type SiteNavigation = {
   menu: {
-    characters_label: string
-    characters_show: boolean
     categories_label: string
     all_label: string
     about_label: string
@@ -273,8 +257,6 @@ export type SiteNavigation = {
 // Same as what the designs show; used if the admin can't be reached.
 export const FALLBACK_NAVIGATION: SiteNavigation = {
   menu: {
-    characters_label: "Shop By Character",
-    characters_show: true,
     categories_label: "Shop By Categories",
     all_label: "All furniture",
     about_label: "About",
@@ -294,7 +276,7 @@ export const FALLBACK_NAVIGATION: SiteNavigation = {
     ],
     col2_title: "Customer Support",
     col2_links: [
-      { label: "Delivery & assembly", href: "/help/delivery-and-assembly" },
+      { label: "Delivery", href: "/help/delivery" },
       { label: "Returns & warranty", href: "/help/returns-and-warranty" },
       { label: "FAQs", href: "/help/faqs" },
       { label: "Privacy", href: "/help/privacy", same_line: true },

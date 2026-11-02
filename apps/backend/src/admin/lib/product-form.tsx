@@ -35,7 +35,6 @@ export type ProductFormValue = {
   width?: number | null
   height?: number | null
   weight?: number | null
-  character_id: string | null
   collection_id: string | null
   category_ids: string[]
   materials: string[]
@@ -45,7 +44,6 @@ export type ProductFormValue = {
   colour_images: Record<string, string[]>
 }
 type Lookups = {
-  characters: { id: string; name: string }[]
   collections: { id: string; title: string }[]
   categories: { id: string; name: string }[]
   colours: { name: string; hex: string | null }[]
@@ -65,7 +63,6 @@ const EMPTY: ProductFormValue = {
   width: null,
   height: null,
   weight: null,
-  character_id: null,
   collection_id: null,
   category_ids: [],
   materials: [],
@@ -423,7 +420,7 @@ export function ProductFormPage({ id }: { id?: string }) {
           <Input
             id="pf-title"
             value={form.title}
-            placeholder="e.g. Bella's Reading Chair"
+            placeholder="e.g. Walnut Staunton Chess Set"
             onChange={(e) => {
               const title = e.target.value
               setForm((f) => ({ ...f, title, ...(handleTouched ? {} : { handle: slug(title) }) }))
@@ -461,21 +458,6 @@ export function ProductFormPage({ id }: { id?: string }) {
 
       <Section title="Where it appears">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Field label="Character" hint="Shows the product on the character's page.">
-            <Select value={form.character_id ?? NONE} onValueChange={(v) => set("character_id", v === NONE ? null : v)}>
-              <Select.Trigger aria-label="Character">
-                <Select.Value />
-              </Select.Trigger>
-              <Select.Content>
-                <Select.Item value={NONE}>No character</Select.Item>
-                {lk.characters.map((c) => (
-                  <Select.Item key={c.id} value={c.id}>
-                    {c.name}
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select>
-          </Field>
           <Field label="Collection" hint="Used for the shop's breadcrumb and collections.">
             <Select value={form.collection_id ?? NONE} onValueChange={(v) => set("collection_id", v === NONE ? null : v)}>
               <Select.Trigger aria-label="Collection">

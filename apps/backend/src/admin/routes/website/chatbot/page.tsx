@@ -14,7 +14,6 @@ type Quick = { id: string; label: string; action: QuickAction; value: string }
 type Faq = { id: string; question: string; answer: string; keywords: string }
 type Bot = {
   enabled: boolean
-  host: string
   name: string
   greeting: string
   launcher_label: string
@@ -31,13 +30,11 @@ type Bot = {
   ai_daily_limit: number
   hide_on: string[]
 }
-type CharacterOption = { name: string; handle: string; image_url: string | null; status: string }
 type BotResponse = {
   chatbot: Bot
   defaults: Bot
   ai_providers: { provider: "groq" | "gemini"; model: string }[]
   ai_used_today: number
-  characters: CharacterOption[]
 }
 type Reply = { text: string; source: string; products?: string[]; actions?: string[] }
 type ChatRow = { id: string; last_at: string; page: string | null; count: number; first: string; last: string; ai_count: number; handed_over: boolean; unanswered: boolean }
@@ -490,36 +487,6 @@ function Settings({ data, focusFaq, onFocused }: { data: BotResponse; focusFaq: 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="flex min-w-0 flex-col gap-y-3">
           <Section title="Look & words">
-            <Field
-              label="Who greets shoppers"
-              hint="A character's artwork sits at the top of the chat and on the chat button, saying their hello. Only characters with artwork can be picked."
-            >
-              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Who greets shoppers">
-                {[
-                  { value: "auto", label: "First character", image: null as string | null },
-                  ...data.characters.filter((c) => c.image_url).map((c) => ({ value: c.handle, label: c.name, image: c.image_url })),
-                  { value: "logo", label: "Stancil logo", image: null as string | null },
-                ].map((o) => {
-                  const on = b.host === o.value || (o.value === "auto" && !b.host)
-                  return (
-                    <button
-                      key={o.value}
-                      type="button"
-                      role="radio"
-                      aria-checked={on}
-                      data-host={o.value}
-                      onClick={() => set({ host: o.value })}
-                      className={`flex items-center gap-2 rounded-full py-1 pl-1 pr-3 txt-compact-small shadow-borders-base ${on ? "bg-ui-bg-highlight shadow-borders-interactive-with-active" : "bg-ui-bg-base hover:bg-ui-bg-base-hover"}`}
-                    >
-                      <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-ui-bg-subtle">
-                        {o.image ? <img src={o.image} alt="" className="h-full w-full object-cover" /> : o.value === "logo" ? "S" : "★"}
-                      </span>
-                      {o.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </Field>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Field label="Bot's name" htmlFor="bot-name" hint="Shown at the top of the chat.">
                 <Input id="bot-name" value={b.name} onChange={(e) => set({ name: e.target.value })} />
@@ -625,7 +592,7 @@ function Settings({ data, focusFaq, onFocused }: { data: BotResponse; focusFaq: 
                   <Field
                     label="Answer"
                     htmlFor={`faq-answer-${f.id}`}
-                    hint="Links: [Delivery & assembly](/help/delivery-and-assembly). {delivery} puts in your delivery line from Settings."
+                    hint="Links: [Delivery](/help/delivery). {delivery} puts in your delivery line from Settings."
                   >
                     <Textarea id={`faq-answer-${f.id}`} rows={3} value={f.answer} onChange={(e) => setFaq(f.id, { answer: e.target.value })} />
                   </Field>

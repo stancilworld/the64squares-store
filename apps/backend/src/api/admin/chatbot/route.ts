@@ -1,13 +1,12 @@
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { aiUsageToday, CHATBOT_KEY, clearChatbotCache, DEFAULT_CHATBOT, listCharacters, loadChatbot } from "../../../lib/chatbot"
+import { aiUsageToday, CHATBOT_KEY, clearChatbotCache, DEFAULT_CHATBOT, loadChatbot } from "../../../lib/chatbot"
 import { getServiceKeys } from "../../../lib/service-keys"
 import { saveSettingWorkflow } from "../../../workflows/setting"
 import type { ChatbotBodyType } from "../validators"
 
 const extras = async (req: AuthenticatedMedusaRequest) => {
   const ai = (await getServiceKeys(req.scope)).ai
-  const characters = (await listCharacters(req.scope).catch(() => [])).map((c) => ({ name: c.name, handle: c.handle, image_url: c.image_url, status: c.status }))
-  return { ai_providers: ai.map((p) => ({ provider: p.provider, model: p.model })), ai_used_today: aiUsageToday(), characters }
+  return { ai_providers: ai.map((p) => ({ provider: p.provider, model: p.model })), ai_used_today: aiUsageToday() }
 }
 
 // GET /admin/chatbot: the chat bot's settings, the defaults, and whether an AI key is set.

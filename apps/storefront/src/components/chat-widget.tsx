@@ -7,7 +7,6 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { formatPrice } from "@/lib/format"
 import type { ChatbotConfig, ChatOrder, ChatProduct, ChatReply } from "@/lib/types"
 import { ChatIcon, CloseIcon, SendIcon, WhatsAppIcon } from "./icons"
-import { Media } from "./media"
 
 // The help bubble at the bottom right of every page (admin → Website → Chat bot).
 // The chat is kept in this browser for a day, so it carries on from page to page.
@@ -200,7 +199,6 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
   const lastAsked = [...msgs].reverse().find((m): m is Extract<Msg, { role: "user" }> => m.role === "user" && !labels.has(m.text))?.text ?? ""
   const showHuman = !!lastBot && "actions" in lastBot && lastBot.actions?.includes("human")
 
-  const host = config.host
   const fresh = msgs.length === 0
   const close = () => {
     setOpen(false)
@@ -212,51 +210,28 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
       {open && (
         <div
           role="dialog"
-          aria-label={`Chat with ${host?.name ?? config.name}`}
+          aria-label={`Chat with ${config.name}`}
           data-chat-panel
           className="chat-pop fixed inset-0 z-[60] flex flex-col bg-white [&>*:not(img):not(video)]:relative [&>*:not(img):not(video)]:z-[1] sm:inset-auto sm:bottom-[100px] sm:right-5 sm:h-[min(640px,calc(100dvh-130px))] sm:w-[400px] sm:rounded-[32px] sm:border-[1.5px] sm:border-black sm:shadow-[8px_8px_0_#000]"
         >
-          {/* The host peeks over the top edge of the chat (behind it), waving hello. */}
-          {fresh && host && (
-            <Media
-              src={host.image}
-              alt=""
-              className="chat-wave pointer-events-none absolute -top-[74px] right-[64px] z-0 hidden max-h-[150px] w-[190px] object-contain object-bottom sm:block"
-            />
-          )}
           {/* Header: big hello on a fresh chat, a slim bar once talking. */}
           <div
             className={`relative z-[1] shrink-0 bg-[#f6c445] sm:rounded-t-[30px] ${fresh ? "px-6 pb-6 pt-5" : "flex items-center gap-3 border-b-[1.5px] border-black px-4 py-3"}`}
           >
             {fresh ? (
               <>
-                {host && (
-                  <span className="sm:hidden">
-                    <Sticker host={host} size="lg" />
-                  </span>
-                )}
                 <div className="absolute right-4 top-4">
                   <HeaderButtons onClose={close} />
                 </div>
-                <h2 className={`font-display text-[58px] leading-[44px] ${host ? "pt-3 sm:pt-6" : "pt-6"}`}>
-                  {host ? (
-                    <>
-                      {host.greeting.replace(/\s+$/, "")}
-                      <br />
-                      {host.name}
-                    </>
-                  ) : (
-                    config.name
-                  )}
-                </h2>
+                <h2 className="pt-6 font-display text-[58px] leading-[44px]">{config.name}</h2>
                 <p className="mt-3 max-w-[310px] text-[15px] leading-[21px]">
                   <Words text={config.greeting} />
                 </p>
               </>
             ) : (
               <>
-                <Sticker host={host} size="sm" />
-                <p className="min-w-0 flex-1 truncate pt-1 font-display text-[40px] leading-[30px]">{host?.name ?? config.name}</p>
+                <Sticker size="sm" />
+                <p className="min-w-0 flex-1 truncate pt-1 font-display text-[40px] leading-[30px]">{config.name}</p>
                 <button type="button" onClick={startOver} className="rounded-full px-3 py-1.5 text-[13px] font-medium hover:bg-black/10">
                   Start over
                 </button>
@@ -292,7 +267,7 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
                   </div>
                 )
               }
-              const face = firstOfTurn ? <Sticker host={host} size="xs" /> : <span className="w-[30px] shrink-0" />
+              const face = firstOfTurn ? <Sticker size="xs" /> : <span className="w-[30px] shrink-0" />
               if ("kind" in m && m.kind === "order") {
                 return (
                   <div key={m.id} className="flex items-start gap-2">
@@ -331,7 +306,7 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
             })}
             {busy && (
               <div className="flex items-end gap-2" aria-label="Typing">
-                <Sticker host={host} size="xs" />
+                <Sticker size="xs" />
                 <span className="flex gap-1 rounded-[22px] rounded-bl-[6px] border-[1.5px] border-black bg-white px-4 py-3.5">
                   {[0, 1, 2].map((i) => (
                     <span key={i} className="h-[7px] w-[7px] animate-bounce rounded-full bg-black motion-reduce:animate-none" style={{ animationDelay: `${i * 150}ms` }} />
@@ -423,7 +398,7 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
           ref={launcher}
           type="button"
           data-chat-launcher
-          aria-label={open ? "Close chat" : config.launcher_label ? undefined : `Chat with ${host?.name ?? config.name}`}
+          aria-label={open ? "Close chat" : config.launcher_label ? undefined : `Chat with ${config.name}`}
           aria-expanded={open}
           onClick={() => setOpen(!open)}
           className={`flex h-[52px] items-center justify-center gap-2 rounded-full bg-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition-transform hover:-translate-y-0.5 ${
@@ -444,16 +419,12 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
   )
 }
 
-// The host's face in a round white sticker (or the Stancil logo).
-function Sticker({ host, size }: { host: ChatbotConfig["host"]; size: "lg" | "sm" | "xs" }) {
-  const box = size === "lg" ? "h-[84px] w-[84px]" : size === "sm" ? "h-[42px] w-[42px]" : "h-[30px] w-[30px]"
+// The logo in a round white sticker.
+function Sticker({ size }: { size: "sm" | "xs" }) {
+  const box = size === "sm" ? "h-[42px] w-[42px]" : "h-[30px] w-[30px]"
   return (
     <span aria-hidden="true" className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-black bg-white ${box}`}>
-      {host ? (
-        <Media src={host.image} alt="" className="h-full w-full object-cover object-[32%_100%]" />
-      ) : (
-        <Image src="/brand/logo-header.png" alt="" width={64} height={64} className="h-[78%] w-[78%] object-contain" />
-      )}
+      <Image src="/brand/logo-header.png" alt="" width={64} height={64} className="h-[78%] w-[78%] object-contain" />
     </span>
   )
 }

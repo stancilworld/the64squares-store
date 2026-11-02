@@ -1,19 +1,3 @@
-export type Character = {
-  id: string
-  name: string
-  handle: string
-  greeting: string
-  tagline: string | null
-  story: string | null
-  image_url: string | null
-  banner_url: string | null
-  collection_title: string | null
-  status: "live" | "coming_soon"
-  coming_soon_text: string
-  rank: number
-  product_ids: string[]
-}
-
 export type ContentBlock = {
   id: string
   section: string
@@ -38,7 +22,6 @@ export type ProductCard = {
   colours: string[]
   materials: string[]
   categoryIds: string[]
-  characterId: string | null
   inStock: boolean
   badge: { text: string; colour: "black" | "red" | "yellow" | "blue" } | null
 }
@@ -106,8 +89,6 @@ export type ContactPage = {
 // The chat bubble (admin → Website → Chat bot).
 export type ChatbotConfig = {
   enabled: boolean
-  // The character who greets shoppers (artwork + "Hi! I am Bella"), or null for the logo.
-  host: { name: string; greeting: string; image: string; handle: string } | null
   name: string
   greeting: string
   launcher_label: string

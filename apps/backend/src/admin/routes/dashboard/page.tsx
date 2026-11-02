@@ -302,7 +302,7 @@ const DashboardPage = () => {
                   )}
                   {can("content.homepage") || can("content.about") ? (
                     <Link data-keep to="/website" className="flex items-center justify-between px-5 py-2.5 hover:bg-ui-bg-base-hover">
-                      <Text size="small">Edit homepage, About us, characters and more</Text>
+                      <Text size="small">Edit homepage, About us, blog and more</Text>
                       <Text size="small" className="text-ui-fg-subtle">
                         Website →
                       </Text>

@@ -85,7 +85,6 @@ module.exports = defineConfig({
     vite: () => ({ plugins: [adminNavGuard(BACKEND_URL)] }),
   },
   modules: [
-    { resolve: "./src/modules/character" },
     { resolve: "./src/modules/content" },
     { resolve: "./src/modules/newsletter" },
     { resolve: "./src/modules/blog" },

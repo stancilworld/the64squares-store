@@ -26,9 +26,6 @@ export type Faq = { id: string; question: string; answer: string; keywords: stri
 
 export type Chatbot = {
   enabled: boolean
-  // Who greets shoppers: "auto" (the first character with artwork), "logo", or a
-  // character's handle.
-  host: string
   name: string
   greeting: string
   launcher_label: string
@@ -48,7 +45,6 @@ export type Chatbot = {
 
 export const DEFAULT_CHATBOT: Chatbot = {
   enabled: false,
-  host: "auto",
   name: "Stancil Helper",
   greeting: "Hi! I'm the Stancil helper. Ask me about our furniture, delivery or your order.",
   launcher_label: "Need help?",
@@ -63,7 +59,7 @@ export const DEFAULT_CHATBOT: Chatbot = {
     {
       id: "f_delivery_time",
       question: "How long does delivery take?",
-      answer: "{delivery} You can see the delivery date for your pincode on every product page. More on [Delivery & assembly](/help/delivery-and-assembly).",
+      answer: "{delivery} You can see the delivery date for your pincode on every product page. More on [Delivery](/help/delivery).",
       keywords: "delivery time days when arrive shipping dispatch how long",
     },
   ],
@@ -94,27 +90,11 @@ const whatsappOf = async (c: MedusaContainer, bot: Chatbot) => {
   return page.panel.find((p) => p.type === "whatsapp")?.value?.trim() || ""
 }
 
-type Character = { name: string; handle: string; greeting: string; image_url: string | null; status: string; rank: number }
-export const listCharacters = async (c: MedusaContainer): Promise<Character[]> => {
-  const query = c.resolve(ContainerRegistrationKeys.QUERY)
-  const { data } = await query.graph({ entity: "character", fields: ["name", "handle", "greeting", "image_url", "status", "rank"] })
-  return (data as Character[]).sort((a, b) => a.rank - b.rank)
-}
-
-// The character who greets shoppers, if any (with artwork).
-const hostOf = async (c: MedusaContainer, bot: Chatbot) => {
-  if (bot.host === "logo") return null
-  const all = (await listCharacters(c).catch(() => [] as Character[])).filter((x) => x.image_url)
-  const pick = bot.host === "auto" ? all.find((x) => x.status === "live") ?? all[0] : all.find((x) => x.handle === bot.host)
-  return pick ? { name: pick.name, greeting: pick.greeting || "Hi! I am", image: pick.image_url!, handle: pick.handle } : null
-}
-
 // What the website gets: the look and the buttons (not the answers or the AI settings).
 export const publicChatbot = async (c: MedusaContainer) => {
   const bot = await loadChatbot(c)
   return {
     enabled: bot.enabled,
-    host: await hostOf(c, bot),
     name: bot.name,
     greeting: bot.greeting,
     launcher_label: bot.launcher_label,
@@ -403,7 +383,7 @@ const systemPrompt = (bot: Chatbot, k: Knowledge, faqs: Known[], products: Produ
     "Answer in short, warm, simple sentences (at most 80 words). If the shopper writes in Hindi or Hinglish, answer the same way.",
     "Use ONLY the facts below. If the answer isn't in them, say you're not sure and offer to connect them with the team. Never make up prices, dates, discounts, stock, sizes or policies.",
     "Never ask for personal details. For the status of an order, tell them to press 'Track my order'. For anything you can't solve, set handover to true.",
-    "You may use links like [Delivery & assembly](/help/delivery-and-assembly) from the facts.",
+    "You may use links like [Delivery](/help/delivery) from the facts.",
     'Reply ONLY as JSON: {"reply": "your answer", "products": ["handles of up to 4 products from the list that fit, else empty"], "handover": false}',
     bot.ai_instructions.trim() ? `Extra notes from the shop: ${bot.ai_instructions.trim()}` : "",
     "",

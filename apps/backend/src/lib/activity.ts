@@ -47,7 +47,6 @@ export const describe = (method: string, path: string, body: Record<string, unkn
         return withTarget({ action: priceChange ? "Changed prices" : method === "DELETE" ? "Deleted a version" : "Changed versions", area: "Products" }, "product")
       }
       if (sub === "options") return withTarget({ action: "Changed colours or materials", area: "Products" }, "product")
-      if (sub === "character") return withTarget({ action: "Changed character", area: "Products" }, "product")
       if (sub === "images" || sub === "media") return withTarget({ action: "Changed photos", area: "Products" }, "product")
       return withTarget({ action: `${verb(method, hasId)} product`, area: "Products" }, "product")
     }
@@ -138,8 +137,6 @@ export const describe = (method: string, path: string, body: Record<string, unkn
       return { action: "Changed menu, footer or announcement bar", area: "Website" }
     case "team-members":
       return { action: `${verb(method, hasId)} team face`, area: "Website" }
-    case "characters":
-      return { action: `${verb(method, hasId)} character`, area: "Website" }
     case "pages":
       return { action: `${verb(method, hasId)} help page`, area: "Website" }
     case "posts":

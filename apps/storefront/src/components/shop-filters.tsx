@@ -14,7 +14,7 @@ export type FilterGroup = {
 
 function Group({ group, selected, toggle }: { group: FilterGroup; selected: string[]; toggle: (v: string) => void }) {
   const swatch = useSwatch()
-  const [open, setOpen] = useState(selected.length > 0 || group.key === "character")
+  const [open, setOpen] = useState(selected.length > 0 || group.key === "category")
   const id = `filter-${group.key}`
   return (
     <div className="border-b-[3px] border-rule pb-[22px] pt-[26px] lg:ml-[14px] lg:mr-[17px] lg:border-b-0 lg:pb-0 lg:pt-0">

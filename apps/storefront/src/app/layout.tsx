@@ -14,7 +14,7 @@ import { getChatbot, getColourPalette, getSiteNavigation } from "@/lib/data"
 import { ListProvider } from "@/lib/list"
 import { SITE_URL } from "@/lib/site"
 
-const DESCRIPTION = "Character-led furniture for kids, made in India. Meet Bella and the gang."
+const DESCRIPTION = "Premium chess sets, boards, pieces and clocks, made in India. Play online and join tournaments."
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

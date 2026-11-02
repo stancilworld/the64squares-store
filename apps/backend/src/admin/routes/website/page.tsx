@@ -5,7 +5,6 @@ import {
   ChatBubbleLeftRight,
   ComputerDesktop,
   Envelope,
-  FaceSmile,
   House,
   Lifebuoy,
   Newspaper,
@@ -44,14 +43,6 @@ const SECTIONS: Section[] = [
     sitePath: "/about",
     icon: Users,
     permission: "content.about",
-  },
-  {
-    title: "Characters",
-    description: "Bella and the gang: artwork, banners, stories and which ones are coming soon.",
-    to: "/characters",
-    sitePath: "/characters",
-    icon: FaceSmile,
-    permission: "content.characters",
   },
   {
     title: "Blog",

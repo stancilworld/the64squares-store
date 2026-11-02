@@ -12,7 +12,6 @@ export default async function HomePage() {
   const hero = of("hero")[0]
   const featured = of("featured_collection")[0]
   const featuredImages = of("featured_image").map((b) => b.image_url)
-  const gang = of("gang_band")[0]
   const newsletter = of("newsletter")[0]
 
   return (
@@ -40,27 +39,6 @@ export default async function HomePage() {
                 {featured.link_label || "Explore This Collection"}
               </Link>
             )}
-          </div>
-        </section>
-      )}
-
-      {gang && (
-        <section className="relative mt-[64px] overflow-hidden bg-placeholder lg:mt-[184px]">
-          {gang.image_url && <FillMedia src={gang.image_url} sizes="100vw" />}
-          <div className="relative mx-auto flex min-h-[300px] max-w-[1440px] items-center justify-center lg:block lg:h-[428px] lg:min-h-0">
-            <div className="px-6 py-12 text-center lg:absolute lg:left-[154px] lg:top-[106px] lg:w-[486px] lg:p-0">
-              <h2 className="font-display text-[56px] leading-[38px] lg:text-[105px] lg:leading-[66px]">
-                {gang.title}
-              </h2>
-              {gang.link_url && (
-                <Link
-                  href={gang.link_url}
-                  className="mt-[28px] inline-flex h-[42px] min-w-[140px] items-center justify-center rounded-full bg-ink px-6 text-[16px] text-white hover:bg-black lg:mt-[40px]"
-                >
-                  {gang.link_label || "Sign up"}
-                </Link>
-              )}
-            </div>
           </div>
         </section>
       )}

@@ -4,24 +4,6 @@ import { PERMISSION_KEYS } from "../../lib/permissions"
 
 const nullableText = z.string().nullable().optional()
 
-export const CharacterBody = z.object({
-  name: z.string().min(1),
-  handle: z
-    .string()
-    .min(1)
-    .regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers and dashes"),
-  greeting: z.string().optional(),
-  tagline: nullableText,
-  story: nullableText,
-  image_url: nullableText,
-  banner_url: nullableText,
-  collection_title: nullableText,
-  status: z.enum(["live", "coming_soon"]).optional(),
-  coming_soon_text: z.string().optional(),
-  rank: z.number().int().optional(),
-})
-export const UpdateCharacterBody = CharacterBody.partial()
-
 export const ContentBlockBody = z.object({
   page: z.string().regex(/^[a-z0-9-]+$/).optional(),
   section: z.string().regex(/^[a-z0-9_]+$/),
@@ -56,15 +38,8 @@ export const ContentBlockBody = z.object({
 })
 export const UpdateContentBlockBody = ContentBlockBody.partial()
 
-export const ProductCharacterBody = z.object({
-  character_id: z.string().nullable(),
-})
-
-export type CharacterBodyType = z.infer<typeof CharacterBody>
-export type UpdateCharacterBodyType = z.infer<typeof UpdateCharacterBody>
 export type ContentBlockBodyType = z.infer<typeof ContentBlockBody>
 export type UpdateContentBlockBodyType = z.infer<typeof UpdateContentBlockBody>
-export type ProductCharacterBodyType = z.infer<typeof ProductCharacterBody>
 
 export const NewsletterBody = z.object({
   email: z.string().email(),
@@ -177,7 +152,6 @@ export const ProductFormBody = z.object({
   width: size,
   height: size,
   weight: size,
-  character_id: z.string().nullable(),
   collection_id: z.string().nullable(),
   category_ids: z.array(z.string()).max(50),
   materials: z.array(z.string().trim().min(1).max(60)).max(20),
@@ -230,8 +204,6 @@ const footerLink = navLink.extend({ same_line: z.boolean().optional() })
 const social = z.string().trim().max(300).refine((v) => v === "" || /^https:\/\//i.test(v), { message: "Social links must start with https://" })
 export const SiteNavigationBody = z.object({
   menu: z.object({
-    characters_label: z.string().trim().min(1).max(40),
-    characters_show: z.boolean(),
     categories_label: z.string().trim().min(1).max(40),
     all_label: z.string().trim().min(1).max(40),
     about_label: z.string().trim().min(1).max(40),

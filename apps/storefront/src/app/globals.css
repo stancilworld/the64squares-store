@@ -70,25 +70,6 @@ body {
     animation: none;
   }
 }
-/* The host character says hello once when the chat opens. */
-@keyframes chat-wave {
-  0% {
-    transform: translateY(18px) rotate(-4deg);
-    opacity: 0;
-  }
-  60% {
-    transform: translateY(-4px) rotate(2deg);
-    opacity: 1;
-  }
-}
-.chat-wave {
-  animation: chat-wave 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) 80ms both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .chat-wave {
-    animation: none;
-  }
-}
 /* The chat's typing box shows its focus on the rounded pill around it instead. */
 .chat-input:focus-visible {
   outline: none;

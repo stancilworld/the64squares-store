@@ -9,8 +9,6 @@ import { useStoreUrl } from "../../../lib/site"
 type NavLink = { label: string; href: string; same_line?: boolean }
 type Nav = {
   menu: {
-    characters_label: string
-    characters_show: boolean
     categories_label: string
     all_label: string
     about_label: string
@@ -191,8 +189,7 @@ const NavigationPage = () => {
 
   const suggestions = useMemo(
     () => [
-      ["/shop", "Shop (all furniture)"],
-      ["/characters", "Characters"],
+      ["/shop", "Shop (all products)"],
       ["/about", "About us"],
       ["/blog", "Blog"],
       ["/contact", "Contact"],
@@ -341,15 +338,6 @@ const NavigationPage = () => {
         }
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Field label="Characters link" htmlFor="m-char">
-            <div className="flex items-center gap-x-3">
-              <Input id="m-char" value={m.characters_label} onChange={(e) => setMenu({ characters_label: e.target.value })} />
-              <label className="flex shrink-0 items-center gap-x-2 txt-compact-small">
-                <Switch checked={m.characters_show} onCheckedChange={(v) => setMenu({ characters_show: v })} aria-label="Show characters link" />
-                Show
-              </label>
-            </div>
-          </Field>
           <Field label="Categories menu" htmlFor="m-cat" hint="Its list comes from your product categories.">
             <Input id="m-cat" value={m.categories_label} onChange={(e) => setMenu({ categories_label: e.target.value })} />
           </Field>

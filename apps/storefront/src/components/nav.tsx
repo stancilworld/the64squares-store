@@ -7,8 +7,6 @@ import { ChevronDown, CloseIcon, MenuIcon, SearchIcon } from "./icons"
 
 type NavLink = { href: string; label: string }
 type Menu = {
-  charactersLabel: string
-  charactersShow: boolean
   categoriesLabel: string
   aboutLabel: string
   extraLinks: NavLink[]
@@ -89,14 +87,6 @@ export function NavLinksView({ categoryLinks, aboutLinks, menu, path }: Props & 
       aria-label="Main"
       className="ml-[47px] hidden items-center gap-[43px] text-[20px] lg:flex xl:ml-[47px]"
     >
-      {menu.charactersShow && (
-        <Link
-          href="/characters"
-          className={`whitespace-nowrap ${path.startsWith("/characters") ? underline : ""}`}
-        >
-          {menu.charactersLabel}
-        </Link>
-      )}
       <Dropdown
         label={menu.categoriesLabel}
         links={categoryLinks}
@@ -150,7 +140,6 @@ export function MobileMenuView({ categoryLinks, aboutLinks, menu, path }: Props 
             <input name="q" type="search" placeholder="Search" aria-label="Search" className="ml-2 h-full w-full bg-transparent text-[17px] outline-none" />
           </form>
           <nav className="mt-8 flex flex-col gap-6 text-[22px]" aria-label="Mobile">
-            {menu.charactersShow && <Link href="/characters">{menu.charactersLabel}</Link>}
             {menu.extraLinks.map((l) => (
               <Link key={l.href + l.label} href={l.href}>
                 {l.label}
