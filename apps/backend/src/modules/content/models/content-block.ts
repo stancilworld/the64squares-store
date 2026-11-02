@@ -1,6 +1,6 @@
 import { model } from "@medusajs/framework/utils"
 
-// One editable piece of page content, e.g. the homepage banner or a "Why Stancil" point.
+// One editable piece of page content, e.g. the homepage banner or a "Why The64Squares" point.
 // `section` is a free key (hero, why_point, featured_image, intro, team, contact...) so new
 // page sections can be added in the admin config without a database change.
 const ContentBlock = model.define("content_block", {

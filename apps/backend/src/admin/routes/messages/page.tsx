@@ -41,7 +41,7 @@ const waLink = (phone: string) => {
   return `https://wa.me/${d}`
 }
 
-const replySubject = (m: Message) => `Re: your message to Stancil${m.topic ? ` (${m.topic})` : ""}`
+const replySubject = (m: Message) => `Re: your message to The64Squares${m.topic ? ` (${m.topic})` : ""}`
 
 // Answering, marking and deleting form messages: the same from the list, the right-click
 // menu and the open message.

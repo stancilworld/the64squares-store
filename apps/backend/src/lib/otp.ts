@@ -15,7 +15,7 @@ export const newCode = () => String(crypto.randomInt(0, 1_000_000)).padStart(6, 
 
 export const hashCode = (email: string, code: string) =>
   crypto
-    .createHmac("sha256", process.env.JWT_SECRET || "stancil-otp")
+    .createHmac("sha256", process.env.JWT_SECRET || "t64-otp")
     .update(`${normalizeEmail(email)}:${code}`)
     .digest("hex")
 

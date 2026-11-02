@@ -74,10 +74,10 @@ export async function Footer() {
           </div>
         ) : (
           <div className="relative pl-[41px] pt-[50px] lg:pl-[190px] lg:pt-[71px]">
-            <Link href="/" aria-label="Stancil home">
+            <Link href="/" aria-label="The64Squares home">
               <Image
                 src="/brand/logo-footer.webp"
-                alt="Stancil"
+                alt="The64Squares"
                 width={479}
                 height={480}
                 className="h-[80px] w-[80px] lg:h-[165px] lg:w-[160px]"

@@ -19,7 +19,7 @@ type Msg =
 
 type NewMsg = Msg extends infer T ? (T extends Msg ? Omit<T, "id"> : never) : never
 
-const STORE = "stancil-chat"
+const STORE = "t64-chat"
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
 const read = <T,>(key: string): T | null => {
   try {

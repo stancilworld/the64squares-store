@@ -67,7 +67,7 @@ const OrderInvoice = ({ data: order }: DetailWidgetProps<AdminOrder>) => {
 
 export const config = defineWidgetConfig({
   zone: "order.details.side.before",
-  id: "stancil-order-invoice",
+  id: "t64-order-invoice",
 })
 
 export default OrderInvoice

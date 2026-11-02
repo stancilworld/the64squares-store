@@ -18,13 +18,13 @@ const DESCRIPTION = "Premium chess sets, boards, pieces and clocks, made in Indi
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: "Stancil | Furniture for little stories", template: "%s | Stancil" },
+  title: { default: "The64Squares | Premium chess sets, boards & tournaments", template: "%s | The64Squares" },
   description: DESCRIPTION,
   icons: { icon: "/brand/logo-header.png" },
   openGraph: {
     type: "website",
-    siteName: "Stancil",
-    title: "Stancil | Furniture for little stories",
+    siteName: "The64Squares",
+    title: "The64Squares | Premium chess sets, boards & tournaments",
     description: DESCRIPTION,
     locale: "en_IN",
   },

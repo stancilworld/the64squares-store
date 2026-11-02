@@ -22,7 +22,7 @@ export const DEFAULT_CHECKOUT_SETTINGS: CheckoutSettings = {
   cod_max: null,
   online_enabled: true,
   delivery_text: "Free delivery across India in 5–9 days.",
-  order_alert_email: process.env.STANCIL_OWNER_EMAIL || "stancilworld.in@gmail.com",
+  order_alert_email: process.env.OWNER_EMAIL || "",
 }
 
 export const resolveCheckoutSettings = (stored: Record<string, unknown> | null | undefined): CheckoutSettings => ({

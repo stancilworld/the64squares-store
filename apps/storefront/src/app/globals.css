@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Stancil heading font: Laia the Great Blondie. Capital and small letters are drawn
+/* The64Squares heading font: Laia the Great Blondie. Capital and small letters are drawn
    differently, so headings are typed in the designer's capitalisation. */
 @font-face {
   font-family: "LaiatheGreatBlondie";

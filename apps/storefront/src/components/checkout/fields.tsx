@@ -2,7 +2,7 @@
 
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react"
 
-// Form fields in the Stancil style: rounded, black outline, like the newsletter box.
+// Form fields in The64Squares style: rounded, black outline, like the newsletter box.
 const box =
   "h-[46px] w-full rounded-full border-[1.5px] border-black bg-white px-5 text-[15px] outline-none placeholder:text-black/40 focus:ring-2 focus:ring-black/20 disabled:bg-pill disabled:text-black/50 lg:h-[50px] lg:text-[16px]"
 

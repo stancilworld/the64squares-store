@@ -9,7 +9,7 @@ export const checksFor = async (req: AuthenticatedMedusaRequest) => {
   return { canChangePrices: can("products.prices"), canDelete: can("products.delete") }
 }
 
-// POST /admin/stancil-products: create a product from the simple form.
+// POST /admin/store-products: create a product from the simple form.
 export const POST = async (req: AuthenticatedMedusaRequest<ProductFormBodyType>, res: MedusaResponse) => {
   const id = await saveForm(req.scope, null, req.validatedBody as ProductForm, await checksFor(req))
   res.json({ id, form: await loadForm(req.scope, id) })

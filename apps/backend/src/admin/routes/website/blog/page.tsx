@@ -33,7 +33,7 @@ const EMPTY: FormState = {
   body: "",
   cover_url: null,
   thumbnail_url: null,
-  author: "Team Stancil",
+  author: "The64Squares team",
   status: "draft",
   published_at: null,
 }
@@ -164,7 +164,7 @@ const PostDrawer = ({
               <Label>Web address</Label>
               <Input value={form.handle} onChange={(e) => set("handle", toHandle(e.target.value))} />
               <Text size="xsmall" className="text-ui-fg-subtle">
-                stancil.in/blog/{form.handle || "title"}
+                the64squares.in/blog/{form.handle || "title"}
               </Text>
             </div>
             <div className="flex flex-col gap-y-2">
@@ -267,7 +267,7 @@ const BlogPage = () => {
         <div>
           <Heading level="h1">Blog</Heading>
           <Text size="small" className="text-ui-fg-subtle">
-            Letters from Stancil. Newest posts show first on the website.
+            The64Squares Journal. Newest posts show first on the website.
           </Text>
         </div>
         <div className="flex flex-wrap gap-2">

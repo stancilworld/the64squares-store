@@ -6,8 +6,8 @@ set -euo pipefail
 BASE=/opt/stancil
 APP="$BASE/app"
 APP_USER=stancil
-STORE_DOMAIN="${STORE_DOMAIN:-staging.stancil.in}"
-API_DOMAIN="${API_DOMAIN:-api-staging.stancil.in}"
+STORE_DOMAIN="${STORE_DOMAIN:-staging.the64squares.in}"
+API_DOMAIN="${API_DOMAIN:-api-staging.the64squares.in}"
 SERVER="$APP/apps/backend/.medusa/server"
 # Set by go-live.sh once the store runs on the real domain.
 [ -f "$BASE/domains.env" ] && . "$BASE/domains.env"
@@ -47,8 +47,8 @@ if [ ! -s "$PREVIEW_FILE" ]; then
   (umask 077 && openssl rand -hex 32 > "$PREVIEW_FILE")
 fi
 PREVIEW_SECRET=$(tr -d '[:space:]' < "$PREVIEW_FILE")
-if ! grep -q '^STANCIL_PREVIEW_SECRET=' "$SERVER/.env"; then
-  printf '\nSTANCIL_PREVIEW_SECRET=%s\n' "$PREVIEW_SECRET" >> "$SERVER/.env"
+if ! grep -q '^T64_PREVIEW_SECRET=' "$SERVER/.env"; then
+  printf '\nT64_PREVIEW_SECRET=%s\n' "$PREVIEW_SECRET" >> "$SERVER/.env"
 fi
 # No separate install here: the built server lives inside the repo, so it uses the packages
 # already installed above from package-lock.json. (An unpinned install in this folder can
@@ -79,7 +79,7 @@ KEY=$(cd / && sudo -u postgres psql -d stancil -Atc \
 cat > "$APP/apps/storefront/.env.local" <<EOF
 MEDUSA_BACKEND_URL=http://localhost:9000
 NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=$KEY
-STANCIL_PREVIEW_SECRET=$PREVIEW_SECRET
+T64_PREVIEW_SECRET=$PREVIEW_SECRET
 EOF
 chown "$APP_USER:$APP_USER" "$APP/apps/storefront/.env.local"
 chmod 600 "$APP/apps/storefront/.env.local"

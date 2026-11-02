@@ -30,7 +30,7 @@ import type {
 } from "@medusajs/framework/types"
 import { getServiceKeys, type RazorpayCreds } from "../../lib/service-keys"
 
-// Razorpay (UPI, cards, net banking, wallets) for Stancil.
+// Razorpay (UPI, cards, net banking, wallets) for The64Squares.
 //
 // How a payment goes:
 // 1. Checkout asks Medusa for a payment session → initiatePayment creates a Razorpay order
@@ -103,7 +103,7 @@ class RazorpayProviderService extends AbstractPaymentProvider<Options> {
     const order = await this.api<RzpOrder>(creds, "POST", "/orders", {
       amount: toPaise(amount),
       currency: currency.toUpperCase(),
-      receipt: (sessionId || `stancil_${Date.now()}`).slice(0, 40),
+      receipt: (sessionId || `t64_${Date.now()}`).slice(0, 40),
       notes: sessionId ? { session_id: sessionId } : {},
       payment_capture: 1,
     })

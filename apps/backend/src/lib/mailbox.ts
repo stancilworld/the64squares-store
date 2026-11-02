@@ -7,7 +7,7 @@ import { CONTENT_MODULE } from "../modules/content"
 import type ContentModuleService from "../modules/content/service"
 import { getServiceKeys, type MailboxCreds, type MailServer } from "./service-keys"
 
-// The shop's mailbox (e.g. draw@stancil.in at GoDaddy) inside the admin (Messages → Email).
+// The shop's mailbox (e.g. hello@the64squares.in at GoDaddy) inside the admin (Messages → Email).
 //
 // - Reading: every minute (jobs/sync-mailbox.ts, or "Check now") new emails in the Inbox
 //   and Sent folders are copied from the mail server (IMAP) into mail_message.
@@ -458,7 +458,7 @@ export const sendMail = async (
       .join("")
 
   const mail = {
-    from: { name: "Stancil", address: m.email },
+    from: { name: "The64Squares", address: m.email },
     to: input.to,
     cc: input.cc?.length ? input.cc : undefined,
     subject: input.subject,
@@ -519,7 +519,7 @@ export const sendMail = async (
     in_reply_to: original?.message_id ?? null,
     references,
     thread_id,
-    from_name: "Stancil",
+    from_name: "The64Squares",
     from_email: m.email.toLowerCase(),
     reply_to: null,
     to: toList,

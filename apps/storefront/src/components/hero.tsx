@@ -2,7 +2,7 @@ import Link from "next/link"
 import type { ContentBlock } from "@/lib/types"
 import { FillMedia } from "./media"
 
-// Splits a heading after each ", " so "Hello Friends, Meet Bella..." sits on two lines.
+// Splits a heading after each ", " so "Every move, Every board" sits on two lines.
 export function headingLines(title: string | null) {
   return (title ?? "").split(/(?<=,)\s+/)
 }

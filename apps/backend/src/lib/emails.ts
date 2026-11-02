@@ -1,12 +1,12 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 
-// Stancil's emails: simple, white, black buttons, logo on top. Each function returns the
+// The64Squares's emails: simple, white, black buttons, logo on top. Each function returns the
 // subject, an HTML body and a plain-text body. Sent through the Resend provider.
 
 export const storeUrl = () => {
   const fromCors = (process.env.STORE_CORS || "").split(",")[0]?.trim()
-  return (process.env.STORE_URL || fromCors || "https://stancil.in").replace(/\/$/, "")
+  return (process.env.STORE_URL || fromCors || "https://the64squares.in").replace(/\/$/, "")
 }
 
 const esc = (s: unknown) =>
@@ -25,10 +25,10 @@ const layout = (title: string, inner: string) => `<!doctype html>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f4f0;padding:24px 12px">
 <tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:24px;padding:32px 28px">
-<tr><td style="padding-bottom:20px"><a href="${storeUrl()}"><img src="${storeUrl()}/brand/logo-header.png" alt="Stancil" height="48" style="height:48px;border:0"></a></td></tr>
+<tr><td style="padding-bottom:20px"><a href="${storeUrl()}"><img src="${storeUrl()}/brand/logo-header.png" alt="The64Squares" height="48" style="height:48px;border:0"></a></td></tr>
 <tr><td style="font-size:16px;line-height:24px">${inner}</td></tr>
 <tr><td style="padding-top:28px;border-top:1px solid #eee;margin-top:28px;font-size:13px;line-height:20px;color:#777">
-Questions? Just reply to this email.<br><a href="${storeUrl()}" style="color:#777">stancil.in</a> · Furniture for little stories
+Questions? Just reply to this email.<br><a href="${storeUrl()}" style="color:#777">the64squares.in</a> · Premium chess sets &amp; tournaments
 </td></tr>
 </table></td></tr></table></body></html>`
 
@@ -91,7 +91,7 @@ const itemsText = (o: EmailOrder) =>
 export const orderPlacedEmail = (o: EmailOrder, invoiceUrl?: string | null): Email => {
   const name = o.shipping_address?.first_name || "there"
   const cod = /cash/i.test(o.payment_method)
-  const subject = `Your Stancil order #${o.display_id} is confirmed`
+  const subject = `Your The64Squares order #${o.display_id} is confirmed`
   const link = `${storeUrl()}/order/${o.id}`
   return {
     subject,
@@ -128,7 +128,7 @@ ${button(link, "Open in admin")}`
 }
 
 export const orderShippedEmail = (o: EmailOrder, tracking: { number?: string; url?: string }[]): Email => {
-  const subject = `Your Stancil order #${o.display_id} is on its way`
+  const subject = `Your The64Squares order #${o.display_id} is on its way`
   const track = tracking.filter((t) => t.number || t.url)
   return {
     subject,
@@ -146,17 +146,17 @@ ${track.some((t) => t.url) ? "" : button(`${storeUrl()}/order/${o.id}`, "View yo
 }
 
 export const signInCodeEmail = (code: string): Email => {
-  const subject = `${code} is your Stancil code`
+  const subject = `${code} is your The64Squares code`
   return {
     subject,
     html: layout(
       subject,
       `<h1 style="font-size:24px;margin:0 0 12px">Your sign-in code</h1>
-<p style="margin:0 0 16px">Enter this code on the Stancil website. It works for 10 minutes.</p>
+<p style="margin:0 0 16px">Enter this code on The64Squares website. It works for 10 minutes.</p>
 <p style="font-size:34px;letter-spacing:10px;font-weight:700;margin:0 0 16px">${esc(code)}</p>
 <p style="margin:0;color:#777;font-size:14px">If you didn't ask for this, you can ignore this email. Nobody can sign in without the code.</p>`
     ),
-    text: `Your Stancil code is ${code}. It works for 10 minutes. If you didn't ask for it, ignore this email.`,
+    text: `Your The64Squares code is ${code}. It works for 10 minutes. If you didn't ask for it, ignore this email.`,
   }
 }
 
@@ -172,7 +172,7 @@ const answersHtml = (answers: ContactAnswer[]) =>
 
 const answersText = (answers: ContactAnswer[]) => answers.map((a) => `${a.label}: ${a.value || "-"}`).join("\n")
 
-// To Stancil: a new message from the Contact page. Pressing Reply answers the customer.
+// To The64Squares: a new message from the Contact page. Pressing Reply answers the customer.
 export const contactMessageEmail = (m: { name: string | null; email: string | null; topic: string | null; answers: ContactAnswer[] }, adminLink: string): Email => {
   const who = m.name || m.email || "Someone"
   const subject = `New message from ${who}${m.topic ? `: ${m.topic}` : ""}`

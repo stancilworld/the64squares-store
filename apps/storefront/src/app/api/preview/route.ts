@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const token = url.searchParams.get("token") ?? ""
   const raw = url.searchParams.get("path") ?? "/"
   const path = raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/\\") ? raw : "/"
-  const secret = process.env.STANCIL_PREVIEW_SECRET ?? ""
+  const secret = process.env.T64_PREVIEW_SECRET ?? ""
   const [exp, sig] = token.split(".")
   const expected = secret ? createHmac("sha256", secret).update(`preview:${exp}`).digest("hex") : ""
   const ok =

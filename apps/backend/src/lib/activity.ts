@@ -50,7 +50,7 @@ export const describe = (method: string, path: string, body: Record<string, unkn
       if (sub === "images" || sub === "media") return withTarget({ action: "Changed photos", area: "Products" }, "product")
       return withTarget({ action: `${verb(method, hasId)} product`, area: "Products" }, "product")
     }
-    case "stancil-products":
+    case "store-products":
       return withTarget({ action: id ? "Saved product (simple form)" : "Created product (simple form)", area: "Products" }, "product")
     case "shop-order":
       return { action: "Changed shop order or badges", area: "Products" }

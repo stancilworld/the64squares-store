@@ -13,7 +13,7 @@ import {
   updateProductsWorkflow,
 } from "@medusajs/medusa/core-flows"
 
-// The simple Stancil product form (admin → Products → Add product (simple)).
+// The simple The64Squares product form (admin → Products → Add product (simple)).
 //
 // Colours and materials are Medusa's shared "Colour" and "Material" option lists: each
 // product picks the values it uses, and every colour/material combination is a variant with

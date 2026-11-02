@@ -22,7 +22,7 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       last_name: u.last_name,
       created_at: u.created_at,
       ...staffOf(u, defaults),
-      custom: Array.isArray(u.metadata?.stancil_permissions),
+      custom: Array.isArray(u.metadata?.t64_permissions),
     })),
     permissions: PERMISSIONS,
     defaults,

@@ -24,10 +24,10 @@ const updateStaffStep = createStep(
     const previous = (user.metadata ?? {}) as Record<string, unknown>
     const metadata = { ...previous }
     if (input.role) {
-      metadata.stancil_role = input.role
+      metadata.t64_role = input.role
     }
     if (input.permissions) {
-      metadata.stancil_permissions = input.permissions
+      metadata.t64_permissions = input.permissions
     }
     await users.updateUsers({ id: input.id, metadata })
     return new StepResponse({ id: input.id, metadata }, { id: input.id, metadata: previous })

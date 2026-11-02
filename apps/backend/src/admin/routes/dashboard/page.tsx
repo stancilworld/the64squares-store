@@ -120,7 +120,7 @@ const DashboardPage = () => {
   const storeUrl = useStoreUrl()
   const { me, can } = useMe()
   const { data, isLoading } = useQuery({
-    queryKey: ["stancil-dashboard"],
+    queryKey: ["t64-dashboard"],
     queryFn: () => sdk.client.fetch<Dashboard>("/admin/dashboard"),
     refetchInterval: 60_000,
   })

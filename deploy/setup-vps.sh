@@ -7,9 +7,9 @@
 # Safe to run again: existing secrets, database and admin user are kept.
 set -euo pipefail
 
-STORE_DOMAIN="${STORE_DOMAIN:-staging.stancil.in}"
-API_DOMAIN="${API_DOMAIN:-api-staging.stancil.in}"
-ADMIN_EMAIL="${ADMIN_EMAIL:-admin@stancil.in}"
+STORE_DOMAIN="${STORE_DOMAIN:-staging.the64squares.in}"
+API_DOMAIN="${API_DOMAIN:-api-staging.the64squares.in}"
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@the64squares.in}"
 SSL_EMAIL="${SSL_EMAIL:-}"
 
 BASE=/opt/stancil
@@ -85,12 +85,12 @@ chown -R "$APP_USER:$APP_USER" "$APP" "$BASE/uploads"
 chmod 700 "$BASE/backups"
 
 # Let the app user pull updates with the deploy key used for the first clone.
-if [ -f /root/.ssh/stancil_deploy ]; then
+if [ -f /root/.ssh/t64_deploy ]; then
   install -d -m 700 -o "$APP_USER" -g "$APP_USER" "/home/$APP_USER/.ssh"
-  install -m 600 -o "$APP_USER" -g "$APP_USER" /root/.ssh/stancil_deploy "/home/$APP_USER/.ssh/stancil_deploy"
+  install -m 600 -o "$APP_USER" -g "$APP_USER" /root/.ssh/t64_deploy "/home/$APP_USER/.ssh/t64_deploy"
   [ -f /root/.ssh/known_hosts ] && install -m 644 -o "$APP_USER" -g "$APP_USER" /root/.ssh/known_hosts "/home/$APP_USER/.ssh/known_hosts"
   sudo -u "$APP_USER" git -C "$APP" config core.sshCommand \
-    "ssh -i /home/$APP_USER/.ssh/stancil_deploy -o StrictHostKeyChecking=accept-new"
+    "ssh -i /home/$APP_USER/.ssh/t64_deploy -o StrictHostKeyChecking=accept-new"
 fi
 
 say "Secrets"

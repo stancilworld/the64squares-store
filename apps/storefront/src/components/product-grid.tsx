@@ -12,7 +12,7 @@ export function ProductGrid({ products }: { products: Card[] }) {
   if (!products.length) {
     return (
       <p className="py-20 text-center text-[20px]">
-        No furniture matches these filters yet. Try removing one.
+        No products match these filters yet. Try removing one.
       </p>
     )
   }

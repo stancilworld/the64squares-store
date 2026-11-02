@@ -3,7 +3,7 @@
 //   only tidiness, the server checks every action anyway (src/api/staff-guard.ts)
 // - hides technical settings from the menu (they're listed under Settings → Advanced settings)
 // - hides the links to Medusa's documentation and changelog
-// - shows "Stancil Admin" and the Stancil logo in the browser tab instead of Medusa
+// - shows "The64Squares Admin" and The64Squares logo in the browser tab instead of Medusa
 // - opens the Dashboard after signing in, instead of the Orders list
 import { ADMIN_FAVICON } from "./brand/admin-favicon"
 
@@ -78,7 +78,7 @@ const ALWAYS_CSS = [
   `nav .flex-col > div:first-child{order:-2}`,
   `nav .flex-col > div:has(> div > a[href="/app/dashboard"]){order:-1}`,
   // The settings menu's "Developer" group is then empty: hide its heading too.
-  `[data-stancil-hide]{display:none!important}`,
+  `[data-t64-hide]{display:none!important}`,
   // Medusa documentation / changelog links in the user menu.
   `a[href^="https://docs.medusajs.com"],a[href^="https://medusajs.com"]{display:none!important}`,
   // ...and the divider under them, so there's no double line.
@@ -98,11 +98,11 @@ const script = (backendUrl: string) => `
   var style = document.createElement("style");
   document.head.appendChild(style);
 
-  // Browser tab: Stancil name and logo.
+  // Browser tab: The64Squares name and logo.
   function fixHead() {
     var t = document.title;
     if (t.indexOf("Medusa") >= 0) {
-      document.title = t === "Medusa" ? "Stancil Admin" : t.replace(/ - Medusa$/, " - Stancil Admin").replace(/Medusa/g, "Stancil");
+      document.title = t === "Medusa" ? "The64Squares Admin" : t.replace(/ - Medusa$/, " - The64Squares Admin").replace(/Medusa/g, "The64Squares");
     }
     var icon = document.querySelector('link[rel="icon"]');
     if (icon && icon.getAttribute("href") !== FAVICON) icon.setAttribute("href", FAVICON);
@@ -121,7 +121,7 @@ const script = (backendUrl: string) => `
       if (!box) continue;
       var links = box.querySelectorAll("a"), visible = 0;
       for (var j = 0; j < links.length; j++) if (getComputedStyle(links[j]).display !== "none") visible++;
-      if (visible === 0) box.setAttribute("data-stancil-hide", "");
+      if (visible === 0) box.setAttribute("data-t64-hide", "");
     }
   }
   new MutationObserver(function () { clearTimeout(tidyGroups.t); tidyGroups.t = setTimeout(tidyGroups, 50); })
@@ -180,10 +180,10 @@ const script = (backendUrl: string) => `
 
 // Vite plugin that adds the script to the admin's index.html.
 export const adminNavGuard = (backendUrl: string) => ({
-  name: "stancil-admin-nav-guard",
+  name: "t64-admin-nav-guard",
   transformIndexHtml() {
     return [
-      { tag: "title", children: "Stancil Admin", injectTo: "head" as const },
+      { tag: "title", children: "The64Squares Admin", injectTo: "head" as const },
       { tag: "script", children: script(backendUrl), injectTo: "body" as const },
     ]
   },

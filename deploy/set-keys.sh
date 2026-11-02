@@ -81,19 +81,19 @@ note "Razorpay dashboard → Account & Settings → API Keys. Use the rzp_test_ 
 ask RAZORPAY_KEY_ID "Razorpay Key Id" plain "starts with rzp_test_ or rzp_live_" '^rzp_(test|live)_[A-Za-z0-9]+$'
 ask RAZORPAY_KEY_SECRET "Razorpay Key Secret" secret "shown once when the key is made" '^[A-Za-z0-9]{10,}$'
 note "Webhook: Razorpay → Account & Settings → Webhooks → Add New Webhook"
-note "  URL:    ${API_URL:-https://api.stancil.in}/hooks/payment/razorpay_razorpay"
+note "  URL:    ${API_URL:-https://api.the64squares.in}/hooks/payment/razorpay_razorpay"
 note "  Events: order.paid, payment.captured, payment.failed"
 note "  Secret: make up a long random password, type it there AND here."
 ask RAZORPAY_WEBHOOK_SECRET "Razorpay Webhook Secret" secret "the secret you typed in Razorpay's webhook form" '^.{8,}$'
 
 say "Emails (Resend)"
-note "resend.com → Domains → add stancil.in and copy its DNS records into Hostinger; then API Keys → Create."
+note "resend.com → Domains → add the64squares.in and copy its DNS records into Hostinger; then API Keys → Create."
 ask RESEND_API_KEY "Resend API key" secret "starts with re_" '^re_[A-Za-z0-9_]+$'
-ask EMAIL_FROM "Send emails from" plain "e.g. Stancil <orders@stancil.in>, on the domain you added in Resend" '^[^<>]*<?[^ <>@]+@[^ <>@]+\.[a-z]{2,}>?$'
+ask EMAIL_FROM "Send emails from" plain "e.g. Stancil <orders@the64squares.in>, on the domain you added in Resend" '^[^<>]*<?[^ <>@]+@[^ <>@]+\.[a-z]{2,}>?$'
 
 say "Sign in with Google (optional)"
 note "console.cloud.google.com → APIs & Services → Credentials → Create OAuth client ID → Web application."
-note "  Authorised redirect URI: ${STORE_URL:-https://stancil.in}/account/google"
+note "  Authorised redirect URI: ${STORE_URL:-https://the64squares.in}/account/google"
 ask GOOGLE_CLIENT_ID "Google Client ID" plain "ends with .apps.googleusercontent.com" '\.apps\.googleusercontent\.com$'
 ask GOOGLE_CLIENT_SECRET "Google Client Secret" secret "starts with GOCSPX-" '^.{10,}$'
 

@@ -88,9 +88,9 @@ export const POST = async (req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
     const ip = ipOf(req) ?? ""
     const lines = changed.map((c) => `• ${c}`).join("\n")
     await sendEmail(req.scope, OWNER_EMAIL, "keys-changed", {
-      subject: "Stancil: payment or email keys were changed",
-      text: `These keys were changed in the Stancil admin by ${by} on ${when}${ip ? ` (from ${ip})` : ""}:\n\n${lines}\n\nIf this wasn't you, change the main admin password straight away and check Settings → Payments & delivery.`,
-      html: `<p>These keys were changed in the Stancil admin by <strong>${esc(by)}</strong> on ${esc(when)}${ip ? ` (from ${esc(ip)})` : ""}:</p><ul>${changed.map((c) => `<li>${esc(c)}</li>`).join("")}</ul><p><strong>If this wasn't you</strong>, change the main admin password straight away and check Settings → Payments &amp; delivery.</p>`,
+      subject: "The64Squares: payment or email keys were changed",
+      text: `These keys were changed in The64Squares admin by ${by} on ${when}${ip ? ` (from ${ip})` : ""}:\n\n${lines}\n\nIf this wasn't you, change the main admin password straight away and check Settings → Payments & delivery.`,
+      html: `<p>These keys were changed in The64Squares admin by <strong>${esc(by)}</strong> on ${esc(when)}${ip ? ` (from ${esc(ip)})` : ""}:</p><ul>${changed.map((c) => `<li>${esc(c)}</li>`).join("")}</ul><p><strong>If this wasn't you</strong>, change the main admin password straight away and check Settings → Payments &amp; delivery.</p>`,
     })
   }
   res.json({ ...(await view(req)), changed })

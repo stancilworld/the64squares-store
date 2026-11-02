@@ -195,7 +195,7 @@ const ProductPrices = ({ data: product }: DetailWidgetProps<HttpTypes.AdminProdu
 
 export const config = defineWidgetConfig({
   zone: "product.details.side.before",
-  id: "stancil-product-prices",
+  id: "t64-product-prices",
 })
 
 export default ProductPrices

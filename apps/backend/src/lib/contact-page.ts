@@ -2,7 +2,7 @@ import type { MedusaContainer } from "@medusajs/framework/types"
 import { CONTENT_MODULE } from "../modules/content"
 import type ContentModuleService from "../modules/content/service"
 
-// The Contact page (admin → Website → Contact page): the panel of ways to reach Stancil on the
+// The Contact page (admin → Website → Contact page): the panel of ways to reach The64Squares on the
 // left, and a form built in the admin on the right. Messages are saved (admin → Messages) and
 // emailed to `notify_email`.
 
@@ -74,10 +74,10 @@ export const DEFAULT_CONTACT_PAGE: ContactPage = {
   intro: "Questions about an order, delivery or a piece for your little one? We'd love to hear from you.",
   panel_title: "We're here to help",
   panel: [
-    item("p_email", "email", "Email us", "draw@stancil.in"),
+    item("p_email", "email", "Email us", "hello@the64squares.in"),
     item("p_phone", "phone", "Call us", ""),
-    item("p_whatsapp", "whatsapp", "WhatsApp", "", { button_label: "Chat on WhatsApp", message: "Hi Stancil! I have a question." }),
-    item("p_instagram", "instagram", "Instagram", "https://www.instagram.com/stancil.in"),
+    item("p_whatsapp", "whatsapp", "WhatsApp", "", { button_label: "Chat on WhatsApp", message: "Hi The64Squares! I have a question." }),
+    item("p_instagram", "instagram", "Instagram", ""),
     item("p_hours", "hours", "When we're around", "Monday – Saturday: 10:00 AM – 7:00 PM IST\nSunday: closed"),
   ],
   form_title: "Send us a message",
@@ -90,11 +90,11 @@ export const DEFAULT_CONTACT_PAGE: ContactPage = {
     field("f_phone", "phone", "Phone / WhatsApp", { placeholder: "+91 98765 43210", width: "half" }),
     field("f_topic", "select", "What's it about?", {
       required: true,
-      options: ["An order I placed", "Delivery & assembly", "Returns & warranty", "Choosing furniture", "Bulk or school order", "Something else"],
+      options: ["An order I placed", "Delivery", "Returns & warranty", "Choosing a chess set", "Tournaments", "Bulk, club or school order", "Something else"],
     }),
     field("f_message", "textarea", "Message", { required: true, placeholder: "Tell us a little more…" }),
   ],
-  notify_email: "draw@stancil.in",
+  notify_email: "hello@the64squares.in",
   send_copy: true,
 }
 

@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
         port: backend.port,
         pathname: "/static/**",
       },
-      { protocol: "https", hostname: "*.stancil.in" },
+      { protocol: "https", hostname: "*.the64squares.in" },
     ],
   },
   turbopack: {

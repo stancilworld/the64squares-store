@@ -17,8 +17,8 @@ import { BadgePicker, type BadgeValue } from "./badge-picker"
 import { uploadImage } from "./upload"
 import { useUploadLimits } from "./upload-limits"
 
-// The simple Stancil product form: everything about a product on one screen.
-// Saved by POST /admin/stancil-products(/:id) (src/lib/product-form.ts).
+// The simple The64Squares product form: everything about a product on one screen.
+// Saved by POST /admin/store-products(/:id) (src/lib/product-form.ts).
 
 type Colour = { name: string; hex: string }
 type FormVariant = { colour: string | null; material: string | null; price: number; stock: number | null }
@@ -73,7 +73,7 @@ const EMPTY: ProductFormValue = {
 }
 
 const NONE = "__none"
-const AGES = ["0-2 years", "1-3 years", "2-6 years", "3-8 years", "5-12 years"]
+const AGES = ["All ages", "4+ years", "6+ years", "8+ years", "12+ years", "Adults"]
 
 const slug = (s: string) =>
   s
@@ -259,12 +259,12 @@ export function ProductFormPage({ id }: { id?: string }) {
   const photoLimit = limits?.limits.find((l) => l.type === "product_photo")
 
   const lookups = useQuery({
-    queryKey: ["stancil-product-lookups"],
-    queryFn: () => sdk.client.fetch<Lookups>("/admin/stancil-products/lookups"),
+    queryKey: ["t64-product-lookups"],
+    queryFn: () => sdk.client.fetch<Lookups>("/admin/store-products/lookups"),
   })
   const loaded = useQuery({
-    queryKey: ["stancil-product", id],
-    queryFn: () => sdk.client.fetch<{ id: string; form: ProductFormValue }>(`/admin/stancil-products/${id}`),
+    queryKey: ["t64-product", id],
+    queryFn: () => sdk.client.fetch<{ id: string; form: ProductFormValue }>(`/admin/store-products/${id}`),
     enabled: !!id,
   })
 
@@ -337,7 +337,7 @@ export function ProductFormPage({ id }: { id?: string }) {
 
   const save = useMutation({
     mutationFn: (body: ProductFormValue) =>
-      sdk.client.fetch<{ id: string; form: ProductFormValue }>(id ? `/admin/stancil-products/${id}` : "/admin/stancil-products", {
+      sdk.client.fetch<{ id: string; form: ProductFormValue }>(id ? `/admin/store-products/${id}` : "/admin/store-products", {
         method: "POST",
         body,
       }),
@@ -345,7 +345,7 @@ export function ProductFormPage({ id }: { id?: string }) {
       setError(null)
       setForm(r.form)
       setOriginal(JSON.stringify(r.form))
-      qc.invalidateQueries({ queryKey: ["stancil-product-lookups"] })
+      qc.invalidateQueries({ queryKey: ["t64-product-lookups"] })
       qc.invalidateQueries({ queryKey: ["products"] })
       qc.invalidateQueries({ queryKey: ["product-prices", r.id] })
       toast.success(id ? "Product saved. The website shows the changes within a minute." : "Product created")
@@ -431,7 +431,7 @@ export function ProductFormPage({ id }: { id?: string }) {
           <Textarea id="pf-desc" rows={4} value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} />
         </Field>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Field label="Web address" htmlFor="pf-handle" hint={`${storeUrl ?? "https://stancil.in"}/products/${handle || "…"}`}>
+          <Field label="Web address" htmlFor="pf-handle" hint={`${storeUrl ?? "https://the64squares.in"}/products/${handle || "…"}`}>
             <Input
               id="pf-handle"
               value={form.handle ?? ""}
@@ -515,7 +515,7 @@ export function ProductFormPage({ id }: { id?: string }) {
             <Input
               id="pf-assembly"
               value={form.assembly ?? ""}
-              placeholder="e.g. Easy home assembly, about 20 minutes"
+              placeholder="e.g. Comes fully assembled"
               onChange={(e) => set("assembly", e.target.value)}
             />
           </Field>

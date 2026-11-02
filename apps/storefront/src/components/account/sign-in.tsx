@@ -88,7 +88,7 @@ export function SignIn({ google, next }: { google: boolean; next?: string }) {
     const res = await googleStart()
     if (res.location) {
       try {
-        sessionStorage.setItem("stancil_next", safeNext(next))
+        sessionStorage.setItem("t64_next", safeNext(next))
       } catch {}
       window.location.href = res.location
       return

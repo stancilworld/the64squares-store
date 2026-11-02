@@ -23,8 +23,8 @@ export function GoogleReturn() {
       }
       let next = "/account"
       try {
-        next = sessionStorage.getItem("stancil_next") || "/account"
-        sessionStorage.removeItem("stancil_next")
+        next = sessionStorage.getItem("t64_next") || "/account"
+        sessionStorage.removeItem("t64_next")
       } catch {}
       notifyCartChanged()
       router.replace(next.startsWith("/") && !next.startsWith("//") ? next : "/account")

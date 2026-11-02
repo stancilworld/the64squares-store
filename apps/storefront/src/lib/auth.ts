@@ -5,8 +5,8 @@ import { cookies } from "next/headers"
 import { sdk } from "./medusa"
 
 // Customer sign-in. The token lives in an httpOnly cookie, so page scripts can't read it.
-const TOKEN = "stancil_token"
-const CART = "stancil_cart"
+const TOKEN = "t64_token"
+const CART = "t64_cart"
 const MONTH = 60 * 60 * 24 * 30
 
 type Result = { ok: true } | { ok: false; error: string }

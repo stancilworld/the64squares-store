@@ -1,6 +1,6 @@
 import Medusa from "@medusajs/js-sdk"
 
-// The address the admin was built for (MEDUSA_BACKEND_URL, e.g. https://api.stancil.in).
+// The address the admin was built for (MEDUSA_BACKEND_URL, e.g. https://api.the64squares.in).
 // Medusa's own screens use the same one, so the login session is shared even when the admin
 // is opened from another address (such as the old api-staging one).
 export const BACKEND_URL = (

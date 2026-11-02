@@ -41,7 +41,7 @@ const SECTIONS: SectionConfig[] = [
     labels: {
       title: "First paragraph",
       body: "Second paragraph",
-      link_url: "Button link (mailto:you@stancil.in opens an email)",
+      link_url: "Button link (mailto:you@the64squares.in opens an email)",
     },
   },
 ]

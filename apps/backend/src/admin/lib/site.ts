@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { sdk } from "./sdk"
 
-// The public store address (e.g. https://stancil.in), for "View on website" links.
+// The public store address (e.g. https://the64squares.in), for "View on website" links.
 export const useStoreUrl = () => {
   const { data } = useQuery({
     queryKey: ["site-info"],

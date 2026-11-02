@@ -9,7 +9,7 @@
 // Every admin API request is matched to one action here and checked on the server, so a
 // moderator cannot get around a toggle by calling the API directly.
 
-export const OWNER_EMAIL = (process.env.STANCIL_OWNER_EMAIL || "stancilworld.in@gmail.com").toLowerCase()
+export const OWNER_EMAIL = (process.env.OWNER_EMAIL || "").toLowerCase()
 
 export type StaffRole = "admin" | "moderator"
 
@@ -44,18 +44,18 @@ export const PERMISSIONS: Permission[] = [
   { key: "customers.delete", group: "Customers & marketing", label: "Delete customers", description: "Remove customers and customer groups.", default: false },
   { key: "promotions.manage", group: "Customers & marketing", label: "Discounts & promotions", description: "See, create and change discount codes, promotions and campaigns.", default: false },
   { key: "messages.view", group: "Customers & marketing", label: "Read contact messages", description: "See messages sent with the Contact page form and mark them as answered.", default: true },
-  { key: "mailbox.view", group: "Customers & marketing", label: "Read & answer the email inbox", description: "See every email sent to the shop's mailbox (e.g. draw@stancil.in) and reply from it.", default: false },
+  { key: "mailbox.view", group: "Customers & marketing", label: "Read & answer the email inbox", description: "See every email sent to the shop's mailbox (e.g. hello@the64squares.in) and reply from it.", default: false },
   { key: "subscribers.view", group: "Customers & marketing", label: "View newsletter subscribers", description: "See the newsletter sign-up list.", default: false },
 
   // Website
   { key: "content.homepage", group: "Website", label: "Edit Homepage", description: "Banner, featured collection, gang band and newsletter section.", default: true },
-  { key: "content.about", group: "Website", label: "Edit About us & team faces", description: "Who are we?, Faces Behind Stancil and Get in touch.", default: true },
+  { key: "content.about", group: "Website", label: "Edit About us & team faces", description: "Who are we?, Faces behind The64Squares and Get in touch.", default: true },
   { key: "content.footer", group: "Website", label: "Edit menu, footer & announcement bar", description: "Top-menu words and links, footer links and social links, the announcement strip, and the footer animation.", default: true },
   { key: "content.blog", group: "Website", label: "Write blog posts", description: "Create and edit draft posts.", default: true },
   { key: "content.blog_publish", group: "Website", label: "Publish blog posts", description: "Put posts live, edit live posts, delete posts. Without this, posts stay drafts for the admin to publish.", default: false },
   { key: "content.contact", group: "Website", label: "Edit Contact page", description: "The ways to reach you, the form's questions, and where messages are emailed.", default: false },
   { key: "content.chatbot", group: "Website", label: "Edit the chat bot", description: "The chat bubble on the website: its answers, buttons, WhatsApp handover and AI.", default: false },
-  { key: "content.help", group: "Website", label: "Edit help pages", description: "Delivery & assembly, Returns & warranty, FAQs, Privacy, Terms.", default: false },
+  { key: "content.help", group: "Website", label: "Edit help pages", description: "Delivery, Returns & warranty, FAQs, Privacy, Terms.", default: false },
 
   // Settings
   { key: "settings.branding", group: "Settings", label: "Branding & upload limits", description: "The admin sign-in logo and the file size limits.", default: false },
@@ -127,7 +127,7 @@ const RULES: Rule[] = [
   r("write", /^\/products\/(import|imports|export)(\/|$)/, "products.import"),
   r("write", /^\/(products|product-variants|product-options|product-categories|collections|product-tags|product-types)(\/|$)/, "products.edit"),
   // The simple product form; it checks "Change prices" and "Delete products" itself.
-  r("write", /^\/stancil-products(\/|$)/, "products.edit"),
+  r("write", /^\/store-products(\/|$)/, "products.edit"),
   r("write", /^\/shop-order(\/|$)/, "products.edit"),
   r("write", /^\/(inventory-items|reservations)(\/|$)/, "inventory.edit"),
 
@@ -206,8 +206,8 @@ export const staffOf = (
 ): { role: StaffRole; owner: boolean; permissions: string[] } => {
   const owner = user.email.toLowerCase() === OWNER_EMAIL
   const meta = user.metadata ?? {}
-  const role: StaffRole = owner || meta.stancil_role === "admin" ? "admin" : "moderator"
-  const saved = meta.stancil_permissions
+  const role: StaffRole = owner || meta.t64_role === "admin" ? "admin" : "moderator"
+  const saved = meta.t64_permissions
   const permissions =
     role === "admin"
       ? PERMISSION_KEYS.slice()

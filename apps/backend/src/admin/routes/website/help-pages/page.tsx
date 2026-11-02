@@ -139,7 +139,7 @@ const PageDrawer = ({
               <Label>Web address</Label>
               <Input value={form.handle} onChange={(e) => set("handle", toHandle(e.target.value))} />
               <Text size="xsmall" className="text-ui-fg-subtle">
-                stancil.in/help/{form.handle || "page"}
+                the64squares.in/help/{form.handle || "page"}
               </Text>
             </div>
           </div>

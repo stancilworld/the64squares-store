@@ -8,7 +8,7 @@ import { useMe } from "../../../lib/staff"
 const ADVANCED: { to: string; title: string; description: string }[] = [
   { to: "/settings/regions", title: "Regions", description: "The country the store sells to (India), its currency and payment methods." },
   { to: "/settings/tax-regions", title: "Tax regions", description: "GST rates. Prices on the website already include tax." },
-  { to: "/settings/sales-channels", title: "Sales channels", description: "Where products are sold. Everything uses \"Stancil Website\"." },
+  { to: "/settings/sales-channels", title: "Sales channels", description: "Where products are sold. Everything uses \"The64Squares Website\"." },
   { to: "/settings/refund-reasons", title: "Refund reasons", description: "The list of reasons to pick from when giving a refund." },
   { to: "/settings/publishable-api-keys", title: "Publishable API keys", description: "The key the website uses to read products. Don't delete it." },
   { to: "/settings/secret-api-keys", title: "Secret API keys", description: "Keys for outside services. Only create one when a developer asks." },

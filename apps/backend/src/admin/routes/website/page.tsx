@@ -46,7 +46,7 @@ const SECTIONS: Section[] = [
   },
   {
     title: "Blog",
-    description: "Letters from Stancil: write drafts and publish posts.",
+    description: "The64Squares Journal: write drafts and publish posts.",
     to: "/website/blog",
     sitePath: "/blog",
     icon: Newspaper,
@@ -54,7 +54,7 @@ const SECTIONS: Section[] = [
   },
   {
     title: "Help pages",
-    description: "Delivery & assembly, Returns & warranty, FAQs, Privacy and Terms.",
+    description: "Delivery, Returns & warranty, FAQs, Privacy and Terms.",
     to: "/website/help-pages",
     sitePath: "/help/faqs",
     icon: Lifebuoy,

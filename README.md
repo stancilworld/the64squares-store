@@ -35,7 +35,7 @@ cp apps/backend/.env.template apps/backend/.env      # then edit DATABASE_URL et
 createdb stancil
 cd apps/backend
 npx medusa db:migrate                                 # also runs the first-time Stancil setup
-npx medusa user -e you@stancil.in -p 'a-strong-password'
+npx medusa user -e you@the64squares.in -p 'a-strong-password'
 npm run dev                                           # http://localhost:9000/app
 
 # Storefront (new terminal)
@@ -75,7 +75,7 @@ stand-in font is shown.
 
 ## Deploying to the VPS
 
-Hostinger KVM 1, Ubuntu 24.04. Staging: https://staging.stancil.in, admin at https://api-staging.stancil.in/app.
+Hostinger KVM 1, Ubuntu 24.04. Staging: https://staging.the64squares.in, admin at https://api-staging.the64squares.in/app.
 
 First time (as root on the server, after adding the deploy key on GitHub):
 
@@ -95,7 +95,7 @@ To update after pushing to GitHub: `bash /opt/stancil/app/deploy/update.sh`
 
 ## Editing the website (admin)
 
-Everything on the content pages is edited in the admin (api-staging.stancil.in/app):
+Everything on the content pages is edited in the admin (api-staging.the64squares.in/app):
 
 - **Homepage**: banner, Why Stancil points, featured collection text and carousel pictures, newsletter.
 - **About us**: Who are we?, Meet our team photo, the Get in touch block.

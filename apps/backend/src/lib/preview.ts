@@ -5,12 +5,12 @@ import { storeUrl } from "./emails"
 // Website preview: staff open the website in "preview" to see drafts, hidden items and
 // scheduled posts before shoppers do.
 //
-// STANCIL_PREVIEW_SECRET is shared by the backend and the storefront (deploy/build.sh makes
+// T64_PREVIEW_SECRET is shared by the backend and the storefront (deploy/build.sh makes
 // it once and gives it to both). The admin asks for a short-lived link signed with it; the
 // storefront checks the signature, switches on Next.js draft mode, and from then on sends
-// the secret in the x-stancil-preview header when it reads website content.
+// the secret in the x-t64-preview header when it reads website content.
 
-export const previewSecret = () => (process.env.STANCIL_PREVIEW_SECRET || "").trim()
+export const previewSecret = () => (process.env.T64_PREVIEW_SECRET || "").trim()
 
 const same = (a: string, b: string) => {
   const x = Buffer.from(a)
@@ -21,7 +21,7 @@ const same = (a: string, b: string) => {
 // True when the request comes from the storefront in preview mode.
 export const isPreview = (req: MedusaRequest) => {
   const secret = previewSecret()
-  const sent = String(req.headers["x-stancil-preview"] ?? "")
+  const sent = String(req.headers["x-t64-preview"] ?? "")
   return secret.length >= 32 && !!sent && same(sent, secret)
 }
 

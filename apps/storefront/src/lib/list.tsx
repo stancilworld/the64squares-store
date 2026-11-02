@@ -14,7 +14,7 @@ type ListApi = {
   remove: (productId: string, variantId?: string | null) => void
 }
 
-const KEY = "stancil_list_v1"
+const KEY = "t64_list_v1"
 const ListContext = createContext<ListApi | null>(null)
 
 const read = (): ListItem[] => {

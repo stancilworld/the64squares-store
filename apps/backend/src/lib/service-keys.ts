@@ -54,9 +54,9 @@ export const KEY_DEFS: KeyDef[] = [
   { name: "RAZORPAY_LIVE_KEY_SECRET", group: "razorpay_live", label: "Live Key Secret", secret: true, pattern: /^[\w-]{10,}$/, hint: "Shown once by Razorpay when the key is made" },
   { name: "RAZORPAY_LIVE_WEBHOOK_SECRET", group: "razorpay_live", label: "Live webhook secret", secret: true, pattern: /^.{8,200}$/, hint: "The secret you typed in Razorpay's Live Mode webhook" },
   { name: "RESEND_API_KEY", group: "resend", label: "Resend API key", secret: true, pattern: /^re_[A-Za-z0-9_]{8,}$/, hint: "Starts with re_" },
-  { name: "EMAIL_FROM", group: "resend", label: "Send emails from", secret: false, pattern: /^[^<>]{0,60}<?[^\s<>@]+@[^\s<>@]+\.[a-z]{2,}>?$/i, hint: "e.g. Stancil <orders@stancil.in>, on the domain added in Resend" },
-  { name: "EMAIL_REPLY_TO", group: "resend", label: "Customer replies go to", secret: false, pattern: /^[^\s<>@]+@[^\s<>@]+\.[a-z]{2,}$/i, hint: "A real inbox, e.g. draw@stancil.in. When a customer presses Reply on any email, it goes here." },
-  { name: "MAILBOX_EMAIL", group: "mailbox", label: "Inbox email address", secret: false, pattern: /^[^\s<>@]+@[^\s<>@]+\.[a-z]{2,}$/i, hint: "e.g. draw@stancil.in" },
+  { name: "EMAIL_FROM", group: "resend", label: "Send emails from", secret: false, pattern: /^[^<>]{0,60}<?[^\s<>@]+@[^\s<>@]+\.[a-z]{2,}>?$/i, hint: "e.g. The64Squares <orders@the64squares.in>, on the domain added in Resend" },
+  { name: "EMAIL_REPLY_TO", group: "resend", label: "Customer replies go to", secret: false, pattern: /^[^\s<>@]+@[^\s<>@]+\.[a-z]{2,}$/i, hint: "A real inbox, e.g. hello@the64squares.in. When a customer presses Reply on any email, it goes here." },
+  { name: "MAILBOX_EMAIL", group: "mailbox", label: "Inbox email address", secret: false, pattern: /^[^\s<>@]+@[^\s<>@]+\.[a-z]{2,}$/i, hint: "e.g. hello@the64squares.in" },
   { name: "MAILBOX_PASSWORD", group: "mailbox", label: "Inbox password", secret: true, pattern: /^.{1,200}$/, hint: "The password you use to sign in to that mailbox (or an app password)" },
   { name: "MAILBOX_IMAP", group: "mailbox", label: "Incoming server (IMAP)", secret: false, pattern: /^[a-z0-9.-]+:\d{2,5}$/i, hint: "Leave empty for GoDaddy: imap.secureserver.net:993" },
   { name: "MAILBOX_SMTP", group: "mailbox", label: "Outgoing server (SMTP)", secret: false, pattern: /^[a-z0-9.-]+:\d{2,5}$/i, hint: "Leave empty for GoDaddy: smtpout.secureserver.net:465" },
@@ -84,7 +84,7 @@ const encryptionKey = () =>
     crypto.hkdfSync(
       "sha256",
       `${process.env.JWT_SECRET || "supersecret"}|${process.env.COOKIE_SECRET || "supersecret"}`,
-      "stancil",
+      "the64squares",
       "service-keys-v1",
       32
     )

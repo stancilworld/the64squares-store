@@ -6,7 +6,7 @@ import { ChevronDown } from "@/components/icons"
 import { PostDate } from "@/components/post-date"
 import { getPosts } from "@/lib/data"
 
-export const metadata: Metadata = { title: "Letters from Stancil" }
+export const metadata: Metadata = { title: "The64Squares Journal" }
 
 const PAGE = 3
 
@@ -62,7 +62,7 @@ async function PostListFromParams({ searchParams }: { searchParams: PageProps<"/
 export default function BlogPage({ searchParams }: PageProps<"/blog">) {
   return (
     <section className="mx-auto mb-[96px] max-w-[1440px] px-6 pt-[48px] lg:mb-[150px] lg:px-[199px] lg:pt-[85px]">
-      <h1 className="font-display text-[64px] lg:text-[128px]">Letters from Stancil</h1>
+      <h1 className="font-display text-[64px] lg:text-[128px]">The64Squares Journal</h1>
       <Suspense fallback={<PostList limit={PAGE} />}>
         <PostListFromParams searchParams={searchParams} />
       </Suspense>

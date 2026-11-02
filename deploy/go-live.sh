@@ -3,17 +3,17 @@
 #   bash /opt/stancil/app/deploy/go-live.sh
 #
 # After this:
-#   https://stancil.in              the store
-#   https://www.stancil.in          redirects to https://stancil.in
-#   https://staging.stancil.in      redirects to https://stancil.in
-#   https://api.stancil.in/app      the admin
-#   https://api-staging.stancil.in  still works (pictures uploaded so far use this address)
+#   https://the64squares.in              the store
+#   https://www.the64squares.in          redirects to https://the64squares.in
+#   https://staging.the64squares.in      redirects to https://the64squares.in
+#   https://api.the64squares.in/app      the admin
+#   https://api-staging.the64squares.in  still works (pictures uploaded so far use this address)
 #
 # Safe order: nothing changes until DNS is right and the SSL certificate is issued.
 # If the certificate fails, the old web server settings are put back and staging keeps working.
 set -euo pipefail
 
-LIVE_DOMAIN="${LIVE_DOMAIN:-stancil.in}"
+LIVE_DOMAIN="${LIVE_DOMAIN:-the64squares.in}"
 WWW_DOMAIN="www.$LIVE_DOMAIN"
 LIVE_API="${LIVE_API:-api.$LIVE_DOMAIN}"
 OLD_STORE="${OLD_STORE:-staging.$LIVE_DOMAIN}"

@@ -121,12 +121,12 @@ export default defineMiddlewares({
     },
     {
       method: ["POST"],
-      matcher: "/admin/stancil-products",
+      matcher: "/admin/store-products",
       middlewares: [validateAndTransformBody(ProductFormBody)],
     },
     {
       method: ["POST"],
-      matcher: "/admin/stancil-products/:id",
+      matcher: "/admin/store-products/:id",
       middlewares: [validateAndTransformBody(ProductFormBody)],
     },
     {

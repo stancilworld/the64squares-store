@@ -208,7 +208,7 @@ export function Backpack({ cart }: { cart: HttpTypes.StoreCart | null }) {
           <div className="mt-8">
             <p className="text-[18px]">Your cart is empty.</p>
             <Link href="/shop" className="mt-5 inline-flex h-[42px] items-center rounded-full bg-ink px-8 text-[16px] text-white">
-              Shop furniture
+              Browse the shop
             </Link>
           </div>
         )}

@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: PageProps<"/blog/[handle]">):
   const post = await getPost(handle)
   return post
     ? { title: post.title, description: post.excerpt ?? undefined }
-    : { title: "Letters from Stancil" }
+    : { title: "The64Squares Journal" }
 }
 
 async function Post({ params }: { params: Promise<{ handle: string }> }) {

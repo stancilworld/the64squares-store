@@ -43,7 +43,7 @@ type ChatMsg = { role: "user" | "bot"; text: string; source?: string; at: string
 
 const ACTIONS: { value: QuickAction; label: string; hint: string }[] = [
   { value: "track", label: "Track my order", hint: "Shows the order number + email/phone boxes." },
-  { value: "products", label: "Find furniture", hint: "The bot says the words below, then the shopper types what they want." },
+  { value: "products", label: "Find a product", hint: "The bot says the words below, then the shopper types what they want." },
   { value: "ask", label: "Ask a question", hint: "Sends the words below as if the shopper typed them." },
   { value: "human", label: "Talk to us", hint: "Shows WhatsApp and Leave a message." },
 ]
@@ -575,7 +575,7 @@ function Settings({ data, focusFaq, onFocused }: { data: BotResponse; focusFaq: 
             <div className="flex items-center gap-3">
               <Switch id="bot-help" checked={b.use_help_pages} onCheckedChange={(v) => set({ use_help_pages: v })} />
               <Label htmlFor="bot-help" size="small">
-                Also answer from the Help pages (FAQs, Delivery & assembly, Returns & warranty…)
+                Also answer from the Help pages (FAQs, Delivery, Returns & warranty…)
               </Label>
             </div>
             {b.faqs.length > 4 && <Input size="small" type="search" placeholder="Search your answers" value={faqSearch} onChange={(e) => setFaqSearch(e.target.value)} />}

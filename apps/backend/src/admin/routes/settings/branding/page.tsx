@@ -5,7 +5,7 @@ const SECTIONS: SectionConfig[] = [
   {
     key: "admin_logo",
     name: "Admin sign-in logo",
-    help: "Shown at the top of the admin sign-in page. Without one, the Stancil logo is used.",
+    help: "Shown at the top of the admin sign-in page. Without one, The64Squares logo is used.",
     fields: ["image_url"],
     many: false,
     allowVideo: false,
@@ -23,7 +23,7 @@ const BrandingPage = () => (
   <ContentEditor
     page="site"
     title="Branding"
-    intro="The Stancil logo used in the admin. Changes show the next time the sign-in page opens."
+    intro="The The64Squares logo used in the admin. Changes show the next time the sign-in page opens."
     sections={SECTIONS}
   />
 )

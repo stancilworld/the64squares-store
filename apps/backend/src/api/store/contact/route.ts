@@ -7,7 +7,7 @@ import { CONTENT_MODULE } from "../../../modules/content"
 import type ContentModuleService from "../../../modules/content/service"
 
 // POST /store/contact { answers: { [field id]: value }, website?: "" }
-// Saves a Contact page message, emails it to Stancil (Reply goes to the customer) and, if
+// Saves a Contact page message, emails it to The64Squares (Reply goes to the customer) and, if
 // switched on, sends the customer a copy.
 
 // A few messages per visitor per 15 minutes is plenty; more is a robot.

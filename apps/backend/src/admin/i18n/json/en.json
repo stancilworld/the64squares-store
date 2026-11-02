@@ -1,12 +1,12 @@
 {
   "login": {
-    "title": "Welcome to Stancil",
-    "hint": "Sign in to manage the Stancil store"
+    "title": "Welcome to The64Squares",
+    "hint": "Sign in to manage The64Squares store"
   },
   "invite": {
-    "title": "Welcome to Stancil",
-    "successHint": "Get started with the Stancil admin right away.",
-    "successAction": "Open the Stancil admin"
+    "title": "Welcome to The64Squares",
+    "successHint": "Get started with The64Squares admin right away.",
+    "successAction": "Open The64Squares admin"
   },
   "orders": {
     "refund": {
@@ -68,7 +68,7 @@
   "app": {
     "nav": {
       "common": {
-        "extensions": "Stancil"
+        "extensions": "The64Squares"
       }
     }
   }

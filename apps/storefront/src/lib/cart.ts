@@ -5,7 +5,7 @@ import { cookies } from "next/headers"
 import { getRegion } from "./data"
 import { sdk } from "./medusa"
 
-const COOKIE = "stancil_cart"
+const COOKIE = "t64_cart"
 const CART_FIELDS =
   "id,currency_code,total,subtotal,tax_total,shipping_total,item_total,discount_total,*items,+items.metadata,+items.compare_at_unit_price,+items.total,+items.subtotal,+items.tax_total,+items.original_total,+items.discount_total,*items.variant,*items.variant.options,*items.variant.options.option,*items.product"
 

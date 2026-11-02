@@ -30,7 +30,7 @@ import { useContextMenu, type MenuItem } from "./context-menu"
 import { formatWhen } from "./dates"
 import { BACKEND_URL, sdk } from "./sdk"
 
-// Messages → Email: the shop's mailbox (e.g. draw@stancil.in) inside the admin, made to feel
+// Messages → Email: the shop's mailbox (e.g. hello@the64squares.in) inside the admin, made to feel
 // like Gmail: folders on the left, a right-click menu on every conversation and email, quick
 // buttons when the mouse is over a row, ticking several at once, Undo, and keyboard keys.
 
@@ -218,12 +218,12 @@ const readFiles = (files: FileList | File[]) =>
 const who = (m: Mail) => (m.from_name ? `${m.from_name} <${m.from_email}>` : m.from_email || "")
 const quoteOf = (m: Mail) => {
   const body = (m.text || "").trim().split("\n").map((l) => `> ${l}`).join("\n")
-  return `On ${formatWhen(m.date)}, ${m.folder === "sent" ? `Stancil <${m.from_email}>` : who(m)} wrote:\n${body}`
+  return `On ${formatWhen(m.date)}, ${m.folder === "sent" ? `The64Squares <${m.from_email}>` : who(m)} wrote:\n${body}`
 }
 const forwardOf = (m: Mail) =>
   [
     "---------- Forwarded message ---------",
-    `From: ${m.folder === "sent" ? `Stancil <${m.from_email}>` : who(m)}`,
+    `From: ${m.folder === "sent" ? `The64Squares <${m.from_email}>` : who(m)}`,
     `Date: ${formatWhen(m.date)}`,
     `Subject: ${m.subject || "(no subject)"}`,
     `To: ${m.to.map((t) => (t.name ? `${t.name} <${t.address}>` : t.address)).join(", ")}`,
@@ -267,7 +267,7 @@ const draftFor = (mode: ComposeMode, source: Mail | null, shop: string, preset?:
 }
 
 // Unsent writing is kept in this browser, so closing the window by mistake loses nothing.
-const DRAFTS = "stancil-mail-drafts"
+const DRAFTS = "t64-mail-drafts"
 const loadDraft = (key: string): Draft | null => {
   try {
     const all = JSON.parse(localStorage.getItem(DRAFTS) || "{}") as Record<string, Draft>
@@ -551,7 +551,7 @@ export function Composer({
           )}
         </div>
         <Text size="xsmall" className="text-ui-fg-subtle">
-          From Stancil &lt;{shop || "…"}&gt;
+          From The64Squares &lt;{shop || "…"}&gt;
         </Text>
       </div>
       <div className="grid grid-cols-[52px_1fr] items-center gap-x-2 gap-y-2">
@@ -1158,7 +1158,7 @@ function MessageCard({
   onMore: (el: HTMLElement) => void
 }) {
   const ours = m.folder === "sent"
-  const name = ours ? `Stancil${m.sent_by ? ` (${m.sent_by})` : ""}` : m.from_name || m.from_email || ""
+  const name = ours ? `The64Squares${m.sent_by ? ` (${m.sent_by})` : ""}` : m.from_name || m.from_email || ""
   const toLine = m.to.map((t) => (t.address === shop.toLowerCase() ? "me" : t.name || t.address)).join(", ")
   return (
     <div data-mail={m.id} data-open={open ? "yes" : "no"} className={`${first ? "" : "border-t border-ui-border-base"} ${m.status === "new" ? "bg-ui-bg-base" : ""}`}>
@@ -1176,7 +1176,7 @@ function MessageCard({
         onContextMenu={onMenu}
         className="flex cursor-pointer items-start gap-3 px-4 py-3 outline-none hover:bg-ui-bg-base-hover focus-visible:bg-ui-bg-base-hover"
       >
-        <Avatar name={ours ? "Stancil" : name} email={ours ? shop : m.from_email || ""} />
+        <Avatar name={ours ? "The64Squares" : name} email={ours ? shop : m.from_email || ""} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2">
             <Text size="small" weight="plus" className="truncate">
@@ -1510,7 +1510,7 @@ export function MailInbox() {
       <Container className="flex flex-col gap-3 px-6 py-6">
         <Heading level="h2">Connect your shop inbox</Heading>
         <Text size="small" className="text-ui-fg-subtle">
-          See every email sent to your shop address (like draw@stancil.in) right here, and reply from the admin. The main admin adds the
+          See every email sent to your shop address (like hello@the64squares.in) right here, and reply from the admin. The main admin adds the
           inbox's email and password once, in Settings → Payments &amp; delivery → Keys → Shop inbox. Your webmail and phone app keep working
           as before.
         </Text>

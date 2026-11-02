@@ -150,7 +150,7 @@ export function AccountHome({ customer, orders }: { customer: HttpTypes.StoreCus
           <div>
             <p className="text-[16px]">No orders yet.</p>
             <Link href="/shop" className="mt-4 inline-flex h-[42px] items-center rounded-full bg-ink px-8 text-[16px] text-white">
-              Shop furniture
+              Browse the shop
             </Link>
           </div>
         )}

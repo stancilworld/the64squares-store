@@ -339,7 +339,7 @@ const BlockDrawer = ({
   )
 }
 
-const PREVIEW_KEY = "stancil_live_preview"
+const PREVIEW_KEY = "t64_live_preview"
 const readPref = () => {
   try {
     return localStorage.getItem(PREVIEW_KEY) === "1"

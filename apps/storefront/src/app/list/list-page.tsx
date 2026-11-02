@@ -20,7 +20,7 @@ export function ListPageView() {
       <div className="py-16 text-center">
         <p className="text-[20px]">Your wishlist is empty. Tap the heart on any product to save it here.</p>
         <Link href="/shop" className="mt-6 inline-flex h-[42px] items-center rounded-full bg-ink px-8 text-[16px] text-white">
-          Shop furniture
+          Browse the shop
         </Link>
       </div>
     )

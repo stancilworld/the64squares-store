@@ -286,7 +286,7 @@ export function KeysEditor() {
       </Block>
 
       <Block
-        title="Shop inbox (draw@stancil.in)"
+        title="Shop inbox (hello@the64squares.in)"
         intro="Shows every email to your shop address under Messages → Email, and lets you reply from the admin. Your webmail and phone app keep working as before."
       >
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">{rows("mailbox").map(field)}</div>

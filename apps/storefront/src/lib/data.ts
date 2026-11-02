@@ -258,11 +258,11 @@ export type SiteNavigation = {
 export const FALLBACK_NAVIGATION: SiteNavigation = {
   menu: {
     categories_label: "Shop By Categories",
-    all_label: "All furniture",
+    all_label: "All products",
     about_label: "About",
     about_links: [
       { label: "About us", href: "/about" },
-      { label: "Letters from Stancil", href: "/blog" },
+      { label: "The64Squares Journal", href: "/blog" },
     ],
     extra_links: [],
   },
@@ -284,8 +284,8 @@ export const FALLBACK_NAVIGATION: SiteNavigation = {
     ],
     socials: {
       facebook: "https://www.facebook.com/share/1CN3cnz8vy/?mibextid=wwXIfr",
-      instagram: "https://www.instagram.com/stancil.in",
-      linkedin: "https://www.linkedin.com/company/stancil",
+      instagram: "",
+      linkedin: "",
       youtube: "",
       whatsapp: "",
     },

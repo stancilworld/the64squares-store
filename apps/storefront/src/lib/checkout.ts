@@ -9,8 +9,8 @@ import { sdk } from "./medusa"
 
 // Checkout runs on its own cart, built from the items ticked in the backpack. Unticked
 // items stay in the backpack; after the order, the bought items leave the backpack.
-const CHECKOUT = "stancil_checkout"
-const CART = "stancil_cart"
+const CHECKOUT = "t64_checkout"
+const CART = "t64_cart"
 const FIELDS =
   "id,email,currency_code,total,subtotal,tax_total,shipping_total,item_total,discount_total,completed_at,customer_id,*items,+items.total,+items.compare_at_unit_price,*items.variant,*shipping_address,*shipping_methods,*payment_collection,*payment_collection.payment_sessions"
 

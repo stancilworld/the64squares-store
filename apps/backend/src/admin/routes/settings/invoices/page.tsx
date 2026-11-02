@@ -82,7 +82,7 @@ const InvoicesPage = () => {
         <F label="Company name (seller)" htmlFor="iv-legal" hint="The GST-registered company, as on the GST certificate.">
           <Input id="iv-legal" value={form.legal_name} onChange={(e) => set("legal_name", e.target.value)} />
         </F>
-        <F label="Line under the name" htmlFor="iv-brand" hint="e.g. Stancil · a brand of Rural Routes">
+        <F label="Line under the name" htmlFor="iv-brand" hint="e.g. The64Squares · a brand of your company">
           <Input id="iv-brand" value={form.brand_line} onChange={(e) => set("brand_line", e.target.value)} />
         </F>
         <F label="GSTIN" htmlFor="iv-gstin" hint={form.gstin && !gstinOk ? "That doesn't look like a 15-character GSTIN." : "15 characters, e.g. 27ABCDE1234F1Z5"}>
@@ -126,7 +126,7 @@ const InvoicesPage = () => {
         <F label="GST rate (%)" htmlFor="iv-rate" hint="Prices on the website include it. Check with your accountant.">
           <Input id="iv-rate" inputMode="decimal" value={rate} aria-invalid={badRate} onChange={(e) => setRate(e.target.value)} />
         </F>
-        <F label="Default HSN" htmlFor="iv-hsn" hint="Used when a product has no HS code. 9403 = furniture.">
+        <F label="Default HSN" htmlFor="iv-hsn" hint="Used when a product has no HS code. 9504 = chess sets and board games.">
           <Input id="iv-hsn" value={form.default_hsn} onChange={(e) => set("default_hsn", e.target.value.replace(/\D/g, "").slice(0, 8))} />
         </F>
         <F label="Signature line" htmlFor="iv-sign">

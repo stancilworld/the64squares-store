@@ -25,7 +25,7 @@ export const isLive = (a: SiteNavigation["announcement"], now: number) =>
   (!a.ends_at || new Date(a.ends_at).getTime() > now)
 
 export function AnnouncementBar({ a }: { a: SiteNavigation["announcement"] }) {
-  const key = `stancil_announcement_${a.text}`
+  const key = `t64_announcement_${a.text}`
   // Dates and "closed" are checked in the browser (the page itself is cached).
   const live = useSyncExternalStore(noop, () => isLive(a, Date.now()), () => false)
   const [closedNow, setClosedNow] = useState(false)

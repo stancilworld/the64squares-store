@@ -8,7 +8,7 @@ import type { ContactPanelItem } from "@/lib/types"
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Get in touch with Stancil: email, WhatsApp or send us a message.",
+  description: "Get in touch with The64Squares: email, WhatsApp or send us a message.",
 }
 
 const ICONS: Record<ContactPanelItem["type"], (p: { className?: string }) => ReactNode> = {

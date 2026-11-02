@@ -49,10 +49,10 @@ const FIELD_TYPES: { value: FieldType; label: string }[] = [
 const WITH_OPTIONS: FieldType[] = ["select", "radio", "checkboxes"]
 
 const PANEL_TYPES: { value: PanelType; label: string; placeholder: string; hint: string }[] = [
-  { value: "email", label: "Email", placeholder: "draw@stancil.in", hint: "Opens their email app." },
+  { value: "email", label: "Email", placeholder: "hello@the64squares.in", hint: "Opens their email app." },
   { value: "phone", label: "Phone", placeholder: "+91 98765 43210", hint: "Tapping it calls on a phone." },
   { value: "whatsapp", label: "WhatsApp button", placeholder: "+91 98765 43210", hint: "Your WhatsApp number. Shows a green Chat button." },
-  { value: "instagram", label: "Instagram", placeholder: "@stancil.in or https://instagram.com/stancil.in", hint: "" },
+  { value: "instagram", label: "Instagram", placeholder: "@the64squares.in or ", hint: "" },
   { value: "hours", label: "Opening hours", placeholder: "Monday – Saturday: 10 AM – 7 PM", hint: "Each line shows on its own line." },
   { value: "address", label: "Address", placeholder: "Street, city, PIN", hint: "Each line shows on its own line." },
   { value: "link", label: "Link button", placeholder: "/help/faqs or https://…", hint: "" },
@@ -120,7 +120,7 @@ function RowTools({ i, n, onMove, onRemove }: { i: number; n: number; onMove: (d
   )
 }
 
-const PREVIEW_KEY = "stancil_live_preview"
+const PREVIEW_KEY = "t64_live_preview"
 
 const ContactPageEditor = () => {
   const qc = useQueryClient()

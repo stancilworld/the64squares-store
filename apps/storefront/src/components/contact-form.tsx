@@ -232,7 +232,7 @@ function Question({ f, value, error, onChange }: { f: ContactField; value: Value
   )
 }
 
-// Round (pick one) or square (tick) marker in the Stancil black outline style.
+// Round (pick one) or square (tick) marker in The64Squares black outline style.
 function Tick({ on, error, square }: { on: boolean; error: boolean; square?: boolean }) {
   return (
     <span

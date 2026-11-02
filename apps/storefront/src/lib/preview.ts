@@ -5,6 +5,6 @@ import { draftMode } from "next/headers"
 // hidden items and scheduled posts. Safe to call inside "use cache" functions.
 export async function previewHeaders(): Promise<Record<string, string>> {
   const { isEnabled } = await draftMode()
-  const secret = process.env.STANCIL_PREVIEW_SECRET
-  return isEnabled && secret ? { "x-stancil-preview": secret } : {}
+  const secret = process.env.T64_PREVIEW_SECRET
+  return isEnabled && secret ? { "x-t64-preview": secret } : {}
 }

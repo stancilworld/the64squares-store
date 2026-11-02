@@ -45,13 +45,13 @@ export type Chatbot = {
 
 export const DEFAULT_CHATBOT: Chatbot = {
   enabled: false,
-  name: "Stancil Helper",
-  greeting: "Hi! I'm the Stancil helper. Ask me about our furniture, delivery or your order.",
+  name: "The64Squares Helper",
+  greeting: "Hi! I'm The64Squares' chess helper. Ask me about our chess sets, boards, tournaments, delivery or your order.",
   launcher_label: "Need help?",
   placeholder: "Type your question…",
   quick: [
     { id: "q_track", label: "Track my order", action: "track", value: "" },
-    { id: "q_find", label: "Find furniture", action: "products", value: "What are you looking for? A bed, a desk, storage…?" },
+    { id: "q_find", label: "Find a chess set", action: "products", value: "What are you looking for? A chess set, a board, pieces or a clock?" },
     { id: "q_delivery", label: "Delivery", action: "ask", value: "How long does delivery take?" },
     { id: "q_human", label: "Talk to us", action: "human", value: "" },
   ],
@@ -65,7 +65,7 @@ export const DEFAULT_CHATBOT: Chatbot = {
   ],
   use_help_pages: true,
   whatsapp: "",
-  whatsapp_message: "Hi Stancil! I have a question.",
+  whatsapp_message: "Hi The64Squares! I have a question.",
   allow_message: true,
   away_text: "Leave your question and we'll reply by email, usually within one working day.",
   ai_enabled: true,
@@ -280,7 +280,7 @@ export type Reply = {
   actions?: ("track" | "human")[]
 }
 
-const PRODUCT_WORDS = new Set(["bed", "desk", "chair", "storage", "furniture", "sofa", "bench", "toy", "box", "table", "show", "buy", "recommend", "suggest", "gift", "room", "price", "color", "set", "range", "collection"])
+const PRODUCT_WORDS = new Set(["chess", "board", "pieces", "piece", "clock", "staunton", "wooden", "magnetic", "travel", "book", "box", "table", "show", "buy", "recommend", "suggest", "gift", "room", "price", "color", "set", "range", "collection"])
 
 // How well a question fits: mostly "are the shopper's words in the question?", a little
 // "are they in the answer?", and a little "is that most of what the question is about?".
@@ -379,7 +379,7 @@ const callProvider = async (p: Provider, system: string, history: Turn[], questi
 
 const systemPrompt = (bot: Chatbot, k: Knowledge, faqs: Known[], products: Product[], contact: string) =>
   [
-    `You are "${bot.name}", the friendly helper on the website of Stancil (stancil.in), an Indian brand that makes character-led furniture for children.`,
+    `You are "${bot.name}", the friendly helper on the website of The64Squares (the64squares.in), an Indian brand that makes premium chess sets, boards, pieces and clocks, and runs online chess tournaments.`,
     "Answer in short, warm, simple sentences (at most 80 words). If the shopper writes in Hindi or Hinglish, answer the same way.",
     "Use ONLY the facts below. If the answer isn't in them, say you're not sure and offer to connect them with the team. Never make up prices, dates, discounts, stock, sizes or policies.",
     "Never ask for personal details. For the status of an order, tell them to press 'Track my order'. For anything you can't solve, set handover to true.",
@@ -425,7 +425,7 @@ export const askAi = async (c: MedusaContainer, bot: Chatbot, k: Knowledge, hist
   const products = ranked.length >= 4 ? ranked : [...ranked, ...k.products.filter((p) => !ranked.includes(p)).slice(0, 8 - ranked.length)]
   const page = await loadContactPage(c)
   const hours = page.panel.find((p) => p.type === "hours")?.value
-  const contact = [`Team email: ${page.panel.find((p) => p.type === "email")?.value || "draw@stancil.in"}`, hours ? `Team hours: ${hours.replace(/\n/g, "; ")}` : ""].filter(Boolean).join("\n")
+  const contact = [`Team email: ${page.panel.find((p) => p.type === "email")?.value || "hello@the64squares.in"}`, hours ? `Team hours: ${hours.replace(/\n/g, "; ")}` : ""].filter(Boolean).join("\n")
   const system = systemPrompt(bot, k, faqs, products, contact)
   const past = history.slice(-6).map((t) => ({ role: t.role, text: redact(t.text).slice(0, 600) }))
   const logger = c.resolve(ContainerRegistrationKeys.LOGGER)

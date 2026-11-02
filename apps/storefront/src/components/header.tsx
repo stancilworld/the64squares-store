@@ -32,10 +32,10 @@ export async function Header() {
             <MobileMenu categoryLinks={categoryLinks} aboutLinks={aboutLinks} menu={menu} />
           </Suspense>
 
-          <Link href="/" aria-label="Stancil home" className="ml-[15px] shrink-0 lg:ml-0">
+          <Link href="/" aria-label="The64Squares home" className="ml-[15px] shrink-0 lg:ml-0">
             <Image
               src="/brand/logo-header.webp"
-              alt="Stancil"
+              alt="The64Squares"
               width={215}
               height={240}
               priority
