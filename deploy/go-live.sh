@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Moves the store from the staging addresses to the real domain. Run once, as root:
-#   bash /opt/stancil/app/deploy/go-live.sh
+#   bash /opt/the64squares/app/deploy/go-live.sh
 #
 # After this:
 #   https://the64squares.in              the store
@@ -19,18 +19,18 @@ LIVE_API="${LIVE_API:-api.$LIVE_DOMAIN}"
 OLD_STORE="${OLD_STORE:-staging.$LIVE_DOMAIN}"
 OLD_API="${OLD_API:-api-staging.$LIVE_DOMAIN}"
 
-BASE=/opt/stancil
+BASE=/opt/the64squares
 APP="$BASE/app"
 ENV_FILE="$APP/apps/backend/.env"
-CONF=/etc/nginx/sites-available/stancil.conf
+CONF=/etc/nginx/sites-available/the64squares.conf
 
 say() { printf "\n\033[1;34m==> %s\033[0m\n" "$1"; }
 fail() { printf "\n\033[1;31m%s\033[0m\n" "$1"; exit 1; }
 
 [ "$(id -u)" = 0 ] || fail "Run this as root."
-[ -f "$ENV_FILE" ] || fail "Stancil is not installed here yet (no $ENV_FILE)."
+[ -f "$ENV_FILE" ] || fail "The64Squares is not installed here yet (no $ENV_FILE)."
 
-exec 9>/run/stancil-setup.lock
+exec 9>/run/the64squares-setup.lock
 flock -n 9 || fail "The setup or go-live is already running. Wait for it to finish, then run this again."
 
 command -v dig >/dev/null || { apt-get install -y -qq dnsutils >/dev/null; }
@@ -81,7 +81,7 @@ server {
   server_name $LIVE_DOMAIN;
 
   location / {
-    proxy_pass http://127.0.0.1:8000;
+    proxy_pass http://127.0.0.1:8100;
     proxy_http_version 1.1;
     proxy_set_header Host \$host;
     proxy_set_header X-Real-IP \$remote_addr;
@@ -112,7 +112,7 @@ server {
   }
 
   location / {
-    proxy_pass http://127.0.0.1:9000;
+    proxy_pass http://127.0.0.1:9100;
     proxy_http_version 1.1;
     proxy_set_header Host \$host;
     proxy_set_header X-Real-IP \$remote_addr;
@@ -140,7 +140,7 @@ say "SSL certificate for all addresses"
 # The certbot account made during setup is reused (it keeps any expiry-notice email given then).
 if [ -d /etc/letsencrypt/accounts ]; then EMAIL_ARG=(); else EMAIL_ARG=(--register-unsafely-without-email); fi
 if ! certbot --nginx --non-interactive --agree-tos "${EMAIL_ARG[@]}" --redirect \
-  --cert-name stancil-live --expand \
+  --cert-name the64squares-live --expand \
   -d "$LIVE_DOMAIN" -d "$WWW_DOMAIN" -d "$LIVE_API" -d "$OLD_STORE" -d "$OLD_API"; then
   restore_nginx
   fail "The SSL certificate could not be issued, so the old settings were put back and staging still works.
@@ -179,7 +179,7 @@ for url in "https://$LIVE_DOMAIN/" "https://$LIVE_API/health" "https://$LIVE_API
   [ "$code" = 200 ] || ok=no
 done
 
-printf "\n\033[1;32m================ Stancil is live ================\033[0m\n"
+printf "\n\033[1;32m================ The64Squares is live ================\033[0m\n"
 echo "Store:  https://$LIVE_DOMAIN"
 echo "Admin:  https://$LIVE_API/app   (same login as before)"
 echo "www.$LIVE_DOMAIN and $OLD_STORE now redirect to https://$LIVE_DOMAIN"

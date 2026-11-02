@@ -1,0 +1,17 @@
+[Unit]
+Description=The64Squares storefront (Next.js)
+After=network.target the64squares-backend.service
+
+[Service]
+Type=simple
+User=the64squares
+WorkingDirectory=/opt/the64squares/app/apps/storefront
+EnvironmentFile=/opt/the64squares/app/apps/storefront/.env.local
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /opt/the64squares/app/node_modules/next/dist/bin/next start -p 8100
+Restart=always
+RestartSec=5
+MemoryMax=1200M
+
+[Install]
+WantedBy=multi-user.target

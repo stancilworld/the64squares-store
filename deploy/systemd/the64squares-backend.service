@@ -1,0 +1,19 @@
+[Unit]
+Description=The64Squares API and admin (Medusa server)
+After=network.target postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=the64squares
+WorkingDirectory=/opt/the64squares/app/apps/backend/.medusa/server
+EnvironmentFile=/opt/the64squares/app/apps/backend/.medusa/server/.env
+Environment=NODE_ENV=production
+Environment=MEDUSA_WORKER_MODE=server
+Environment=PORT=9100
+ExecStart=/usr/bin/node /opt/the64squares/app/node_modules/@medusajs/cli/cli.js start
+Restart=always
+RestartSec=5
+MemoryMax=1500M
+
+[Install]
+WantedBy=multi-user.target

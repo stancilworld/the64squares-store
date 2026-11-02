@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Adds or changes the keys for payments, emails, Google sign-in and Delhivery. Run as root:
-#   bash /opt/stancil/app/deploy/set-keys.sh
+#   bash /opt/the64squares/app/deploy/set-keys.sh
 #
 # Easier: the main admin can do all of this in the admin, under Settings → Payments &
 # delivery → Keys. Keys saved there take priority over the ones set here.
@@ -11,9 +11,9 @@
 # Git and never in the admin. The API and worker restart at the end (about 30 seconds).
 set -euo pipefail
 
-BASE=/opt/stancil
+BASE=/opt/the64squares
 APP="$BASE/app"
-APP_USER=stancil
+APP_USER=the64squares
 ENV_FILE="$APP/apps/backend/.env"
 SERVER_ENV="$APP/apps/backend/.medusa/server/.env"
 
@@ -22,7 +22,7 @@ fail() { printf "\n\033[1;31m%s\033[0m\n" "$1"; exit 1; }
 note() { printf "    %s\n" "$1"; }
 
 [ "$(id -u)" = 0 ] || fail "Run this as root."
-[ -f "$ENV_FILE" ] || fail "Stancil is not installed here yet (no $ENV_FILE)."
+[ -f "$ENV_FILE" ] || fail "The64Squares is not installed here yet (no $ENV_FILE)."
 [ -f "$BASE/domains.env" ] && . "$BASE/domains.env"
 API_URL="$(grep -E '^MEDUSA_BACKEND_URL=' "$ENV_FILE" | cut -d= -f2- || true)"
 STORE_URL="$(grep -E '^STORE_CORS=' "$ENV_FILE" | cut -d= -f2- | cut -d, -f1 || true)"
@@ -89,7 +89,7 @@ ask RAZORPAY_WEBHOOK_SECRET "Razorpay Webhook Secret" secret "the secret you typ
 say "Emails (Resend)"
 note "resend.com → Domains → add the64squares.in and copy its DNS records into Hostinger; then API Keys → Create."
 ask RESEND_API_KEY "Resend API key" secret "starts with re_" '^re_[A-Za-z0-9_]+$'
-ask EMAIL_FROM "Send emails from" plain "e.g. Stancil <orders@the64squares.in>, on the domain you added in Resend" '^[^<>]*<?[^ <>@]+@[^ <>@]+\.[a-z]{2,}>?$'
+ask EMAIL_FROM "Send emails from" plain "e.g. The64Squares <orders@the64squares.in>, on the domain you added in Resend" '^[^<>]*<?[^ <>@]+@[^ <>@]+\.[a-z]{2,}>?$'
 
 say "Sign in with Google (optional)"
 note "console.cloud.google.com → APIs & Services → Credentials → Create OAuth client ID → Web application."
@@ -112,13 +112,13 @@ if [ -d "$(dirname "$SERVER_ENV")" ]; then
 fi
 
 say "Restarting the API and worker"
-systemctl restart stancil-backend stancil-worker
+systemctl restart the64squares-backend the64squares-worker
 for _ in $(seq 1 40); do
-  curl -sf http://127.0.0.1:9000/health >/dev/null && break
+  curl -sf http://127.0.0.1:9100/health >/dev/null && break
   sleep 3
 done
-if curl -sf http://127.0.0.1:9000/health >/dev/null; then
+if curl -sf http://127.0.0.1:9100/health >/dev/null; then
   say "Done. Check Settings → Payments & delivery in the admin: each key shows Connected."
 else
-  fail "The API didn't come back. Run: journalctl -u stancil-backend -n 50"
+  fail "The API didn't come back. Run: journalctl -u the64squares-backend -n 50"
 fi

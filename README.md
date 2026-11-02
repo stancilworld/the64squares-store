@@ -1,6 +1,6 @@
-# Stancil store
+# The64Squares store
 
-Stancil's ecommerce website: a **Medusa v2** commerce engine with a Shopify-like admin, and a **Next.js** storefront built from the Stancil designs.
+The64Squares' ecommerce website: a **Medusa v2** commerce engine with a Shopify-like admin, and a **Next.js** storefront. It started as a copy of the Stancil store and shares its checkout, accounts, admin and deployment.
 
 ```
 apps/
@@ -12,16 +12,13 @@ apps/
 
 | Area | Status |
 | --- | --- |
-| Store setup | India region, INR, prices include 18% GST, warehouse, free standard delivery |
-| Catalogue | Categories (Chairs, Tables, Storage, Shelves), Colour and Material options, Bella collection, 6 **sample** products |
-| Characters | Custom module: Bella (live), Ollie and Stella (coming soon), linked to products |
-| Homepage content | Custom module: slider, Why Stancil, featured collection, product row, newsletter |
-| Newsletter | Custom module + signup on the homepage, Subscribers page with CSV download |
-| Admin screens | Characters, Homepage, Subscribers, and a Character picker on every product |
-| Storefront | Header, footer, Home, Shop (filters, See More), Meet the gang, character pages, product page, cart |
-| Checkout | Razorpay + Cash on Delivery, pincode check (Delhivery when its token is set), order emails via Resend, customer accounts (email code, password, Google) |
-| Keys | Razorpay (test + live), Resend, Google, Delhivery keys: main admin enters them in Settings → Payments & delivery → Keys (encrypted with the server's JWT_SECRET + COOKIE_SECRET; changing those secrets means re-entering the keys), or on the server with deploy/set-keys.sh |
-| Not yet | Delhivery shipment booking from the admin, GST invoices |
+| Store setup | India region, INR, prices include 18% GST (confirm the rate for HSN 9504), warehouse, free standard delivery |
+| Catalogue | Categories (Chess Sets, Boards, Pieces, Clocks, Books, Accessories), Colour and Material options, Signature Collection, 6 **sample** products |
+| Content | Homepage, About us, help pages, blog (The64Squares Journal), menu and footer, all edited in the admin |
+| Checkout | Razorpay + Cash on Delivery, pincode check (Delhivery when its token is set), order emails via Resend, GST invoices, customer accounts (email code, password, Google) |
+| Admin | Staff roles (Admin / Moderator), activity log, scheduled publishing, mailbox, chat bot |
+| Keys | Razorpay, Resend, Google and Delhivery keys: the main admin (OWNER_EMAIL) enters them in Settings → Payments & delivery → Keys, or on the server with deploy/set-keys.sh |
+| Next | The64Squares design for the storefront, real products, then tournaments |
 
 ## Run it locally
 
@@ -31,77 +28,63 @@ Needs Node 22+, PostgreSQL 15+ and Redis.
 npm install
 
 # Backend
-cp apps/backend/.env.template apps/backend/.env      # then edit DATABASE_URL etc.
-createdb stancil
+cp apps/backend/.env.template apps/backend/.env      # then edit DATABASE_URL, OWNER_EMAIL etc.
+createdb the64squares
 cd apps/backend
-npx medusa db:migrate                                 # also runs the first-time Stancil setup
-npx medusa user -e you@the64squares.in -p 'a-strong-password'
+npx medusa db:migrate                                 # also runs the first-time store setup
+npx medusa user -e you@example.com -p 'a-strong-password'
 npm run dev                                           # http://localhost:9000/app
 
 # Storefront (new terminal)
 cd apps/storefront
-cp .env.template .env.local                           # paste the publishable key from
-                                                      # Admin > Settings > Publishable API Keys
+# .env.local needs MEDUSA_BACKEND_URL=http://localhost:9000 and the publishable key from
+# Admin > Settings > Publishable API Keys
 npm run dev                                           # http://localhost:8000
 ```
 
-## The heading font
+## Deploying to the VPS
 
-Headings use **LaiatheGreatBlondie**. Put the licensed file at
-`apps/storefront/public/fonts/LaiatheGreatBlondie.woff2` (or `.ttf`). Until it is there, a scaled
-stand-in font is shown.
+The store runs on the same Hostinger VPS as Stancil (KVM 2: 2 CPU, 8 GB), fully separated from it:
 
-## How content flows
+| | Stancil | The64Squares |
+| --- | --- | --- |
+| Folder and Linux user | `/opt/stancil`, `stancil` | `/opt/the64squares`, `the64squares` |
+| Services | backend + worker + storefront | `the64squares-backend`, `the64squares-worker`, `the64squares-storefront` |
+| Ports | 9000, 9001, 8000 | 9100, 9101, 8100 |
+| Database | PostgreSQL `stancil` | PostgreSQL `the64squares` |
+| Redis | database 0 | database 1 |
+| Web server file | `stancil.conf` | `the64squares.conf` |
 
-- Products, prices, stock, orders, discounts: Medusa admin.
-- Characters, homepage sections, subscribers: the Stancil pages in the admin sidebar.
-- The website caches store data for about a minute, so admin changes appear within a minute or two.
+Memory limits per service: backend 1.5 GB, worker 1 GB, storefront 1.2 GB. Builds run inside a 3.5 GB limit (deploy/build.sh) so a runaway build can never take memory from Stancil.
+
+First time (as root on the server, after adding a deploy key for this repo on GitHub as `/root/.ssh/t64_deploy`):
+
+```bash
+git clone git@github.com:stancilworld/the64squares-store.git /opt/the64squares/app
+OWNER_EMAIL=you@example.com SSL_EMAIL=you@example.com bash /opt/the64squares/app/deploy/setup-vps.sh
+```
+
+It runs first on staging addresses (https://staging.the64squares.in, admin at https://api-staging.the64squares.in/app), which need A records pointing at the server. It prints the admin password at the end.
+
+- Go live on the64squares.in: `bash /opt/the64squares/app/deploy/go-live.sh`
+- Update after pushing to GitHub: `bash /opt/the64squares/app/deploy/update.sh`
+- Keys: `bash /opt/the64squares/app/deploy/set-keys.sh`
+- Logs: `journalctl -u the64squares-backend -f` (same for the worker and storefront)
+- Uploaded images: `/opt/the64squares/uploads`
+- Backups (nightly, 14 days): `/opt/the64squares/backups`
+- Secrets: `/opt/the64squares/secrets.env` (root only)
 
 ## Custom code map
 
 | Path | What it is |
 | --- | --- |
-| `apps/backend/src/modules/character` | Character data model + service |
-| `apps/backend/src/modules/content` | Homepage content blocks |
+| `apps/backend/src/modules/content` | Page content blocks, help pages, chat and mailbox records |
+| `apps/backend/src/modules/blog` | Blog posts |
 | `apps/backend/src/modules/newsletter` | Newsletter subscribers |
-| `apps/backend/src/links/character-product.ts` | Character has many products |
+| `apps/backend/src/modules/razorpay`, `resend`, `otp-auth`, `google-auth` | Payments, email, sign-in |
 | `apps/backend/src/workflows/*` | Create / update / delete logic with automatic rollback |
-| `apps/backend/src/api/store/*` | Public routes: characters, content, newsletter |
-| `apps/backend/src/api/admin/*` | Admin routes + validation |
-| `apps/backend/src/admin/*` | Admin pages and the product Character widget |
+| `apps/backend/src/api/store/*`, `api/admin/*` | Public and admin routes |
+| `apps/backend/src/admin/*` | Admin pages and widgets |
 | `apps/backend/src/migration-scripts/initial-data-seed.ts` | First-run store setup and sample data |
 | `apps/storefront/src/lib/data.ts` | All storefront data fetching (cached) |
 | `apps/storefront/src/lib/cart.ts` | Cart server actions |
-
-## Deploying to the VPS
-
-Hostinger KVM 1, Ubuntu 24.04. Staging: https://staging.the64squares.in, admin at https://api-staging.the64squares.in/app.
-
-First time (as root on the server, after adding the deploy key on GitHub):
-
-```bash
-git clone git@github.com:<user>/stancil-store.git /opt/stancil/app
-SSL_EMAIL=you@example.com bash /opt/stancil/app/deploy/setup-vps.sh
-```
-
-The setup script installs Node 22, PostgreSQL, Redis, nginx and certbot. It creates the database and secrets, builds everything, runs three services and sets up HTTPS and nightly backups. It prints the admin password at the end. The services are `stancil-backend` (API + admin), `stancil-worker` (background jobs) and `stancil-storefront`.
-
-To update after pushing to GitHub: `bash /opt/stancil/app/deploy/update.sh`
-
-- Logs: `journalctl -u stancil-backend -f` (same for the worker and storefront)
-- Uploaded images: `/opt/stancil/uploads`
-- Backups: `/opt/stancil/backups`
-- Secrets: `/opt/stancil/secrets.env` (root only)
-
-## Editing the website (admin)
-
-Everything on the content pages is edited in the admin (api-staging.the64squares.in/app):
-
-- **Homepage**: banner, Why Stancil points, featured collection text and carousel pictures, newsletter.
-- **About us**: Who are we?, Meet our team photo, the Get in touch block.
-- **Blog**: Letters from Stancil posts (draft or published, pictures, author, date).
-- **Help pages**: Delivery & assembly, Returns & warranty, FAQs, Privacy, Terms, Contact.
-- **Characters** and **Subscribers** as before.
-
-Headings use Laia the Great Blondie, whose capital letters are drawn differently from small
-letters, so type headings with the capitalisation you want to see.
