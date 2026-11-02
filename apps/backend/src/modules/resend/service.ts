@@ -29,7 +29,7 @@ class ResendNotificationService extends AbstractNotificationProviderService {
     // Keys from the admin (Settings → Payments & delivery → Keys) or the server's .env.
     const keys = await getServiceKeys()
     const apiKey = keys.resendKey || this.options_.api_key
-    const from = notification.from?.trim() || keys.emailFrom || this.options_.from || "The 64 Squares <hello@the64squares.in>"
+    const from = notification.from?.trim() || keys.emailFrom || this.options_.from || "The 64 Squares <orders@the64squares.in>"
     // Replies (e.g. to an order confirmation) go to a real inbox, not the sending address.
     const own = (content as { reply_to?: unknown }).reply_to
     const replyTo = (typeof own === "string" && own) || keys.emailReplyTo || process.env.EMAIL_REPLY_TO || undefined

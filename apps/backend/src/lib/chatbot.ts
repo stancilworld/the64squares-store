@@ -425,7 +425,7 @@ export const askAi = async (c: MedusaContainer, bot: Chatbot, k: Knowledge, hist
   const products = ranked.length >= 4 ? ranked : [...ranked, ...k.products.filter((p) => !ranked.includes(p)).slice(0, 8 - ranked.length)]
   const page = await loadContactPage(c)
   const hours = page.panel.find((p) => p.type === "hours")?.value
-  const contact = [`Team email: ${page.panel.find((p) => p.type === "email")?.value || "hello@the64squares.in"}`, hours ? `Team hours: ${hours.replace(/\n/g, "; ")}` : ""].filter(Boolean).join("\n")
+  const contact = [`Team email: ${page.panel.find((p) => p.type === "email")?.value || "info@the64squares.in"}`, hours ? `Team hours: ${hours.replace(/\n/g, "; ")}` : ""].filter(Boolean).join("\n")
   const system = systemPrompt(bot, k, faqs, products, contact)
   const past = history.slice(-6).map((t) => ({ role: t.role, text: redact(t.text).slice(0, 600) }))
   const logger = c.resolve(ContainerRegistrationKeys.LOGGER)

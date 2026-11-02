@@ -33,7 +33,7 @@ import ContentModuleService from "../modules/content/service"
  * list arrives; edit or delete them in the admin.
  */
 
-const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "hello@the64squares.in"
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "info@the64squares.in"
 
 const COLOURS = ["Natural", "Walnut", "Ebony Black"]
 const MATERIALS = ["Sheesham Wood", "Boxwood", "Rosewood", "Vinyl", "ABS Plastic"]

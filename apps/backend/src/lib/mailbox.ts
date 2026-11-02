@@ -7,7 +7,7 @@ import { CONTENT_MODULE } from "../modules/content"
 import type ContentModuleService from "../modules/content/service"
 import { getServiceKeys, type MailboxCreds, type MailServer } from "./service-keys"
 
-// The shop's mailbox (e.g. hello@the64squares.in at GoDaddy) inside the admin (Messages → Email).
+// The shop's mailbox (e.g. info@the64squares.in at GoDaddy) inside the admin (Messages → Email).
 //
 // - Reading: every minute (jobs/sync-mailbox.ts, or "Check now") new emails in the Inbox
 //   and Sent folders are copied from the mail server (IMAP) into mail_message.

@@ -136,7 +136,7 @@ module.exports = defineConfig({
             options: {
               channels: ["email"],
               api_key: process.env.RESEND_API_KEY,
-              from: process.env.EMAIL_FROM || "Stancil <hello@the64squares.in>",
+              from: process.env.EMAIL_FROM || "Stancil <info@the64squares.in>",
               api_base: process.env.RESEND_API_BASE,
             },
           },

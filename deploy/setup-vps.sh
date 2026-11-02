@@ -13,7 +13,7 @@ set -euo pipefail
 STORE_DOMAIN="${STORE_DOMAIN:-staging.the64squares.in}"
 API_DOMAIN="${API_DOMAIN:-api-staging.the64squares.in}"
 OWNER_EMAIL="${OWNER_EMAIL:-}"
-SUPPORT_EMAIL="${SUPPORT_EMAIL:-hello@the64squares.in}"
+SUPPORT_EMAIL="${SUPPORT_EMAIL:-info@the64squares.in}"
 SSL_EMAIL="${SSL_EMAIL:-}"
 
 BASE=/opt/the64squares

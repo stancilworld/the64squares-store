@@ -49,7 +49,7 @@ const FIELD_TYPES: { value: FieldType; label: string }[] = [
 const WITH_OPTIONS: FieldType[] = ["select", "radio", "checkboxes"]
 
 const PANEL_TYPES: { value: PanelType; label: string; placeholder: string; hint: string }[] = [
-  { value: "email", label: "Email", placeholder: "hello@the64squares.in", hint: "Opens their email app." },
+  { value: "email", label: "Email", placeholder: "info@the64squares.in", hint: "Opens their email app." },
   { value: "phone", label: "Phone", placeholder: "+91 98765 43210", hint: "Tapping it calls on a phone." },
   { value: "whatsapp", label: "WhatsApp button", placeholder: "+91 98765 43210", hint: "Your WhatsApp number. Shows a green Chat button." },
   { value: "instagram", label: "Instagram", placeholder: "@the64squares.in or ", hint: "" },

@@ -30,7 +30,7 @@ import { useContextMenu, type MenuItem } from "./context-menu"
 import { formatWhen } from "./dates"
 import { BACKEND_URL, sdk } from "./sdk"
 
-// Messages → Email: the shop's mailbox (e.g. hello@the64squares.in) inside the admin, made to feel
+// Messages → Email: the shop's mailbox (e.g. info@the64squares.in) inside the admin, made to feel
 // like Gmail: folders on the left, a right-click menu on every conversation and email, quick
 // buttons when the mouse is over a row, ticking several at once, Undo, and keyboard keys.
 
@@ -1510,7 +1510,7 @@ export function MailInbox() {
       <Container className="flex flex-col gap-3 px-6 py-6">
         <Heading level="h2">Connect your shop inbox</Heading>
         <Text size="small" className="text-ui-fg-subtle">
-          See every email sent to your shop address (like hello@the64squares.in) right here, and reply from the admin. The main admin adds the
+          See every email sent to your shop address (like info@the64squares.in) right here, and reply from the admin. The main admin adds the
           inbox's email and password once, in Settings → Payments &amp; delivery → Keys → Shop inbox. Your webmail and phone app keep working
           as before.
         </Text>

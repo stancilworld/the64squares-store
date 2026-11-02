@@ -74,7 +74,7 @@ export const DEFAULT_CONTACT_PAGE: ContactPage = {
   intro: "Questions about an order, a chess set or a tournament? We'd love to hear from you.",
   panel_title: "We're here to help",
   panel: [
-    item("p_email", "email", "Email us", "hello@the64squares.in"),
+    item("p_email", "email", "Email us", "info@the64squares.in"),
     item("p_phone", "phone", "Call us", ""),
     item("p_whatsapp", "whatsapp", "WhatsApp", "", { button_label: "Chat on WhatsApp", message: "Hi The 64 Squares! I have a question." }),
     item("p_instagram", "instagram", "Instagram", ""),
@@ -94,7 +94,7 @@ export const DEFAULT_CONTACT_PAGE: ContactPage = {
     }),
     field("f_message", "textarea", "Message", { required: true, placeholder: "Tell us a little more…" }),
   ],
-  notify_email: "hello@the64squares.in",
+  notify_email: "info@the64squares.in",
   send_copy: true,
 }
 

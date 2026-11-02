@@ -44,7 +44,7 @@ export const PERMISSIONS: Permission[] = [
   { key: "customers.delete", group: "Customers & marketing", label: "Delete customers", description: "Remove customers and customer groups.", default: false },
   { key: "promotions.manage", group: "Customers & marketing", label: "Discounts & promotions", description: "See, create and change discount codes, promotions and campaigns.", default: false },
   { key: "messages.view", group: "Customers & marketing", label: "Read contact messages", description: "See messages sent with the Contact page form and mark them as answered.", default: true },
-  { key: "mailbox.view", group: "Customers & marketing", label: "Read & answer the email inbox", description: "See every email sent to the shop's mailbox (e.g. hello@the64squares.in) and reply from it.", default: false },
+  { key: "mailbox.view", group: "Customers & marketing", label: "Read & answer the email inbox", description: "See every email sent to the shop's mailbox (e.g. info@the64squares.in) and reply from it.", default: false },
   { key: "subscribers.view", group: "Customers & marketing", label: "View newsletter subscribers", description: "See the newsletter sign-up list.", default: false },
 
   // Website

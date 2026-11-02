@@ -1,6 +1,6 @@
 import { model } from "@medusajs/framework/utils"
 
-// One email in the shop's mailbox (e.g. hello@the64squares.in), copied from the mail server so the
+// One email in the shop's mailbox (e.g. info@the64squares.in), copied from the mail server so the
 // admin can show it (Messages → Email). `folder` is where it lives on the server; `uid` and
 // `uidvalidity` find it there again (to download attachments or mark it read).
 const MailMessage = model.define("mail_message", {
