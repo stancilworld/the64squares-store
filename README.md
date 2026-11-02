@@ -20,7 +20,7 @@ apps/
 | Admin | Staff roles (Admin / Moderator), activity log, scheduled publishing, mailbox, chat bot |
 | Keys | Razorpay, Resend, Google and Delhivery keys: the main admin (OWNER_EMAIL) enters them in Settings → Payments & delivery → Keys, or on the server with deploy/set-keys.sh |
 | Tournaments | Online and over-the-board events, free registration with a QR ticket (T64-XXXXXX), admin check-in and CSV export. Online events are always free to enter (Online Gaming Act 2025); paid entry is for offline events, paid at the venue |
-| Online play | Play a friend by link (/play) and live Arena tournaments (/tournaments/<handle>/arena): clocks, draw offers, PGN download, standings with streak bonus |
+| Online play | /play hub: Play online (rated pairing by Glicko-2 rating, leaderboard), Play the computer (Stockfish in the browser, 8 levels, hint and takeback), Play a friend by link, Arena tournaments. Board: drag or click, legal-move dots, highlights, sounds, themes, move replay; games survive closed tabs (return banner, claim win if the opponent leaves); game history and rematch |
 | Next | Real products, then the Android and iOS apps |
 
 ## Run it locally

@@ -1,0 +1,10 @@
+Chess piece artwork used on the64squares.in
+
+modern/   Based on the "cburnett" pieces by Colin M.L. Burnett, recoloured and shaded by
+          The 64 Squares. Licence: GNU GPL v2 or later (https://www.gnu.org/licenses/gpl-2.0.txt).
+          Source: https://github.com/lichess-org/lila/tree/master/public/piece/cburnett
+classic/  "cburnett" pieces by Colin M.L. Burnett. Licence: GNU GPL v2 or later.
+playful/  "rhosgfx" pieces by RhosGFX (https://rhosgfx.itch.io/). Licence: CC0 1.0 (public domain).
+
+The in-browser engine in /engine is Stockfish (stockfish.js by Nathan Rugg), GNU GPL v3:
+https://github.com/nmrugg/stockfish.js (see /engine/COPYING.txt).

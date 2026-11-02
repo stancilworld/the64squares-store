@@ -11,6 +11,7 @@ import { ColoursProvider } from "@/components/colours-provider"
 import { AnnouncementBar } from "@/components/announcement-bar"
 import { PreviewBar } from "@/components/preview-bar"
 import { ChatWidget } from "@/components/chat-widget"
+import { LiveGameBanner } from "@/components/play/live-game-banner"
 import { getChatbot, getColourPalette, getSiteNavigation } from "@/lib/data"
 import { ListProvider } from "@/lib/list"
 import { SITE_URL } from "@/lib/site"
@@ -42,6 +43,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />
+          <Suspense fallback={null}>
+            <LiveGameBanner />
+          </Suspense>
           {chatbot && (
             <Suspense fallback={null}>
               <ChatWidget config={chatbot} />

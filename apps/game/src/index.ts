@@ -2,10 +2,12 @@ import http from "node:http"
 import { Server, type Socket } from "socket.io"
 import { playerFromToken } from "./auth.js"
 import { config } from "./config.js"
-import { gamePgn, migrate, recentGamesFor } from "./db.js"
-import type { Color, Player } from "./game.js"
+import { gamePgn, leaderboard, liveGamesFor, migrate, ratingsFor, recentGamesFor } from "./db.js"
+import { type Color, type Game, type Player } from "./game.js"
+import { speedOf, type Speed } from "./glicko.js"
 import { GameManager } from "./manager.js"
 import { arenaStandings, registerArena, startArenas } from "./arena.js"
+import { registerSeek, SEEK_TIME_CONTROLS, seekCounts, startSeeking } from "./seek.js"
 
 type Ack = (res: Record<string, unknown>) => void
 
@@ -32,9 +34,35 @@ const server = http.createServer(async (req, res) => {
       const a = await arenaStandings(m[1])
       return a ? send(res, 200, JSON.stringify({ arena: a }), "application/json", origin) : send(res, 404, JSON.stringify({ error: "not-found" }), "application/json", origin)
     }
+    m = /^\/games\/([A-Za-z0-9]{6,20})\/status$/.exec(path)
+    if (m && req.method === "GET") {
+      const g = await manager.get(m[1])
+      if (!g) return send(res, 404, JSON.stringify({ error: "not-found" }), "application/json", origin)
+      const v = g.view(Date.now())
+      return send(res, 200, JSON.stringify({ id: v.id, status: v.status, mode: v.mode, white: v.white, black: v.black }), "application/json", origin)
+    }
     m = /^\/players\/(cus_[A-Za-z0-9]{6,40})\/games$/.exec(path)
     if (m && req.method === "GET") {
-      return send(res, 200, JSON.stringify({ games: await recentGamesFor(m[1]) }), "application/json", origin)
+      const before = url.searchParams.get("before")
+      const when = before && !Number.isNaN(Date.parse(before)) ? new Date(before) : undefined
+      const limit = Number(url.searchParams.get("limit")) || 20
+      return send(res, 200, JSON.stringify({ games: await recentGamesFor(m[1], limit, when) }), "application/json", origin)
+    }
+    m = /^\/players\/(cus_[A-Za-z0-9]{6,40})\/live$/.exec(path)
+    if (m && req.method === "GET") {
+      return send(res, 200, JSON.stringify({ games: await liveGamesFor(m[1]) }), "application/json", origin)
+    }
+    m = /^\/players\/(cus_[A-Za-z0-9]{6,40})\/ratings$/.exec(path)
+    if (m && req.method === "GET") {
+      return send(res, 200, JSON.stringify({ ratings: await ratingsFor(m[1]) }), "application/json", origin)
+    }
+    if (path === "/leaderboard" && req.method === "GET") {
+      const speed = (url.searchParams.get("speed") ?? "blitz") as Speed
+      if (!["bullet", "blitz", "rapid", "classical"].includes(speed)) return send(res, 400, JSON.stringify({ error: "bad-speed" }), "application/json", origin)
+      return send(res, 200, JSON.stringify({ speed, players: await leaderboard(speed) }), "application/json", origin)
+    }
+    if (path === "/lobby" && req.method === "GET") {
+      return send(res, 200, JSON.stringify({ playing: manager.liveCount(), seeking: seekCounts(), time_controls: SEEK_TIME_CONTROLS }), "application/json", origin)
     }
     send(res, 404, JSON.stringify({ error: "not-found" }), "application/json", origin)
   } catch (e) {
@@ -52,7 +80,43 @@ const io = new Server(server, {
 })
 
 const room = (id: string) => `game:${id}`
-const manager = new GameManager((view) => io.to(room(view.id)).emit("game:state", view))
+const manager = new GameManager((view) => {
+  io.to(room(view.id)).emit("game:state", view)
+  if (view.status === "finished" || view.status === "aborted") presence.delete(view.id)
+})
+
+// Rematch offers on finished games: game id → the player who offered.
+const rematches = new Map<string, string>()
+
+// Who of the two players has the game open. When one leaves and doesn't come back, the
+// other may claim the win (or a draw) after a short wait.
+type Seat = { sockets: Set<string>; goneAt: number | null }
+const presence = new Map<string, { w: Seat; b: Seat }>()
+const claimAfterMs = (g: Game) => (["bullet", "blitz"].includes(speedOf(g.r.initial_ms, g.r.increment_ms)) ? 30_000 : 60_000)
+
+const presenceView = (g: Game, now = Date.now()) => {
+  const p = presence.get(g.r.id)
+  const seat = (c: Color) => {
+    const s = p?.[c]
+    const online = !!s && s.sockets.size > 0
+    const since = s?.goneAt ?? g.r.started_at ?? now
+    return { online, gone_ms: online ? null : Math.max(0, now - since) }
+  }
+  return { id: g.r.id, w: seat("w"), b: seat("b"), claim_after_ms: claimAfterMs(g) }
+}
+
+const sendPresence = (g: Game) => {
+  if (g.r.status === "active") io.to(room(g.r.id)).emit("game:presence", presenceView(g))
+}
+
+const seatFor = (id: string, c: Color) => {
+  let p = presence.get(id)
+  if (!p) {
+    p = { w: { sockets: new Set(), goneAt: null }, b: { sockets: new Set(), goneAt: null } }
+    presence.set(id, p)
+  }
+  return p[c]
+}
 
 // Players are known from their play token; anyone may watch.
 io.use(async (socket, next) => {
@@ -94,7 +158,74 @@ io.on("connection", (socket) => {
     const g = await manager.get(id)
     if (!g) return ack({ ok: false, error: "not-found" })
     socket.join(room(id))
-    ack({ ok: true, game: g.view(Date.now()), you: me()?.id ?? null })
+    const player = me()
+    const colour = player ? g.colorOf(player.id) : null
+    if (colour && g.r.status === "active") {
+      const seat = seatFor(id, colour)
+      seat.sockets.add(socket.id)
+      seat.goneAt = null
+      ;(socket.data.seats ??= []).push([id, colour])
+      sendPresence(g)
+    }
+    ack({ ok: true, game: g.view(Date.now()), you: player?.id ?? null, presence: g.r.status === "active" ? presenceView(g) : null })
+  })
+
+  socket.on("game:claim", async (input: { id?: unknown; outcome?: unknown }, ack: unknown) => {
+    if (!guard(ack) || limited(socket) || !isId(input?.id)) return
+    const outcome = input.outcome === "draw" ? "draw" : "win"
+    const player = me()
+    if (!player) return ack({ ok: false, error: "sign-in" })
+    const g = await manager.get(input.id)
+    const colour = g ? g.colorOf(player.id) : null
+    if (!g || !colour || g.r.status !== "active") return ack({ ok: false, error: "not-active" })
+    const opp = presenceView(g)[colour === "w" ? "b" : "w"]
+    if (opp.online || (opp.gone_ms ?? 0) < claimAfterMs(g)) return ack({ ok: false, error: "not-yet" })
+    ack(await manager.act(input.id, (game, now) => game.claim(player.id, outcome, now)))
+  })
+
+  // Rematch: one side offers, the other accepts; colours swap.
+  socket.on("game:rematch", async (input: { id?: unknown; action?: unknown }, ack: unknown) => {
+    if (!guard(ack) || limited(socket) || !isId(input?.id)) return
+    const player = me()
+    if (!player) return ack({ ok: false, error: "sign-in" })
+    const g = await manager.get(input.id)
+    if (!g || g.r.status !== "finished" || !g.colorOf(player.id) || (g.r.mode !== "friend" && g.r.mode !== "online")) {
+      return ack({ ok: false, error: "not-available" })
+    }
+    const id = g.r.id
+    if (input.action === "decline") {
+      rematches.delete(id)
+      io.to(room(id)).emit("game:rematch", { id, by: null, declined: true })
+      return ack({ ok: true })
+    }
+    const by = rematches.get(id)
+    if (by && by !== player.id) {
+      rematches.delete(id)
+      if (manager.liveFor(g.r.white!.id).length || manager.liveFor(g.r.black!.id).length) return ack({ ok: false, error: "in-game" })
+      const next = await manager.createPaired(g.r.black!, g.r.white!, g.r.initial_ms, g.r.increment_ms, { mode: g.r.mode, rated: g.r.rated })
+      io.to(room(id)).emit("game:rematch", { id, game_id: next.r.id })
+      return ack({ ok: true, game_id: next.r.id })
+    }
+    rematches.set(id, player.id)
+    io.to(room(id)).emit("game:rematch", { id, by: player.id })
+    ack({ ok: true })
+  })
+
+  socket.on("computer:save", async (input: { colour?: unknown; level?: unknown; moves?: unknown; resigned?: unknown }, ack: unknown) => {
+    if (!guard(ack) || limited(socket)) return
+    const player = me()
+    if (!player) return ack({ ok: false, error: "sign-in" })
+    const colour = input?.colour === "b" ? "b" : "w"
+    ack(await manager.saveComputerGame(player, colour, Number(input?.level) || 1, input?.moves as string[], input?.resigned === true))
+  })
+
+  socket.on("disconnect", () => {
+    for (const [id, colour] of (socket.data.seats ?? []) as [string, Color][]) {
+      const seat = presence.get(id)?.[colour]
+      if (!seat || !seat.sockets.delete(socket.id) || seat.sockets.size > 0) continue
+      seat.goneAt = Date.now()
+      void manager.get(id).then((g) => g && sendPresence(g))
+    }
   })
 
   socket.on("game:accept", async (id: unknown, ack: unknown) => {
@@ -137,11 +268,13 @@ io.on("connection", (socket) => {
   })
 
   registerArena(io, socket, manager, me, limited)
+  registerSeek(io, socket, manager, me, limited)
 })
 
 const main = async () => {
   await migrate()
   await startArenas(io, manager)
+  startSeeking(io, manager)
   const restored = await manager.restore()
   server.listen(config.port, () => {
     console.log(`Game server on :${config.port} (${restored} live games restored)`)

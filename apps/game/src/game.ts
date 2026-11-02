@@ -17,12 +17,15 @@ export type Reason =
   | "agreement"
   | "aborted"
   | "no-start"
+  | "abandoned"
 
-export type Player = { id: string; name: string; rating?: number | null }
+export type Player = { id: string; name: string }
+
+export type Mode = "friend" | "arena" | "online" | "computer"
 
 export type GameRecord = {
   id: string
-  mode: "friend" | "arena"
+  mode: Mode
   tournament_id: string | null
   white: Player | null
   black: Player | null
@@ -41,6 +44,12 @@ export type GameRecord = {
   created_at: number
   started_at: number | null
   ended_at: number | null
+  // Rated games change both players' ratings; the change is stored when the game ends.
+  rated: boolean
+  white_rating: number | null
+  black_rating: number | null
+  white_diff: number | null
+  black_diff: number | null
 }
 
 // Each side's first move doesn't use its clock, but must come within this time.
@@ -232,6 +241,16 @@ export class Game {
     return true
   }
 
+  // The other side left and didn't come back: the one still here takes the win (or a draw).
+  claim(playerId: string, outcome: "win" | "draw", now: number) {
+    if (this.tick(now) || this.r.status !== "active" || this.ply < 2) return false
+    const color = this.colorOf(playerId)
+    if (!color) return false
+    if (outcome === "draw" || !this.canMate(color)) this.finish("1/2-1/2", "abandoned", now)
+    else this.finish(color === "w" ? "1-0" : "0-1", "abandoned", now)
+    return true
+  }
+
   // What players and spectators see.
   view(now: number) {
     const history = this.chess.history({ verbose: true })
@@ -241,8 +260,9 @@ export class Game {
       mode: this.r.mode,
       tournament_id: this.r.tournament_id,
       status: this.r.status,
-      white: this.r.white,
-      black: this.r.black,
+      white: this.r.white ? { ...this.r.white, rating: this.r.white_rating, diff: this.r.white_diff } : null,
+      black: this.r.black ? { ...this.r.black, rating: this.r.black_rating, diff: this.r.black_diff } : null,
+      rated: this.r.rated,
       fen: this.fen,
       moves: this.r.moves,
       last_move: last ? { from: last.from, to: last.to } : null,
@@ -263,13 +283,16 @@ export class Game {
   pgn() {
     const date = new Date(this.r.started_at ?? this.r.created_at).toISOString().slice(0, 10).replace(/-/g, ".")
     const tags = [
-      ["Event", this.r.mode === "arena" ? "The 64 Squares Arena" : "Casual game"],
+      ["Event", this.r.mode === "arena" ? "The 64 Squares Arena" : this.r.mode === "computer" ? "Game vs computer" : this.r.rated ? "Rated game" : "Casual game"],
       ["Site", "the64squares.in"],
       ["Date", date],
       ["White", this.r.white?.name ?? "?"],
       ["Black", this.r.black?.name ?? "?"],
       ["Result", this.r.result ?? "*"],
-      ["TimeControl", `${this.r.initial_ms / 1000}+${this.r.increment_ms / 1000}`],
+      ["TimeControl", this.r.initial_ms ? `${this.r.initial_ms / 1000}+${this.r.increment_ms / 1000}` : "-"],
+      ...(this.r.white_rating != null ? [["WhiteElo", String(this.r.white_rating)]] : []),
+      ...(this.r.black_rating != null ? [["BlackElo", String(this.r.black_rating)]] : []),
+      ...(this.r.reason ? [["Termination", this.r.reason]] : []),
     ]
     const body = this.r.moves.map((m, i) => (i % 2 === 0 ? `${i / 2 + 1}. ${m}` : m)).join(" ")
     return `${tags.map(([k, v]) => `[${k} "${v.replace(/"/g, "'")}"]`).join("\n")}\n\n${body} ${this.r.result ?? "*"}\n`

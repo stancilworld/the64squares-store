@@ -279,7 +279,7 @@ const pairNow = async (io: Server, manager: GameManager, a: Arena) => {
       { id: black.player_id, name: black.name },
       a.initial_ms,
       a.increment_ms,
-      a.t.id
+      { mode: "arena", tournamentId: a.t.id }
     )
     a.playing.set(white.player_id, g.r.id)
     a.playing.set(black.player_id, g.r.id)

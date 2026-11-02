@@ -1,25 +1,28 @@
 "use client"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { io } from "socket.io-client"
-import { GAME_URL, TIME_CONTROLS } from "@/lib/game-types"
+import { GAME_URL } from "@/lib/game-types"
+import { TimeControlPicker } from "./time-control-picker"
 
 const COLOURS = [
-  ["random", "Random"],
   ["w", "White"],
+  ["random", "Random"],
   ["b", "Black"],
 ] as const
 
-// Pick a time control and colour; creates the challenge and opens its page.
-export function NewGame({ token }: { token: string }) {
+// Play a friend: pick a time control and colour, then share the game's link.
+export function NewGame({ token }: { token: string | null }) {
   const router = useRouter()
-  const [tc, setTc] = useState("3+2")
+  const [tc, setTc] = useState("10+0")
   const [colour, setColour] = useState<(typeof COLOURS)[number][0]>("random")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const create = () => {
+    if (!token) return
     setBusy(true)
     setError(null)
     const s = io(GAME_URL, { path: "/game/socket.io", auth: { token }, transports: ["websocket", "polling"] })
@@ -38,48 +41,37 @@ export function NewGame({ token }: { token: string }) {
   }
 
   return (
-    <div className="rounded-md border border-rule p-6">
-      <h2 className="font-display h-sub">Play a friend</h2>
-      <p className="mt-1 text-[15px] text-muted">Create a game, then send the link. It starts when they accept.</p>
-      <fieldset className="mt-6">
-        <legend className="text-[14px] font-medium">Time control</legend>
-        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {TIME_CONTROLS.map((t) => (
-            <button
-              key={t.tc}
-              type="button"
-              aria-pressed={tc === t.tc}
-              onClick={() => setTc(t.tc)}
-              className={`rounded-md border px-3 py-3 text-left transition-colors ${tc === t.tc ? "border-black bg-black text-white" : "border-rule hover:border-black"}`}
-            >
-              <span className="block font-display text-[22px] leading-none">{t.tc}</span>
-              <span className={`mt-1 block text-[12px] ${tc === t.tc ? "text-white/80" : "text-muted"}`}>
-                {t.label}, {t.detail}
-              </span>
-            </button>
-          ))}
-        </div>
-      </fieldset>
-      <fieldset className="mt-6">
-        <legend className="text-[14px] font-medium">You play</legend>
-        <div className="mt-2 flex gap-2">
-          {COLOURS.map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={colour === value}
-              onClick={() => setColour(value)}
-              className={`h-[40px] flex-1 rounded-md border text-[14px] ${colour === value ? "border-black bg-black text-white" : "border-rule hover:border-black"}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-      <button type="button" disabled={busy} onClick={create} className="btn btn-solid mt-6 w-full disabled:opacity-60">
-        {busy ? "Creating…" : "Create game link"}
-      </button>
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-md border border-rule bg-white p-5">
+      <h1 className="font-display h-sub">Play a friend</h1>
+      <p className="mt-1 text-[14px] text-muted">Create a game and send the link. It starts when your friend accepts.</p>
+      <div className="mt-4">
+        <TimeControlPicker value={tc} onChange={setTc} />
+      </div>
+      <p className="mt-4 text-[13px] font-medium">I play</p>
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        {COLOURS.map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={colour === value}
+            onClick={() => setColour(value)}
+            className={`h-[40px] rounded-md border text-[14px] ${colour === value ? "border-velvet bg-maple-soft font-semibold" : "border-rule"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {token ? (
+        <button type="button" disabled={busy} onClick={create} className="btn btn-solid mt-5 h-[48px] w-full text-[16px] disabled:opacity-60">
+          {busy ? "Creating…" : "Create game link"}
+        </button>
+      ) : (
+        <Link href="/account?next=/play/friend" className="btn btn-solid mt-5 h-[48px] w-full">
+          Sign in to play
+        </Link>
+      )}
       {error && <p className="mt-3 text-[14px] text-love">{error}</p>}
+      <p className="mt-3 text-[12px] text-muted">Games with friends are casual: they don&apos;t change your rating.</p>
     </div>
   )
 }

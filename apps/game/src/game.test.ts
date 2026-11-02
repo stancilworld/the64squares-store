@@ -26,6 +26,11 @@ const make = (over: Partial<GameRecord> = {}) =>
     created_at: 0,
     started_at: null,
     ended_at: null,
+    rated: false,
+    white_rating: null,
+    black_rating: null,
+    white_diff: null,
+    black_diff: null,
     ...over,
   })
 
@@ -156,4 +161,29 @@ test("a waiting challenge can be withdrawn by its creator only", () => {
   assert.equal(g.abort(B.id, 1), false)
   assert.equal(g.abort(W.id, 1), true)
   assert.equal(g.r.status, "aborted")
+})
+
+test("claiming a win after the opponent left", () => {
+  const g = make()
+  g.start(0)
+  play(g, [
+    [W.id, "e2e4", 1000],
+    [B.id, "e7e5", 2000],
+  ])
+  assert.equal(g.claim("cus_x", "win", 3000), false)
+  assert.equal(g.claim(W.id, "win", 3000), true)
+  assert.equal(g.r.result, "1-0")
+  assert.equal(g.r.reason, "abandoned")
+})
+
+test("claiming a draw, and no claim before both sides moved", () => {
+  const g = make()
+  g.start(0)
+  assert.equal(g.claim(W.id, "win", 1000), false)
+  play(g, [
+    [W.id, "d2d4", 1000],
+    [B.id, "d7d5", 2000],
+  ])
+  assert.equal(g.claim(B.id, "draw", 3000), true)
+  assert.equal(g.r.result, "1/2-1/2")
 })

@@ -4,41 +4,31 @@ import { Chess, type Square } from "chess.js"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
-import { Chessboard } from "react-chessboard"
 import { io, type Socket } from "socket.io-client"
-import { type Colour, GAME_URL, type GameState, resultText } from "@/lib/game-types"
-
-const DARK = "#8b5a3c"
-const LIGHT = "#ecd9b6"
-const PROMOTIONS = [
-  ["q", "Queen"],
-  ["r", "Rook"],
-  ["b", "Bishop"],
-  ["n", "Knight"],
-] as const
+import { Board, type Colour } from "@/components/chess/board"
+import { material } from "@/components/chess/material"
+import { MovePanel } from "@/components/chess/move-panel"
+import { PlayerBar } from "@/components/chess/player-bar"
+import { PlayLayout } from "@/components/chess/play-layout"
+import { replay, START_FEN } from "@/lib/chess/replay"
+import { playSound, soundForSan } from "@/lib/chess/sounds"
+import { GAME_URL, type GameState, LIVE_KEY, type Presence, resultText, SPEED_LABEL, speedOf, tcText } from "@/lib/game-types"
 
 type Props = { id: string; token: string | null; meId: string | null }
+type Pending = { from: Square; to: Square; promotion?: "q" | "r" | "b" | "n" }
 
 const noSubscribe = () => () => {}
-
-const fmt = (ms: number) => {
-  const s = Math.max(0, ms) / 1000
-  if (s < 10) return s.toFixed(1)
-  const m = Math.floor(s / 60)
-  const r = Math.floor(s % 60)
-  return `${m}:${String(r).padStart(2, "0")}`
-}
-
-function Clock({ ms, running, low }: { ms: number; running: boolean; low: boolean }) {
-  return (
-    <span
-      className={`min-w-[96px] rounded-md px-3 py-1.5 text-right font-mono text-[22px] tabular-nums ${
-        running ? (low ? "bg-love text-white" : "bg-velvet text-white") : "bg-linen text-black"
-      }`}
-    >
-      {fmt(ms)}
-    </span>
-  )
+const store = {
+  set: (k: string, v: string) => {
+    try {
+      window.localStorage.setItem(k, v)
+    } catch {}
+  },
+  clear: (k: string, only?: string) => {
+    try {
+      if (!only || window.localStorage.getItem(k) === only) window.localStorage.removeItem(k)
+    } catch {}
+  },
 }
 
 export function GameView({ id, token, meId }: Props) {
@@ -46,40 +36,53 @@ export function GameView({ id, token, meId }: Props) {
   const socket = useRef<Socket | null>(null)
   const [game, setGame] = useState<GameState | null>(null)
   const [receivedAt, setReceivedAt] = useState(0)
+  const [presence, setPresence] = useState<(Presence & { at: number }) | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [selected, setSelected] = useState<Square | null>(null)
-  const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null)
+  const [pending, setPending] = useState<Pending | null>(null)
+  const [viewPly, setViewPly] = useState<number | null>(null) // null: follow the game
+  const [flipped, setFlipped] = useState(false)
   const [confirmResign, setConfirmResign] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [rematch, setRematch] = useState<{ by: string | null; declined?: boolean } | null>(null)
   // The time the clocks are drawn at, moved on by a timer while a clock runs.
   const [now, setNow] = useState(0)
   // The next arena game, opened after a short pause so the result can be seen.
   const [nextGame, setNextGame] = useState<string | null>(null)
   const [nextIn, setNextIn] = useState(3)
+  const link = useSyncExternalStore(noSubscribe, () => window.location.href, () => "")
 
   const apply = useCallback((g: GameState) => {
     const t = performance.now()
     setGame(g)
     setReceivedAt(t)
     setNow(t)
-    setSelected(null)
+    setPending(null)
   }, [])
 
   useEffect(() => {
     const s = io(GAME_URL, { path: "/game/socket.io", auth: token ? { token } : {}, transports: ["websocket", "polling"] })
     socket.current = s
     const watch = () =>
-      s.emit("game:watch", id, (res: { ok: boolean; game?: GameState; error?: string }) => {
-        if (res.ok && res.game) apply(res.game)
-        else setError(res.error === "not-found" ? "This game doesn't exist." : "Couldn't load the game.")
+      s.emit("game:watch", id, (res: { ok: boolean; game?: GameState; presence?: Presence | null; error?: string }) => {
+        if (res.ok && res.game) {
+          apply(res.game)
+          setPresence(res.presence ? { ...res.presence, at: performance.now() } : null)
+          setNotice(null)
+        } else setError(res.error === "not-found" ? "This game doesn't exist." : "Couldn't load the game.")
       })
     s.on("connect", watch)
     s.on("game:state", (g: GameState) => g.id === id && apply(g))
+    s.on("game:presence", (p: Presence) => p.id === id && setPresence({ ...p, at: performance.now() }))
+    s.on("game:rematch", (r: { id: string; by?: string | null; game_id?: string; declined?: boolean }) => {
+      if (r.id !== id) return
+      if (r.game_id) router.push(`/play/${r.game_id}`)
+      else setRematch({ by: r.by ?? null, declined: r.declined })
+    })
     // In an arena the next pairing arrives as soon as this game ends.
     s.on("arena:paired", (p: { game_id: string }) => p.game_id !== id && setNextGame(p.game_id))
     s.on("connect_error", () => setNotice("Reconnecting…"))
-    s.io.on("reconnect", () => setNotice(null))
+    s.on("disconnect", () => setNotice("Connection lost. Reconnecting…"))
     return () => {
       s.disconnect()
     }
@@ -95,113 +98,103 @@ export function GameView({ id, token, meId }: Props) {
     }
   }, [nextGame, router])
 
-  // Redraw the clocks while one is running.
+  // Redraw the clocks (and the "left the game" countdown) while the game runs.
+  const active = game?.status === "active"
   useEffect(() => {
-    if (!game || game.status !== "active") return
+    if (!active) return
     const t = setInterval(() => setNow(performance.now()), 100)
     return () => clearInterval(t)
-  }, [game])
-
-  // The page address, known only in the browser.
-  const link = useSyncExternalStore(noSubscribe, () => window.location.href, () => "")
+  }, [active])
 
   const myColour: Colour | null = game && meId ? (game.white?.id === meId ? "w" : game.black?.id === meId ? "b" : null) : null
-  const orientation = myColour === "b" ? "black" : "white"
-  const chess = useMemo(() => (game ? new Chess(game.fen) : null), [game])
-  const myTurn = !!game && game.status === "active" && game.turn === myColour
+
+  // Remember a live game in this browser, so the site can offer the way back to it.
+  useEffect(() => {
+    if (!game || !myColour) return
+    if (game.status === "active") store.set(LIVE_KEY, game.id)
+    else if (game.status === "finished" || game.status === "aborted") store.clear(LIVE_KEY, game.id)
+  }, [game, myColour])
+
+  const plies = useMemo(() => replay(game?.moves ?? []), [game?.moves])
+  const latest = plies.length - 1
+  const following = viewPly == null || viewPly >= latest
+  const shownPly = following ? latest : viewPly
+
+  // The position on the board, including our own move while the server confirms it.
+  const optimistic = useMemo(() => {
+    if (!pending || !game) return null
+    try {
+      const c = new Chess(game.fen)
+      const m = c.move(pending)
+      return { fen: c.fen(), san: m.san, from: m.from, to: m.to }
+    } catch {
+      return null
+    }
+  }, [pending, game])
+
+  const fen = following && optimistic ? optimistic.fen : shownPly >= 0 ? plies[shownPly]?.fen ?? START_FEN : START_FEN
+  const lastMove = following && optimistic ? { from: optimistic.from, to: optimistic.to } : shownPly >= 0 ? plies[shownPly] ?? null : null
+
+  // Sounds: for every new move shown, and when the game starts or ends.
+  const shownCount = useRef<number | null>(null)
+  const count = (following ? plies.length + (optimistic ? 1 : 0) : shownPly + 1) || 0
+  useEffect(() => {
+    const before = shownCount.current
+    shownCount.current = count
+    if (before == null || before === count) return
+    const san = following && optimistic ? optimistic.san : plies[count - 1]?.san
+    if (count > 0) playSound(soundForSan(san))
+  }, [count, following, optimistic, plies])
+  const statusSeen = useRef<string | null>(null)
+  useEffect(() => {
+    if (!game) return
+    const before = statusSeen.current
+    statusSeen.current = game.status
+    if (before === "waiting" && game.status === "active") playSound("start")
+    if (before === "active" && (game.status === "finished" || game.status === "aborted")) playSound("end")
+  }, [game])
+
+  const elapsed = Math.max(0, now - receivedAt)
+  const clockOf = (c: Colour) => (game ? Math.max(0, game.clock_running === c ? game.clocks[c] - elapsed : game.clocks[c]) : 0)
+  const myClock = myColour ? clockOf(myColour) : Infinity
+  const warned = useRef(false)
+  useEffect(() => {
+    if (!active || !game?.clock_running || game.clock_running !== myColour) return
+    if (myClock < 10_000 && !warned.current) {
+      warned.current = true
+      playSound("lowtime")
+    }
+  }, [active, game?.clock_running, myColour, myClock])
 
   const emit = <T,>(event: string, payload: unknown) =>
     new Promise<T>((ok) => socket.current?.emit(event, payload, (res: T) => ok(res)))
 
-  const send = async (from: Square, to: Square, promo?: string) => {
-    if (!game) return
-    const res = await emit<{ ok: boolean; error?: string }>("game:move", { id, uci: `${from}${to}${promo ?? ""}`, ply: game.moves.length })
-    if (!res.ok && res.error !== "stale") setNotice(res.error === "illegal" ? "That move isn't allowed." : null)
-  }
-
-  const isPromotion = (from: Square, to: Square) => {
-    const p = chess?.get(from)
-    return !!p && p.type === "p" && (to[1] === "8" || to[1] === "1")
-  }
-
-  const tryMove = (from: Square, to: Square) => {
-    if (!chess || !myTurn) return false
-    const legal = chess.moves({ square: from, verbose: true }).some((m) => m.to === to)
-    if (!legal) return false
-    if (isPromotion(from, to)) {
-      setPromotion({ from, to })
-      return false
-    }
-    void send(from, to)
+  const onMove = (from: Square, to: Square, promotion?: "q" | "r" | "b" | "n") => {
+    if (!game) return false
+    setPending({ from, to, promotion })
+    setViewPly(null)
+    void emit<{ ok: boolean; error?: string }>("game:move", { id, uci: `${from}${to}${promotion ?? ""}`, ply: game.moves.length }).then((res) => {
+      if (!res.ok) {
+        setPending(null)
+        if (res.error === "illegal") setNotice("That move isn't allowed.")
+      }
+    })
     return true
   }
 
-  const onSquareClick = (square: Square) => {
-    if (!chess || !myTurn) return
-    const piece = chess.get(square)
-    if (selected && selected !== square && tryMove(selected, square)) {
-      setSelected(null)
-      return
-    }
-    setSelected(piece && piece.color === myColour ? square : null)
-  }
-
-  const squareStyles = useMemo(() => {
-    const st: Record<string, React.CSSProperties> = {}
-    if (game?.last_move) {
-      st[game.last_move.from] = { background: "rgba(176, 138, 78, 0.45)" }
-      st[game.last_move.to] = { background: "rgba(176, 138, 78, 0.6)" }
-    }
-    if (chess && game?.in_check) {
-      const king = chess.board().flat().find((p) => p && p.type === "k" && p.color === game.turn)
-      if (king) st[king.square] = { ...st[king.square], boxShadow: "inset 0 0 0 4px #b3261e" }
-    }
-    if (chess && selected) {
-      st[selected] = { ...st[selected], background: "rgba(31, 58, 43, 0.45)" }
-      for (const m of chess.moves({ square: selected, verbose: true })) {
-        st[m.to] = {
-          ...st[m.to],
-          backgroundImage: m.captured
-            ? "radial-gradient(transparent 58%, rgba(31,58,43,0.55) 60%)"
-            : "radial-gradient(rgba(31,58,43,0.5) 22%, transparent 24%)",
-        }
-      }
-    }
-    return st
-  }, [game, chess, selected])
+  const goTo = useCallback((p: number) => setViewPly(p >= latest ? null : p), [latest])
 
   if (error) {
     return (
       <div className="py-16 text-center">
         <h1 className="font-display h-page">{error}</h1>
         <Link href="/play" className="btn btn-solid mt-6">
-          Start a new game
+          Back to Play
         </Link>
       </div>
     )
   }
   if (!game) return <p className="py-16 text-center text-muted">Loading the game…</p>
-
-  const elapsed = Math.max(0, now - receivedAt)
-  const clockOf = (c: Colour) => (game.clock_running === c ? game.clocks[c] - elapsed : game.clocks[c])
-  const firstMoveLeft = game.first_move_deadline ? game.first_move_deadline - game.server_now - elapsed : null
-  const top: Colour = orientation === "white" ? "b" : "w"
-  const bottom: Colour = top === "w" ? "b" : "w"
-  const nameOf = (c: Colour) => (c === "w" ? game.white : game.black)?.name ?? "Waiting for opponent"
-  const over = game.status === "finished" || game.status === "aborted"
-  const rows: [string, string | undefined][] = []
-  for (let i = 0; i < game.moves.length; i += 2) rows.push([game.moves[i], game.moves[i + 1]])
-
-  const playerBar = (c: Colour) => (
-    <div className="flex items-center justify-between gap-3 py-2">
-      <div className="flex min-w-0 items-center gap-2">
-        <span aria-hidden="true" className={`h-3.5 w-3.5 shrink-0 rounded-full border border-black/30 ${c === "w" ? "bg-white" : "bg-black"}`} />
-        <span className="truncate text-[15px] font-medium">{nameOf(c)}</span>
-        {game.draw_offer === c && <span className="rounded bg-maple-soft px-2 py-0.5 text-[12px]">offers a draw</span>}
-      </div>
-      <Clock ms={clockOf(c)} running={game.clock_running === c} low={clockOf(c) < 20_000} />
-    </div>
-  )
 
   if (game.status === "waiting") {
     const mine = game.white?.id === meId || game.black?.id === meId
@@ -209,7 +202,7 @@ export function GameView({ id, token, meId }: Props) {
     return (
       <div className="mx-auto max-w-[560px] py-6 text-center">
         <p className="text-[14px] text-muted">
-          {game.initial_ms / 60000}+{game.increment_ms / 1000} · {game.white ? "Challenger plays white" : "Challenger plays black"}
+          {tcText(game.initial_ms, game.increment_ms)} · {game.white ? "Challenger plays white" : "Challenger plays black"}
         </p>
         {mine ? (
           <>
@@ -266,168 +259,212 @@ export function GameView({ id, token, meId }: Props) {
     )
   }
 
-  return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)] lg:gap-10">
-      <div className="min-w-0">
-        {playerBar(top)}
-        <div className="relative">
-          <Chessboard
-            options={{
-              id: `game-${id}`,
-              position: game.fen,
-              boardOrientation: orientation,
-              allowDragging: myTurn,
-              onPieceDrop: ({ sourceSquare, targetSquare }) => !!targetSquare && tryMove(sourceSquare as Square, targetSquare as Square),
-              onSquareClick: ({ square }) => onSquareClick(square as Square),
-              darkSquareStyle: { backgroundColor: DARK },
-              lightSquareStyle: { backgroundColor: LIGHT },
-              squareStyles,
-              animationDurationInMs: 150,
-            }}
-          />
-          {promotion && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40">
-              <div role="dialog" aria-label="Promote to" className="rounded-md bg-white p-4 text-center shadow-lg">
-                <p className="text-[14px] font-medium">Promote to</p>
-                <div className="mt-3 flex gap-2">
-                  {PROMOTIONS.map(([p, label]) => (
-                    <button
-                      key={p}
-                      type="button"
-                      className="btn btn-outline h-[44px] px-3"
-                      onClick={() => {
-                        void send(promotion.from, promotion.to, p)
-                        setPromotion(null)
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <button type="button" className="mt-3 text-[13px] text-muted underline" onClick={() => setPromotion(null)}>
-                  Cancel
+  const over = game.status === "finished" || game.status === "aborted"
+  const orientation: "white" | "black" = (myColour === "b") !== flipped ? "black" : "white"
+  const top: Colour = orientation === "white" ? "b" : "w"
+  const bottom: Colour = top === "w" ? "b" : "w"
+  const mat = material(fen)
+  const firstMoveLeft = game.first_move_deadline ? game.first_move_deadline - game.server_now - elapsed : null
+  const myTurn = active && game.turn === myColour
+  const opp: Colour | null = myColour ? (myColour === "w" ? "b" : "w") : null
+  const oppGone = presence && opp && !presence[opp].online && presence[opp].gone_ms != null ? presence[opp].gone_ms! + (now - presence.at) : null
+  const claimIn = oppGone != null && presence ? Math.max(0, presence.claim_after_ms - oppGone) : null
+  const hasClock = game.initial_ms > 0
+  const speed = speedOf(game.initial_ms, game.increment_ms)
+
+  const bar = (c: Colour) => {
+    const p = c === "w" ? game.white : game.black
+    const gone = active && presence && !presence[c].online && c !== myColour
+    return (
+      <PlayerBar
+        name={p?.name ?? "Waiting…"}
+        colour={c}
+        rating={p?.rating}
+        diff={over ? p?.diff : null}
+        isBot={p?.id === "computer"}
+        taken={mat.taken[c]}
+        lead={c === "w" ? mat.lead : -mat.lead}
+        clock={hasClock ? { ms: clockOf(c), running: game.clock_running === c } : null}
+        note={gone && claimIn != null ? "Left the game" : game.draw_offer === c && active ? <span className="text-velvet">Offers a draw</span> : null}
+      />
+    )
+  }
+
+  const btn = "btn h-[42px] flex-1 px-3 text-[14px]"
+  const statusCard = over ? (
+    <div className="rounded-md bg-velvet p-5 text-white">
+      <p className="font-display h-sub">{game.result === "1/2-1/2" ? "½–½" : game.result ?? "Aborted"}</p>
+      <p className="mt-1 text-[15px] text-maple-soft">{resultText(game)}</p>
+      {game.rated && myColour && (game[myColour === "w" ? "white" : "black"]?.diff ?? null) != null && (
+        <p className="mt-1 text-[14px] text-maple">
+          Your {SPEED_LABEL[speed].toLowerCase()} rating: {(game[myColour === "w" ? "white" : "black"]?.rating ?? 0) + (game[myColour === "w" ? "white" : "black"]?.diff ?? 0)} (
+          {(game[myColour === "w" ? "white" : "black"]?.diff ?? 0) >= 0 ? "+" : ""}
+          {game[myColour === "w" ? "white" : "black"]?.diff})
+        </p>
+      )}
+      {game.mode === "arena" && myColour && (
+        <p className="mt-2 text-[13px] text-maple">
+          {nextGame ? `Next game in ${Math.max(nextIn, 1)}…` : "Stay on this page and your next arena game starts by itself."}
+        </p>
+      )}
+      {rematch?.by && rematch.by !== meId && <p className="mt-2 text-[14px] font-medium text-maple">Your opponent wants a rematch.</p>}
+      {rematch?.declined && <p className="mt-2 text-[13px] text-maple">Rematch declined.</p>}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {myColour && game.status === "finished" && (game.mode === "online" || game.mode === "friend") && (
+          <>
+            <button
+              type="button"
+              disabled={rematch?.by === meId}
+              className="btn btn-light h-[42px] disabled:opacity-60"
+              onClick={async () => {
+                const res = await emit<{ ok: boolean; error?: string }>("game:rematch", { id, action: "offer" })
+                if (!res.ok) setNotice(res.error === "in-game" ? "One of you is already in another game." : "Rematch isn't available.")
+              }}
+            >
+              {rematch?.by === meId ? "Rematch offered…" : rematch?.by ? "Accept rematch" : "Rematch"}
+            </button>
+            {rematch?.by && rematch.by !== meId && (
+              <button type="button" className="btn h-[42px] border border-white/40 text-white" onClick={() => emit("game:rematch", { id, action: "decline" })}>
+                Decline
+              </button>
+            )}
+          </>
+        )}
+        {game.mode === "arena" && game.tournament_id ? (
+          <Link href={`/tournaments/${game.tournament_id}/arena`} className="btn btn-light h-[42px]">
+            Arena standings
+          </Link>
+        ) : game.mode === "computer" ? (
+          <Link href="/play/computer" className="btn btn-light h-[42px]">
+            Play the computer
+          </Link>
+        ) : (
+          <Link href={game.mode === "online" ? "/play/online" : "/play"} className="btn h-[42px] border border-white/40 text-white hover:bg-white/10">
+            New game
+          </Link>
+        )}
+        {game.status === "finished" && (
+          <a href={`${GAME_URL}/game/games/${id}.pgn`} className="btn h-[42px] border border-white/40 text-white hover:bg-white/10" download>
+            PGN
+          </a>
+        )}
+      </div>
+    </div>
+  ) : (
+    <div className="rounded-md border border-rule bg-white p-4">
+      <p className="text-[15px] font-medium">
+        {firstMoveLeft != null && myTurn
+          ? `Your first move: ${Math.max(0, Math.ceil(firstMoveLeft / 1000))} s left`
+          : myColour
+            ? myTurn
+              ? "Your move"
+              : "Waiting for your opponent…"
+            : `${game.turn === "w" ? "White" : "Black"} to move`}
+      </p>
+      {oppGone != null && claimIn != null && (
+        <div className="mt-3 rounded-md bg-maple-soft p-3 text-[14px]">
+          {claimIn > 0 ? (
+            <p>
+              Your opponent left the game. If they don&apos;t return, you can claim the win in <b>{Math.ceil(claimIn / 1000)} s</b>.
+            </p>
+          ) : (
+            <>
+              <p>Your opponent left the game.</p>
+              <div className="mt-2 flex gap-2">
+                <button type="button" className={`${btn} btn-solid`} onClick={() => emit("game:claim", { id, outcome: "win" })}>
+                  Claim victory
+                </button>
+                <button type="button" className={`${btn} btn-outline`} onClick={() => emit("game:claim", { id, outcome: "draw" })}>
+                  Call it a draw
                 </button>
               </div>
-            </div>
+            </>
           )}
         </div>
-        {playerBar(bottom)}
-      </div>
-
-      <aside className="flex min-w-0 flex-col gap-4">
-        {over ? (
-          <div className="rounded-md bg-velvet p-5 text-white">
-            <p className="font-display h-sub">{game.result ?? "Aborted"}</p>
-            <p className="mt-1 text-[15px] text-maple-soft">{resultText(game)}</p>
-            {game.mode === "arena" && myColour && (
-              <p className="mt-2 text-[13px] text-maple">
-                {nextGame ? `Next game in ${Math.max(nextIn, 1)}…` : "Stay on this page and your next arena game starts by itself."}
-              </p>
-            )}
-            <div className="mt-4 flex flex-wrap gap-2">
-              {game.mode === "arena" && game.tournament_id ? (
-                <Link href={`/tournaments/${game.tournament_id}/arena`} className="btn btn-light">
-                  Arena standings
-                </Link>
-              ) : (
-                <Link href="/play" className="btn btn-light">
-                  New game
-                </Link>
-              )}
-              {game.status === "finished" && (
-                <a href={`${GAME_URL}/game/games/${id}.pgn`} className="btn border border-white/40 text-white hover:bg-white/10" download>
-                  Download PGN
-                </a>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-md border border-rule p-4">
-            <p className="text-[15px]">
-              {firstMoveLeft != null && myTurn
-                ? `Your first move: ${Math.max(0, Math.ceil(firstMoveLeft / 1000))} s left`
-                : myColour
-                  ? myTurn
-                    ? "Your move"
-                    : "Waiting for your opponent's move"
-                  : `${game.turn === "w" ? "White" : "Black"} to move`}
-            </p>
-            {myColour && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {game.moves.length < 2 ? (
-                  <button type="button" className="btn btn-outline h-[40px]" onClick={() => emit("game:abort", id)}>
-                    Abort
-                  </button>
-                ) : (
-                  <>
-                    {game.draw_offer && game.draw_offer !== myColour ? (
-                      <>
-                        <button type="button" className="btn btn-solid h-[40px]" onClick={() => emit("game:draw", { id, action: "accept" })}>
-                          Accept draw
-                        </button>
-                        <button type="button" className="btn btn-outline h-[40px]" onClick={() => emit("game:draw", { id, action: "decline" })}>
-                          Decline
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={game.draw_offer === myColour}
-                        className="btn btn-outline h-[40px] disabled:opacity-50"
-                        onClick={() => emit("game:draw", { id, action: "offer" })}
-                      >
-                        {game.draw_offer === myColour ? "Draw offered" : "Offer a draw"}
-                      </button>
-                    )}
-                    {confirmResign ? (
-                      <>
-                        <button
-                          type="button"
-                          className="btn h-[40px] bg-love text-white"
-                          onClick={() => {
-                            void emit("game:resign", id)
-                            setConfirmResign(false)
-                          }}
-                        >
-                          Yes, resign
-                        </button>
-                        <button type="button" className="btn btn-outline h-[40px]" onClick={() => setConfirmResign(false)}>
-                          Keep playing
-                        </button>
-                      </>
-                    ) : (
-                      <button type="button" className="btn btn-outline h-[40px]" onClick={() => setConfirmResign(true)}>
-                        Resign
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-            {notice && <p className="mt-3 text-[13px] text-love">{notice}</p>}
-          </div>
-        )}
-
-        <div className="rounded-md border border-rule">
-          <p className="border-b border-rule px-4 py-2.5 text-[13px] font-medium text-muted">
-            Moves · {game.initial_ms / 60000}+{game.increment_ms / 1000}
-          </p>
-          {rows.length ? (
-            <ol className="max-h-[360px] overflow-y-auto px-4 py-2 font-mono text-[14px]">
-              {rows.map(([w, b], i) => (
-                <li key={i} className="grid grid-cols-[36px_1fr_1fr] py-0.5">
-                  <span className="text-muted">{i + 1}.</span>
-                  <span>{w}</span>
-                  <span>{b ?? ""}</span>
-                </li>
-              ))}
-            </ol>
+      )}
+      {myColour && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {game.moves.length < 2 ? (
+            <button type="button" className={`${btn} btn-outline`} onClick={() => emit("game:abort", id)}>
+              Abort
+            </button>
+          ) : game.draw_offer && game.draw_offer !== myColour ? (
+            <>
+              <button type="button" className={`${btn} btn-solid`} onClick={() => emit("game:draw", { id, action: "accept" })}>
+                Accept draw
+              </button>
+              <button type="button" className={`${btn} btn-outline`} onClick={() => emit("game:draw", { id, action: "decline" })}>
+                Decline
+              </button>
+            </>
+          ) : confirmResign ? (
+            <>
+              <button
+                type="button"
+                className={`${btn} bg-love text-white`}
+                onClick={() => {
+                  void emit("game:resign", id)
+                  setConfirmResign(false)
+                }}
+              >
+                Yes, resign
+              </button>
+              <button type="button" className={`${btn} btn-outline`} onClick={() => setConfirmResign(false)}>
+                Keep playing
+              </button>
+            </>
           ) : (
-            <p className="px-4 py-3 text-[14px] text-muted">No moves yet.</p>
+            <>
+              <button
+                type="button"
+                disabled={game.draw_offer === myColour}
+                className={`${btn} btn-outline disabled:opacity-50`}
+                onClick={() => emit("game:draw", { id, action: "offer" })}
+              >
+                ½ {game.draw_offer === myColour ? "Draw offered" : "Draw"}
+              </button>
+              <button type="button" className={`${btn} btn-outline`} onClick={() => setConfirmResign(true)}>
+                ⚑ Resign
+              </button>
+            </>
           )}
         </div>
-        {!myColour && <p className="text-[13px] text-muted">You are watching this game.</p>}
-      </aside>
+      )}
+      {notice && <p className="mt-3 text-[13px] text-love">{notice}</p>}
     </div>
+  )
+
+  return (
+    <PlayLayout
+      top={bar(top)}
+      bottom={bar(bottom)}
+      board={
+        <Board
+          id={`game-${id}`}
+          fen={fen}
+          orientation={orientation}
+          movable={following && myTurn && !pending ? myColour : null}
+          lastMove={lastMove}
+          onMove={onMove}
+        />
+      }
+      panel={
+        <>
+          <p className="flex items-center justify-between text-[13px] text-muted">
+            <span>
+              {game.mode === "computer" ? "Game vs computer" : `${game.rated ? "Rated" : "Casual"} · ${SPEED_LABEL[speed]} ${tcText(game.initial_ms, game.increment_ms)}`}
+              {game.mode === "arena" ? " · Arena" : ""}
+            </span>
+            {!following && (
+              <button type="button" className="font-medium text-velvet underline underline-offset-2" onClick={() => setViewPly(null)}>
+                Back to the game
+              </button>
+            )}
+          </p>
+          {statusCard}
+          <MovePanel moves={game.moves} ply={shownPly} onGo={goTo} onFlip={() => setFlipped((f) => !f)} />
+        </>
+      }
+    />
   )
 }
