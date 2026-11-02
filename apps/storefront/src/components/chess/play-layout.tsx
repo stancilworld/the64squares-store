@@ -13,7 +13,9 @@ export function PlayLayout({
   board,
   bottom,
   panel,
+  boardOnPhones = true,
 }: {
+  boardOnPhones?: boolean
   top: React.ReactNode
   board: React.ReactNode
   bottom: React.ReactNode
@@ -45,8 +47,8 @@ export function PlayLayout({
   }, [])
 
   return (
-    <div ref={ref} className="flex w-full flex-col items-center gap-5 lg:flex-row lg:items-start lg:justify-center lg:gap-8">
-      <div style={{ width: size ? size.board : "100%" }} className={size ? "" : "max-w-[640px]"}>
+    <div ref={ref} className="flex w-full flex-col items-center gap-3 lg:flex-row lg:items-start lg:justify-center lg:gap-8">
+      <div style={{ width: size ? size.board : "100%" }} className={`${size ? "" : "max-w-[640px]"} ${boardOnPhones ? "" : "hidden lg:block"}`}>
         {top}
         {board}
         {bottom}

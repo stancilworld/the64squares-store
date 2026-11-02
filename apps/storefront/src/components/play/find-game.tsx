@@ -1,10 +1,11 @@
 "use client"
 
 import Link from "next/link"
+import { PanelHeader } from "@/components/play-shell/nav"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { io, type Socket } from "socket.io-client"
-import { GAME_URL, SPEED_LABEL, type Speed, speedOf } from "@/lib/game-types"
+import { GAME_URL, SPEED_LABEL, type Speed, speedOf, TIME_CONTROLS } from "@/lib/game-types"
 import { TimeControlPicker } from "./time-control-picker"
 
 type MyRating = { speed: Speed; rating: number; provisional: boolean }
@@ -65,30 +66,31 @@ export function FindGame({ token, meId }: { token: string | null; meId: string |
     setSeeking(null)
   }
 
+  const label = TIME_CONTROLS.find((t) => t.tc === tc)?.detail ?? tc
   const [m, inc] = tc.split("+").map(Number)
   const speed = speedOf(m * 60000, inc * 1000)
   const mine = ratings.find((r) => r.speed === speed)
   const waited = seeking ? Math.max(0, Math.floor((now - seeking.since) / 1000)) : 0
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-md border border-rule bg-white p-5">
-      <h1 className="font-display h-sub">Play online</h1>
-      <p className="mt-1 text-[14px] text-muted">
+    <div className="flex min-h-0 flex-1 flex-col g-panel p-5 lg:overflow-y-auto">
+      <PanelHeader title="Play online" />
+      <p className="mt-2 text-[14px] g-muted">
         Rated games against a player of similar strength.
         {lobby ? ` ${lobby.playing} ${lobby.playing === 1 ? "game" : "games"} being played now.` : ""}
       </p>
       {seeking ? (
         <div className="mt-6 flex flex-1 flex-col items-center justify-center text-center">
-          <span aria-hidden="true" className="h-12 w-12 animate-spin rounded-full border-4 border-maple border-t-velvet" />
-          <p className="mt-5 font-display text-[22px]">Finding an opponent…</p>
-          <p className="mt-1 text-[14px] text-muted">
-            {SPEED_LABEL[speed]} {tc.replace("+", " | ")} · your rating {seeking.rating}
+          <span aria-hidden="true" className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--g-panel-3)] border-t-[var(--g-gold)]" />
+          <p className="mt-5 text-[22px] font-bold">Finding an opponent…</p>
+          <p className="mt-1 text-[14px] g-muted">
+            {SPEED_LABEL[speed]} {label} · your rating {seeking.rating}
             {seeking.provisional ? "?" : ""} · {Math.floor(waited / 60)}:{String(waited % 60).padStart(2, "0")}
           </p>
-          <button type="button" className="btn btn-outline mt-6 h-[44px] w-full" onClick={cancel}>
+          <button type="button" className="g-btn mt-6 h-[44px] w-full" onClick={cancel}>
             Cancel
           </button>
-          <p className="mt-3 text-[12px] text-muted">Keep this page open. The game starts as soon as someone is found.</p>
+          <p className="mt-3 text-[12px] g-muted">Keep this page open. The game starts as soon as someone is found.</p>
         </div>
       ) : (
         <>
@@ -96,21 +98,21 @@ export function FindGame({ token, meId }: { token: string | null; meId: string |
             <TimeControlPicker value={tc} onChange={setTc} />
           </div>
           {token ? (
-            <button type="button" onClick={play} className="btn btn-solid mt-5 h-[52px] w-full text-[17px]">
-              Play {tc.replace("+", " | ")}
+            <button type="button" onClick={play} className="g-btn g-btn-primary sticky bottom-[76px] z-10 mt-5 lg:static h-[52px] w-full text-[17px]">
+              Play {label}
             </button>
           ) : (
-            <Link href="/account?next=/play/online" className="btn btn-solid mt-5 h-[52px] w-full">
+            <Link href="/account?next=/play/online" className="g-btn g-btn-primary mt-5 h-[52px] w-full">
               Sign in to play
             </Link>
           )}
           {token && (
-            <p className="mt-3 text-[13px] text-muted">
+            <p className="mt-3 text-[13px] g-muted">
               Your {SPEED_LABEL[speed].toLowerCase()} rating: {mine ? `${mine.rating}${mine.provisional ? "?" : ""}` : "1500? (new)"}
             </p>
           )}
           {error && (
-            <p className="mt-3 text-[14px] text-love">
+            <p className="mt-3 text-[14px] text-[#ff8a7d]">
               {error.text}{" "}
               {error.game && (
                 <Link href={`/play/${error.game}`} className="font-semibold underline underline-offset-2">

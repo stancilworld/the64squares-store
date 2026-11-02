@@ -1,7 +1,7 @@
 "use client"
 
 import type { Colour } from "./board"
-import { useBoardSettings } from "@/lib/chess/settings"
+import { pieceSrc, useBoardSettings } from "@/lib/chess/settings"
 
 const fmt = (ms: number) => {
   const s = Math.max(0, ms) / 1000
@@ -16,7 +16,7 @@ export function Clock({ ms, running, low }: { ms: number; running: boolean; low:
   return (
     <span
       className={`inline-flex min-w-[104px] items-center justify-end gap-2 rounded-md px-3 py-1.5 font-mono text-[22px] font-semibold tabular-nums leading-none transition-colors ${
-        running ? (low ? "bg-love text-white" : "bg-[#262421] text-white") : "bg-[#e9e7e3] text-[#5c5853]"
+        running ? (low ? "bg-[#c6392f] text-white" : "bg-[#f3f0e9] text-[#14110e]") : "bg-[var(--g-panel-2)] text-[var(--g-muted)]"
       }`}
     >
       {running && <span aria-hidden="true" className="h-2 w-2 animate-pulse rounded-full bg-current opacity-70" />}
@@ -47,8 +47,8 @@ export function PlayerBar({ name, colour, rating, provisional, diff, taken = [],
       <div className="flex min-w-0 items-center gap-2.5">
         <span
           aria-hidden="true"
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[15px] font-semibold ${
-            isBot ? "bg-velvet text-maple" : colour === "w" ? "bg-[#f1efea] text-[#3b3835] ring-1 ring-black/10" : "bg-[#3b3835] text-white"
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[15px] font-bold ${
+            isBot ? "bg-[var(--g-gold)] text-[#1d1408]" : colour === "w" ? "bg-[#ece9e2] text-[#2b2826]" : "bg-[#2b2826] text-white ring-1 ring-white/15"
           }`}
         >
           {isBot ? "⚙" : name.trim().charAt(0).toUpperCase() || "?"}
@@ -57,32 +57,32 @@ export function PlayerBar({ name, colour, rating, provisional, diff, taken = [],
           <p className="flex items-baseline gap-1.5 truncate text-[15px] font-semibold leading-tight">
             <span className="truncate">{name}</span>
             {rating != null && (
-              <span className="shrink-0 font-normal text-muted">
+              <span className="shrink-0 font-normal text-[var(--g-muted)]">
                 ({rating}
                 {provisional ? "?" : ""})
               </span>
             )}
             {diff != null && diff !== 0 && (
-              <span className={`shrink-0 text-[13px] font-semibold ${diff > 0 ? "text-[#3f8f3a]" : "text-love"}`}>
+              <span className={`shrink-0 text-[13px] font-semibold ${diff > 0 ? "text-[#7bd88f]" : "text-[#ff8a7d]"}`}>
                 {diff > 0 ? `+${diff}` : diff}
               </span>
             )}
           </p>
           <div className="flex h-[18px] items-center">
             {note ? (
-              <span className="text-[12px] text-love">{note}</span>
+              <span className="text-[12px] font-medium text-[#ff8a7d]">{note}</span>
             ) : (
               <>
                 {taken.map((t, i) => (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     key={i}
-                    src={`/pieces/${pieces}/${other}${t.toUpperCase()}.svg`}
+                    src={pieceSrc(pieces, `${other}${t.toUpperCase()}`)}
                     alt=""
                     className={`h-[18px] w-[18px] ${i > 0 && taken[i - 1] === t ? "-ml-[9px]" : ""}`}
                   />
                 ))}
-                {lead > 0 && <span className="ml-1 text-[12px] font-semibold text-muted">+{lead}</span>}
+                {lead > 0 && <span className="ml-1 text-[12px] font-semibold text-[var(--g-muted)]">+{lead}</span>}
               </>
             )}
           </div>

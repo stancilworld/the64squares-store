@@ -71,12 +71,12 @@ export function HistoryList({ playerId }: { playerId: string }) {
     fetchPage(playerId, before).then(take, fail)
   }
 
-  if (failed && !rows.length) return <p className="py-10 text-center text-muted">Couldn&apos;t load your games. Please try again later.</p>
+  if (failed && !rows.length) return <p className="py-10 text-center g-muted">Couldn&apos;t load your games. Please try again later.</p>
   if (!busy && !rows.length)
     return (
-      <div className="rounded-md border border-dashed border-rule px-6 py-12 text-center">
+      <div className="g-panel px-6 py-12 text-center">
         <p className="text-[16px]">No finished games yet.</p>
-        <Link href="/play" className="btn btn-solid mt-5">
+        <Link href="/play" className="g-btn g-btn-primary mt-5">
           Play a game
         </Link>
       </div>
@@ -84,9 +84,9 @@ export function HistoryList({ playerId }: { playerId: string }) {
 
   return (
     <div>
-      <div className="overflow-hidden rounded-md border border-rule">
+      <div className="g-panel overflow-hidden">
         <table className="w-full text-[14px]">
-          <thead className="bg-linen text-left text-[12px] text-muted">
+          <thead className="bg-[var(--g-panel-2)] text-left text-[12px] text-[var(--g-muted)]">
             <tr>
               <th className="px-3 py-2.5 font-medium">Game</th>
               <th className="px-3 py-2.5 font-medium">Players</th>
@@ -105,16 +105,16 @@ export function HistoryList({ playerId }: { playerId: string }) {
                 <span className="flex items-center gap-1.5">
                   <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-sm ring-1 ring-black/25 ${colour === "w" ? "bg-white" : "bg-[#3b3835]"}`} />
                   <span className="truncate">{name}</span>
-                  {rating != null && <span className="text-muted">({rating})</span>}
-                  {d != null && d !== 0 && <span className={`text-[12px] ${d > 0 ? "text-[#3f8f3a]" : "text-love"}`}>{d > 0 ? `+${d}` : d}</span>}
+                  {rating != null && <span className="g-muted">({rating})</span>}
+                  {d != null && d !== 0 && <span className={`text-[12px] ${d > 0 ? "text-[#7bd88f]" : "text-[#ff8a7d]"}`}>{d > 0 ? `+${d}` : d}</span>}
                 </span>
               )
               return (
-                <tr key={g.id} className="border-t border-rule transition hover:bg-[#faf9f7]">
+                <tr key={g.id} className="border-t border-[var(--g-line)] transition hover:bg-white/[0.04]">
                   <td className="px-3 py-2.5 align-middle">
                     <Link href={`/play/${g.id}`} className="block">
                       <span className="block font-medium">{kind}</span>
-                      <span className="block text-[12px] text-muted">
+                      <span className="block text-[12px] g-muted">
                         {g.mode === "arena" ? "Arena" : g.mode === "computer" ? "Casual" : g.rated ? "Rated" : "Casual"}
                       </span>
                     </Link>
@@ -129,16 +129,16 @@ export function HistoryList({ playerId }: { playerId: string }) {
                     <span
                       title={g.reason ? REASON[g.reason] : undefined}
                       className={`inline-flex h-7 w-7 items-center justify-center rounded text-[13px] font-bold text-white ${
-                        score === "win" ? "bg-[#3f8f3a]" : score === "loss" ? "bg-love" : "bg-[#8a8580]"
+                        score === "win" ? "bg-[#3f8f3a]" : score === "loss" ? "bg-[#b23b31]" : "bg-[#8a8580]"
                       }`}
                     >
                       {score === "win" ? "W" : score === "loss" ? "L" : "½"}
                     </span>
-                    <span className="block text-[11px] text-muted">{g.reason ? REASON[g.reason] : ""}</span>
+                    <span className="block text-[11px] g-muted">{g.reason ? REASON[g.reason] : ""}</span>
                     {diff != null && <span className="sr-only">Rating change {diff}</span>}
                   </td>
                   <td className="hidden px-3 py-2.5 text-right sm:table-cell">{Math.ceil(g.plies / 2)}</td>
-                  <td className="hidden px-3 py-2.5 text-right text-muted md:table-cell">{when(g.ended_at)}</td>
+                  <td className="hidden px-3 py-2.5 text-right g-muted md:table-cell">{when(g.ended_at)}</td>
                 </tr>
               )
             })}
@@ -146,7 +146,7 @@ export function HistoryList({ playerId }: { playerId: string }) {
         </table>
       </div>
       {more && (
-        <button type="button" disabled={busy} className="btn btn-outline mt-4 w-full disabled:opacity-60" onClick={() => loadMore(rows[rows.length - 1]?.ended_at)}>
+        <button type="button" disabled={busy} className="g-btn mt-4 w-full disabled:opacity-60" onClick={() => loadMore(rows[rows.length - 1]?.ended_at)}>
           {busy ? "Loading…" : "Show older games"}
         </button>
       )}

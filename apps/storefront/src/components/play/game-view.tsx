@@ -187,32 +187,32 @@ export function GameView({ id, token, meId }: Props) {
   if (error) {
     return (
       <div className="py-16 text-center">
-        <h1 className="font-display h-page">{error}</h1>
-        <Link href="/play" className="btn btn-solid mt-6">
+        <h1 className="g-title !text-[28px]">{error}</h1>
+        <Link href="/play" className="g-btn g-btn-primary mt-6">
           Back to Play
         </Link>
       </div>
     )
   }
-  if (!game) return <p className="py-16 text-center text-muted">Loading the game…</p>
+  if (!game) return <p className="py-16 text-center g-muted">Loading the game…</p>
 
   if (game.status === "waiting") {
     const mine = game.white?.id === meId || game.black?.id === meId
     const host = game.white ?? game.black
     return (
-      <div className="mx-auto max-w-[560px] py-6 text-center">
-        <p className="text-[14px] text-muted">
+      <div className="g-panel mx-auto mt-4 max-w-[560px] p-6 text-center sm:p-8">
+        <p className="text-[14px] g-muted">
           {tcText(game.initial_ms, game.increment_ms)} · {game.white ? "Challenger plays white" : "Challenger plays black"}
         </p>
         {mine ? (
           <>
-            <h1 className="font-display h-page mt-2">Waiting for your opponent</h1>
-            <p className="mt-3 text-[16px] text-muted">Send this link to a friend. The game starts as soon as they open it and accept.</p>
+            <h1 className="g-title !text-[28px] mt-2">Waiting for your opponent</h1>
+            <p className="mt-3 text-[16px] g-muted">Send this link to a friend. The game starts as soon as they open it and accept.</p>
             <div className="mt-6 flex gap-2">
-              <input readOnly value={link} aria-label="Game link" className="h-[48px] min-w-0 flex-1 rounded-md border border-rule bg-linen px-3 text-[14px]" />
+              <input readOnly value={link} aria-label="Game link" className="h-[48px] min-w-0 flex-1 rounded-md border border-[var(--g-line)] bg-[var(--g-panel-2)] px-3 text-[14px]" />
               <button
                 type="button"
-                className="btn btn-solid"
+                className="g-btn g-btn-primary"
                 onClick={async () => {
                   await navigator.clipboard?.writeText(link)
                   setCopied(true)
@@ -222,24 +222,24 @@ export function GameView({ id, token, meId }: Props) {
               </button>
             </div>
             <a
-              className="btn btn-outline mt-3 w-full"
+              className="g-btn mt-3 w-full"
               href={`https://wa.me/?text=${encodeURIComponent(`Play me at chess on The 64 Squares: ${link}`)}`}
               target="_blank"
               rel="noopener noreferrer"
             >
               Send on WhatsApp
             </a>
-            <button type="button" className="mt-6 text-[14px] text-muted underline underline-offset-4" onClick={() => emit("game:abort", id)}>
+            <button type="button" className="mt-6 text-[14px] g-muted underline underline-offset-4" onClick={() => emit("game:abort", id)}>
               Cancel this challenge
             </button>
           </>
         ) : (
           <>
-            <h1 className="font-display h-page mt-2">{host?.name ?? "Someone"} challenges you</h1>
+            <h1 className="g-title !text-[28px] mt-2">{host?.name ?? "Someone"} challenges you</h1>
             {token ? (
               <button
                 type="button"
-                className="btn btn-solid mt-8 w-full"
+                className="g-btn g-btn-primary mt-8 w-full"
                 onClick={async () => {
                   const res = await emit<{ ok: boolean; error?: string }>("game:accept", id)
                   if (!res.ok) setNotice(res.error === "own-challenge" ? "That's your own challenge." : "This challenge is no longer open.")
@@ -248,13 +248,13 @@ export function GameView({ id, token, meId }: Props) {
                 Accept and play
               </button>
             ) : (
-              <Link href={`/account?next=${encodeURIComponent(`/play/${id}`)}`} className="btn btn-solid mt-8 w-full">
+              <Link href={`/account?next=${encodeURIComponent(`/play/${id}`)}`} className="g-btn g-btn-primary mt-8 w-full">
                 Sign in to play
               </Link>
             )}
           </>
         )}
-        {notice && <p className="mt-4 text-[14px] text-love">{notice}</p>}
+        {notice && <p className="mt-4 text-[14px] text-[#ff8a7d]">{notice}</p>}
       </div>
     )
   }
@@ -285,37 +285,37 @@ export function GameView({ id, token, meId }: Props) {
         taken={mat.taken[c]}
         lead={c === "w" ? mat.lead : -mat.lead}
         clock={hasClock ? { ms: clockOf(c), running: game.clock_running === c } : null}
-        note={gone && claimIn != null ? "Left the game" : game.draw_offer === c && active ? <span className="text-velvet">Offers a draw</span> : null}
+        note={gone && claimIn != null ? "Left the game" : game.draw_offer === c && active ? <span className="text-[var(--g-gold)]">Offers a draw</span> : null}
       />
     )
   }
 
-  const btn = "btn h-[42px] flex-1 px-3 text-[14px]"
+  const btn = "g-btn flex-1 px-3 text-[14px]"
   const statusCard = over ? (
-    <div className="rounded-md bg-velvet p-5 text-white">
-      <p className="font-display h-sub">{game.result === "1/2-1/2" ? "½–½" : game.result ?? "Aborted"}</p>
-      <p className="mt-1 text-[15px] text-maple-soft">{resultText(game)}</p>
+    <div className="g-panel p-5 ring-1 ring-[var(--g-gold)]/40">
+      <p className="g-title">{game.result === "1/2-1/2" ? "½–½" : game.result ?? "Aborted"}</p>
+      <p className="mt-1 text-[15px] text-[var(--g-text)]">{resultText(game)}</p>
       {game.rated && myColour && (game[myColour === "w" ? "white" : "black"]?.diff ?? null) != null && (
-        <p className="mt-1 text-[14px] text-maple">
+        <p className="mt-1 text-[14px] text-[var(--g-gold)]">
           Your {SPEED_LABEL[speed].toLowerCase()} rating: {(game[myColour === "w" ? "white" : "black"]?.rating ?? 0) + (game[myColour === "w" ? "white" : "black"]?.diff ?? 0)} (
           {(game[myColour === "w" ? "white" : "black"]?.diff ?? 0) >= 0 ? "+" : ""}
           {game[myColour === "w" ? "white" : "black"]?.diff})
         </p>
       )}
       {game.mode === "arena" && myColour && (
-        <p className="mt-2 text-[13px] text-maple">
+        <p className="mt-2 text-[13px] text-[var(--g-gold)]">
           {nextGame ? `Next game in ${Math.max(nextIn, 1)}…` : "Stay on this page and your next arena game starts by itself."}
         </p>
       )}
-      {rematch?.by && rematch.by !== meId && <p className="mt-2 text-[14px] font-medium text-maple">Your opponent wants a rematch.</p>}
-      {rematch?.declined && <p className="mt-2 text-[13px] text-maple">Rematch declined.</p>}
+      {rematch?.by && rematch.by !== meId && <p className="mt-2 text-[14px] font-medium text-[var(--g-gold)]">Your opponent wants a rematch.</p>}
+      {rematch?.declined && <p className="mt-2 text-[13px] text-[var(--g-gold)]">Rematch declined.</p>}
       <div className="mt-4 flex flex-wrap gap-2">
         {myColour && game.status === "finished" && (game.mode === "online" || game.mode === "friend") && (
           <>
             <button
               type="button"
               disabled={rematch?.by === meId}
-              className="btn btn-light h-[42px] disabled:opacity-60"
+              className="g-btn g-btn-primary h-[42px] disabled:opacity-60"
               onClick={async () => {
                 const res = await emit<{ ok: boolean; error?: string }>("game:rematch", { id, action: "offer" })
                 if (!res.ok) setNotice(res.error === "in-game" ? "One of you is already in another game." : "Rematch isn't available.")
@@ -324,34 +324,34 @@ export function GameView({ id, token, meId }: Props) {
               {rematch?.by === meId ? "Rematch offered…" : rematch?.by ? "Accept rematch" : "Rematch"}
             </button>
             {rematch?.by && rematch.by !== meId && (
-              <button type="button" className="btn h-[42px] border border-white/40 text-white" onClick={() => emit("game:rematch", { id, action: "decline" })}>
+              <button type="button" className="g-btn" onClick={() => emit("game:rematch", { id, action: "decline" })}>
                 Decline
               </button>
             )}
           </>
         )}
         {game.mode === "arena" && game.tournament_id ? (
-          <Link href={`/tournaments/${game.tournament_id}/arena`} className="btn btn-light h-[42px]">
+          <Link href={`/play/arena/${game.tournament_id}`} className="g-btn g-btn-primary h-[42px]">
             Arena standings
           </Link>
         ) : game.mode === "computer" ? (
-          <Link href="/play/computer" className="btn btn-light h-[42px]">
+          <Link href="/play/computer" className="g-btn g-btn-primary h-[42px]">
             Play the computer
           </Link>
         ) : (
-          <Link href={game.mode === "online" ? "/play/online" : "/play"} className="btn h-[42px] border border-white/40 text-white hover:bg-white/10">
+          <Link href={game.mode === "online" ? "/play/online" : "/play"} className="g-btn">
             New game
           </Link>
         )}
         {game.status === "finished" && (
-          <a href={`${GAME_URL}/game/games/${id}.pgn`} className="btn h-[42px] border border-white/40 text-white hover:bg-white/10" download>
+          <a href={`${GAME_URL}/game/games/${id}.pgn`} className="g-btn" download>
             PGN
           </a>
         )}
       </div>
     </div>
   ) : (
-    <div className="rounded-md border border-rule bg-white p-4">
+    <div className="g-panel p-4">
       <p className="text-[15px] font-medium">
         {firstMoveLeft != null && myTurn
           ? `Your first move: ${Math.max(0, Math.ceil(firstMoveLeft / 1000))} s left`
@@ -362,7 +362,7 @@ export function GameView({ id, token, meId }: Props) {
             : `${game.turn === "w" ? "White" : "Black"} to move`}
       </p>
       {oppGone != null && claimIn != null && (
-        <div className="mt-3 rounded-md bg-maple-soft p-3 text-[14px]">
+        <div className="mt-3 rounded-lg bg-[var(--g-panel-3)] p-3 text-[14px]">
           {claimIn > 0 ? (
             <p>
               Your opponent left the game. If they don&apos;t return, you can claim the win in <b>{Math.ceil(claimIn / 1000)} s</b>.
@@ -371,10 +371,10 @@ export function GameView({ id, token, meId }: Props) {
             <>
               <p>Your opponent left the game.</p>
               <div className="mt-2 flex gap-2">
-                <button type="button" className={`${btn} btn-solid`} onClick={() => emit("game:claim", { id, outcome: "win" })}>
+                <button type="button" className={`${btn} g-btn-primary`} onClick={() => emit("game:claim", { id, outcome: "win" })}>
                   Claim victory
                 </button>
-                <button type="button" className={`${btn} btn-outline`} onClick={() => emit("game:claim", { id, outcome: "draw" })}>
+                <button type="button" className={`${btn}`} onClick={() => emit("game:claim", { id, outcome: "draw" })}>
                   Call it a draw
                 </button>
               </div>
@@ -385,15 +385,15 @@ export function GameView({ id, token, meId }: Props) {
       {myColour && (
         <div className="mt-3 flex flex-wrap gap-2">
           {game.moves.length < 2 ? (
-            <button type="button" className={`${btn} btn-outline`} onClick={() => emit("game:abort", id)}>
+            <button type="button" className={`${btn}`} onClick={() => emit("game:abort", id)}>
               Abort
             </button>
           ) : game.draw_offer && game.draw_offer !== myColour ? (
             <>
-              <button type="button" className={`${btn} btn-solid`} onClick={() => emit("game:draw", { id, action: "accept" })}>
+              <button type="button" className={`${btn} g-btn-primary`} onClick={() => emit("game:draw", { id, action: "accept" })}>
                 Accept draw
               </button>
-              <button type="button" className={`${btn} btn-outline`} onClick={() => emit("game:draw", { id, action: "decline" })}>
+              <button type="button" className={`${btn}`} onClick={() => emit("game:draw", { id, action: "decline" })}>
                 Decline
               </button>
             </>
@@ -401,7 +401,7 @@ export function GameView({ id, token, meId }: Props) {
             <>
               <button
                 type="button"
-                className={`${btn} bg-love text-white`}
+                className={`${btn} g-btn-danger`}
                 onClick={() => {
                   void emit("game:resign", id)
                   setConfirmResign(false)
@@ -409,7 +409,7 @@ export function GameView({ id, token, meId }: Props) {
               >
                 Yes, resign
               </button>
-              <button type="button" className={`${btn} btn-outline`} onClick={() => setConfirmResign(false)}>
+              <button type="button" className={`${btn}`} onClick={() => setConfirmResign(false)}>
                 Keep playing
               </button>
             </>
@@ -418,19 +418,19 @@ export function GameView({ id, token, meId }: Props) {
               <button
                 type="button"
                 disabled={game.draw_offer === myColour}
-                className={`${btn} btn-outline disabled:opacity-50`}
+                className={`${btn} disabled:opacity-50`}
                 onClick={() => emit("game:draw", { id, action: "offer" })}
               >
                 ½ {game.draw_offer === myColour ? "Draw offered" : "Draw"}
               </button>
-              <button type="button" className={`${btn} btn-outline`} onClick={() => setConfirmResign(true)}>
+              <button type="button" className={`${btn}`} onClick={() => setConfirmResign(true)}>
                 ⚑ Resign
               </button>
             </>
           )}
         </div>
       )}
-      {notice && <p className="mt-3 text-[13px] text-love">{notice}</p>}
+      {notice && <p className="mt-3 text-[13px] text-[#ff8a7d]">{notice}</p>}
     </div>
   )
 
@@ -450,19 +450,22 @@ export function GameView({ id, token, meId }: Props) {
       }
       panel={
         <>
-          <p className="flex items-center justify-between text-[13px] text-muted">
-            <span>
+          <p className="hidden items-center gap-2 text-[13px] g-muted lg:flex">
+            <Link href={game.mode === "arena" && game.tournament_id ? `/play/arena/${game.tournament_id}` : "/play"} aria-label="Back" className="g-btn g-btn-ghost !min-h-[34px] !px-2 !text-[13px]">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
+            </Link>
+            <span className="flex-1">
               {game.mode === "computer" ? "Game vs computer" : `${game.rated ? "Rated" : "Casual"} · ${SPEED_LABEL[speed]} ${tcText(game.initial_ms, game.increment_ms)}`}
               {game.mode === "arena" ? " · Arena" : ""}
             </span>
             {!following && (
-              <button type="button" className="font-medium text-velvet underline underline-offset-2" onClick={() => setViewPly(null)}>
+              <button type="button" className="font-medium text-[var(--g-gold)] underline underline-offset-2" onClick={() => setViewPly(null)}>
                 Back to the game
               </button>
             )}
           </p>
           {statusCard}
-          <MovePanel moves={game.moves} ply={shownPly} onGo={goTo} onFlip={() => setFlipped((f) => !f)} />
+          <MovePanel moves={game.moves} ply={shownPly} onGo={goTo} onFlip={() => setFlipped((f) => !f)} className="order-first lg:order-none" />
         </>
       }
     />

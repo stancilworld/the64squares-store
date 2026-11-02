@@ -11,7 +11,7 @@ export function TimeControlPicker({ value, onChange }: { value: string; onChange
     <div className="flex flex-col gap-3">
       {GROUPS.map((g) => (
         <div key={g}>
-          <p className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-muted">
+          <p className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">
             <span aria-hidden="true">{ICON[g]}</span>
             {g}
           </p>
@@ -22,9 +22,7 @@ export function TimeControlPicker({ value, onChange }: { value: string; onChange
                 type="button"
                 aria-pressed={value === t.tc}
                 onClick={() => onChange(t.tc)}
-                className={`h-[44px] rounded-md border text-[15px] font-semibold transition-colors ${
-                  value === t.tc ? "border-velvet bg-velvet text-white" : "border-rule bg-white hover:border-black/40"
-                }`}
+                className="g-choice h-[46px] text-[15px] font-bold"
               >
                 {t.detail}
               </button>

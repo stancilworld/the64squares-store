@@ -4,7 +4,9 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { io, type Socket } from "socket.io-client"
+import { PanelHeader } from "@/components/play-shell/nav"
 import { GAME_URL } from "@/lib/game-types"
+import { registerForTournament } from "@/lib/tournament-actions"
 
 type Row = {
   rank: number
@@ -32,13 +34,15 @@ type You = { joined: boolean; waiting: boolean; game_id: string | null; paused: 
 
 const span = (ms: number) => {
   const s = Math.max(0, Math.round(ms / 1000))
+  const d = Math.floor(s / 86400)
+  if (d >= 2) return `${d} days ${Math.floor((s % 86400) / 3600)} h`
   const h = Math.floor(s / 3600)
   const m = Math.floor((s % 3600) / 60)
   const sec = s % 60
   return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}:${String(sec).padStart(2, "0")}`
 }
 
-export function ArenaView({ idOrHandle, token, meId }: { idOrHandle: string; token: string | null; meId: string | null }) {
+export function ArenaView({ idOrHandle, token, meId, myName }: { idOrHandle: string; token: string | null; meId: string | null; myName: string | null }) {
   const router = useRouter()
   const socket = useRef<Socket | null>(null)
   const [arena, setArena] = useState<Arena | null>(null)
@@ -47,6 +51,7 @@ export function ArenaView({ idOrHandle, token, meId }: { idOrHandle: string; tok
   const [error, setError] = useState<string | null>(null)
   const [offset, setOffset] = useState(0)
   const [now, setNow] = useState(0)
+  const [joining, setJoining] = useState(false)
 
   useEffect(() => {
     const s = io(GAME_URL, { path: "/game/socket.io", auth: token ? { token } : {}, transports: ["websocket", "polling"] })
@@ -102,8 +107,25 @@ export function ArenaView({ idOrHandle, token, meId }: { idOrHandle: string; tok
       }
     })
 
+  // One tap to register (online arenas are free), then the arena is told to look again.
+  const register = async () => {
+    if (!arena) return
+    setJoining(true)
+    setError(null)
+    const res = await registerForTournament(arena.handle, { player_name: myName ?? "Player", phone: null, fide_id: null, rating: null, city: null })
+    setJoining(false)
+    if (res.ok) {
+      socket.current?.emit("arena:watch", arena.id, (r: { ok: boolean; registered?: boolean; you?: You }) => {
+        if (r.ok) {
+          setRegistered(!!r.registered)
+          setYou(r.you ?? null)
+        }
+      })
+    } else setError(res.error)
+  }
+
   if (error && !arena) return <p className="py-16 text-center">{error}</p>
-  if (!arena) return <p className="py-16 text-center text-muted">Opening the arena…</p>
+  if (!arena) return <p className="py-16 text-center g-muted">Opening the arena…</p>
 
   const serverNow = now + offset
   const header =
@@ -116,44 +138,51 @@ export function ArenaView({ idOrHandle, token, meId }: { idOrHandle: string; tok
           : "Finished"
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[340px_minmax(0,1fr)]">
+    <div className="mx-auto max-w-[1100px]">
+      <PanelHeader title={arena.title} back="/play/tournaments" backLabel="Tournaments" />
+    <div className="mt-5 grid gap-5 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-8">
       <div className="flex flex-col gap-4">
-        <div className="rounded-md bg-velvet p-6 text-white">
-          <p className="text-[13px] text-maple">Arena · {arena.time_control}</p>
-          <h1 className="font-display h-section mt-1">{arena.title}</h1>
-          <p className="mt-3 font-mono text-[18px] tabular-nums">{header}</p>
+        <div className="g-panel bg-gradient-to-br from-[#2c4a39] to-[#1a2d23] p-6">
+          <p className="text-[13px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">Arena · {arena.time_control}</p>
+          <p className="mt-2 font-mono text-[26px] font-bold tabular-nums">{header}</p>
         </div>
-        <div className="rounded-md border border-rule p-5">
+        <div className="g-panel p-5">
           {!meId ? (
             <>
               <p className="text-[15px]">Sign in to play in this arena.</p>
-              <Link href={`/account?next=${encodeURIComponent(`/tournaments/${idOrHandle}/arena`)}`} className="btn btn-solid mt-4 w-full">
+              <Link href={`/account?next=${encodeURIComponent(`/play/arena/${idOrHandle}`)}`} className="g-btn g-btn-primary mt-4 w-full">
                 Sign in
               </Link>
             </>
           ) : !registered ? (
             <>
-              <p className="text-[15px]">Only registered players can play. You can still watch the standings.</p>
-              <Link href={`/tournaments/${arena.handle}`} className="btn btn-outline mt-4 w-full">
-                Tournament details
-              </Link>
+              {arena.phase === "before" || arena.phase === "live" ? (
+                <>
+                  <p className="text-[15px]">Free entry. Register to play — it takes one tap.</p>
+                  <button type="button" disabled={joining} className="g-btn g-btn-primary mt-4 w-full" onClick={register}>
+                    {joining ? "Registering…" : "Register for free"}
+                  </button>
+                </>
+              ) : (
+                <p className="text-[15px]">This arena is over. Final standings are shown here.</p>
+              )}
             </>
           ) : arena.phase === "live" ? (
             you?.game_id ? (
-              <Link href={`/play/${you.game_id}`} className="btn btn-solid w-full">
+              <Link href={`/play/${you.game_id}`} className="g-btn g-btn-primary w-full">
                 Go to your game
               </Link>
             ) : you?.joined ? (
               <>
                 <p className="text-[15px]">Waiting for an opponent… You&apos;ll be taken to the board automatically.</p>
-                <button type="button" className="btn btn-outline mt-4 w-full" onClick={() => call("arena:pause")}>
+                <button type="button" className="g-btn mt-4 w-full" onClick={() => call("arena:pause")}>
                   Pause
                 </button>
               </>
             ) : (
               <>
                 <p className="text-[15px]">{you?.paused ? "You're paused. Join again when you're ready." : "Ready? Join to get paired."}</p>
-                <button type="button" className="btn btn-solid mt-4 w-full" onClick={() => call("arena:join")}>
+                <button type="button" className="g-btn g-btn-primary mt-4 w-full" onClick={() => call("arena:join")}>
                   Join the arena
                 </button>
               </>
@@ -163,9 +192,9 @@ export function ArenaView({ idOrHandle, token, meId }: { idOrHandle: string; tok
           ) : (
             <p className="text-[15px]">Thanks for playing. Final standings are on the right.</p>
           )}
-          {error && <p className="mt-3 text-[13px] text-love">{error}</p>}
+          {error && <p className="mt-3 text-[13px] text-[#ff8a7d]">{error}</p>}
         </div>
-        <div className="rounded-md bg-linen p-5 text-[14px] leading-[1.6]">
+        <div className="g-panel p-5 text-[14px] leading-[1.6]">
           <p className="font-medium">How the arena works</p>
           <p className="mt-1">
             You&apos;re paired again as soon as your game ends. A win scores 2, a draw 1. After two wins in a row you&apos;re on fire and
@@ -174,12 +203,12 @@ export function ArenaView({ idOrHandle, token, meId }: { idOrHandle: string; tok
         </div>
       </div>
 
-      <div className="min-w-0">
-        <h2 className="font-display h-sub">Standings</h2>
+      <div className="g-panel min-w-0 p-5">
+        <h2 className="g-title">Standings</h2>
         {arena.standings.length ? (
           <table className="mt-4 w-full text-[14px]">
             <thead>
-              <tr className="border-b border-rule text-left text-[12px] text-muted">
+              <tr className="border-b border-[var(--g-line)] text-left text-[12px] g-muted">
                 <th className="w-[44px] py-2 font-normal">#</th>
                 <th className="py-2 font-normal">Player</th>
                 <th className="hidden py-2 font-normal sm:table-cell">Results</th>
@@ -188,23 +217,24 @@ export function ArenaView({ idOrHandle, token, meId }: { idOrHandle: string; tok
             </thead>
             <tbody>
               {arena.standings.map((r) => (
-                <tr key={r.player_id} className={`border-b border-rule ${r.player_id === meId ? "bg-maple-soft" : ""}`}>
-                  <td className="py-2.5 text-muted">{r.rank}</td>
+                <tr key={r.player_id} className={`border-b border-[var(--g-line)] ${r.player_id === meId ? "bg-[var(--g-panel-3)]" : ""}`}>
+                  <td className="py-2.5 g-muted">{r.rank}</td>
                   <td className="py-2.5">
                     <span className="font-medium">{r.name}</span>
-                    {r.on_fire && <span className="ml-2 rounded bg-brass px-1.5 py-0.5 text-[11px] text-white">on fire</span>}
-                    {r.status === "playing" && <span className="ml-2 text-[12px] text-velvet">playing</span>}
+                    {r.on_fire && <span className="ml-2 rounded bg-[#c6542f] px-1.5 py-0.5 text-[11px] font-semibold text-white">🔥 on fire</span>}
+                    {r.status === "playing" && <span className="ml-2 text-[12px] text-[var(--g-gold)]">playing</span>}
                   </td>
-                  <td className="hidden py-2.5 font-mono text-[13px] tracking-wider text-muted sm:table-cell">{r.sheet.join(" ")}</td>
-                  <td className="py-2.5 text-right font-display text-[18px]">{r.score}</td>
+                  <td className="hidden py-2.5 font-mono text-[13px] tracking-wider g-muted sm:table-cell">{r.sheet.join(" ")}</td>
+                  <td className="py-2.5 text-right text-[18px] font-bold">{r.score}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         ) : (
-          <p className="mt-4 text-[15px] text-muted">Nobody has played yet.</p>
+          <p className="mt-4 text-[15px] g-muted">Nobody has played yet.</p>
         )}
       </div>
+    </div>
     </div>
   )
 }

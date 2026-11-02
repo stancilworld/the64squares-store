@@ -4,7 +4,7 @@ import { Chess, type Square } from "chess.js"
 import { useMemo, useState } from "react"
 import { Chessboard, type PieceRenderObject } from "react-chessboard"
 import { playSound } from "@/lib/chess/sounds"
-import { animationMs, BOARD_THEMES, useBoardSettings } from "@/lib/chess/settings"
+import { animationMs, BOARD_THEMES, PIECE_SETS, pieceSrc, useBoardSettings } from "@/lib/chess/settings"
 
 export type Colour = "w" | "b"
 export type BoardArrow = { from: string; to: string; color?: string }
@@ -12,10 +12,10 @@ export type BoardArrow = { from: string; to: string; color?: string }
 const PIECE_CODES = ["wK", "wQ", "wR", "wB", "wN", "wP", "bK", "bQ", "bR", "bB", "bN", "bP"] as const
 const PROMOTE = ["q", "n", "r", "b"] as const
 
-const LAST_MOVE = "rgba(255, 238, 51, 0.42)"
-const SELECTED = "rgba(255, 238, 51, 0.55)"
-const DOT = "radial-gradient(circle, rgba(0,0,0,0.16) 22%, transparent 23%)"
-const RING = "radial-gradient(circle, transparent 60%, rgba(0,0,0,0.16) 61%)"
+const LAST_MOVE = "rgba(232, 196, 92, 0.5)"
+const SELECTED = "rgba(232, 196, 92, 0.68)"
+const DOT = "radial-gradient(circle, rgba(10,20,14,0.28) 22%, transparent 23%)"
+const RING = "radial-gradient(circle, transparent 60%, rgba(10,20,14,0.28) 61%)"
 const CHECK = "radial-gradient(ellipse at center, rgba(255,0,0,0.95) 0%, rgba(231,0,0,0.8) 25%, rgba(169,0,0,0) 80%)"
 
 type Props = {
@@ -30,20 +30,21 @@ type Props = {
   onMove?: (from: Square, to: Square, promotion?: "q" | "r" | "b" | "n") => boolean | void
 }
 
-const pieceImages = (set: string): PieceRenderObject =>
+const pieceImages = (set: keyof typeof PIECE_SETS): PieceRenderObject =>
   Object.fromEntries(
     PIECE_CODES.map((code) => [
       code,
       () => (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={`/pieces/${set}/${code}.svg`}
+          src={pieceSrc(set, code)}
           alt=""
           draggable={false}
           style={{
             width: "100%",
             height: "100%",
             filter: set === "modern" ? "drop-shadow(0 2px 1.5px rgba(0,0,0,0.28))" : undefined,
+            objectFit: "contain",
             pointerEvents: "none",
             userSelect: "none",
           }}
@@ -159,7 +160,7 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove 
             return ok
           },
           onSquareClick: ({ square }) => clickSquare(square as Square),
-          boardStyle: { borderRadius: 6, overflow: "hidden", boxShadow: "0 6px 18px rgba(0,0,0,0.14)" },
+          boardStyle: { borderRadius: 8, overflow: "hidden", boxShadow: "0 0 0 1px rgba(0,0,0,0.25), 0 14px 40px rgba(0,0,0,0.45)" },
           lightSquareStyle: { backgroundColor: theme.light },
           darkSquareStyle: { backgroundColor: theme.dark },
           lightSquareNotationStyle: { color: theme.dark, fontWeight: 600 },
@@ -200,7 +201,7 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove 
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/pieces/${settings.pieces}/${promotion.colour}${p.toUpperCase()}.svg`} alt="" className="h-full w-full" />
+                <img src={pieceSrc(settings.pieces, `${promotion.colour}${p.toUpperCase()}`)} alt="" className="h-full w-full object-contain" />
               </button>
             ))}
           </div>

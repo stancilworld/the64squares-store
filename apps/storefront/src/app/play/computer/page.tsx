@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { ComputerGame } from "@/components/play/computer-game"
 import { getPlayPass } from "@/lib/play"
-import { PlayShell } from "../shell"
+import { Loading } from "../loading-text"
 
 export const metadata: Metadata = { title: "Play the computer", description: "Play chess against the computer at eight levels, from beginner to master." }
 
@@ -12,8 +13,8 @@ async function Computer() {
 
 export default function ComputerPage() {
   return (
-    <PlayShell>
+    <Suspense fallback={<Loading />}>
       <Computer />
-    </PlayShell>
+    </Suspense>
   )
 }

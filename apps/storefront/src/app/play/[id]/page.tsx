@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { GameView } from "@/components/play/game-view"
 import { getPlayPass } from "@/lib/play"
-import { PlayShell } from "../shell"
+import { Loading } from "../loading-text"
 
 export const metadata: Metadata = { title: "Game", robots: { index: false } }
 
@@ -13,8 +14,8 @@ async function Game({ params }: PageProps<"/play/[id]">) {
 
 export default function GamePage(props: PageProps<"/play/[id]">) {
   return (
-    <PlayShell fallback="Loading the game…">
+    <Suspense fallback={<Loading text="Loading the game…" />}>
       <Game {...props} />
-    </PlayShell>
+    </Suspense>
   )
 }

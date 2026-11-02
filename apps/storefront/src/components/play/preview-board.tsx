@@ -9,6 +9,7 @@ import { START_FEN } from "@/lib/chess/replay"
 export function PreviewLayout({ panel, myName }: { panel: React.ReactNode; myName?: string | null }) {
   return (
     <PlayLayout
+      boardOnPhones={false}
       top={<PlayerBar name="Opponent" colour="b" />}
       bottom={<PlayerBar name={myName ?? "You"} colour="w" />}
       board={<Board id="preview" fen={START_FEN} orientation="white" movable={null} />}

@@ -2,6 +2,7 @@
 
 import { Chess, type Square } from "chess.js"
 import Link from "next/link"
+import { PanelHeader } from "@/components/play-shell/nav"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { io } from "socket.io-client"
 import { Board, type BoardArrow, type Colour } from "@/components/chess/board"
@@ -208,7 +209,7 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
     if (best && at === rev.current) setArrows([{ from: best.slice(0, 2), to: best.slice(2, 4) }])
   }
 
-  if (!loaded) return <p className="py-16 text-center text-muted">Loading…</p>
+  if (!loaded) return <p className="py-16 text-center g-muted">Loading…</p>
 
   const colour: Colour = game?.colour ?? (setup.colour === "b" ? "b" : "w")
   const orientation: "white" | "black" = (colour === "b") !== flipped ? "black" : "white"
@@ -226,16 +227,16 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
         isBot
         taken={mat.taken[c]}
         lead={c === "w" ? mat.lead : -mat.lead}
-        note={thinking ? <span className="text-muted">Thinking…</span> : null}
+        note={thinking ? <span className="g-muted">Thinking…</span> : null}
       />
     )
 
-  const btn = "btn h-[42px] flex-1 px-3 text-[14px]"
+  const btn = "g-btn flex-1 px-3 text-[14px]"
 
   const panel = !game ? (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-md border border-rule bg-white p-5">
-      <h1 className="font-display h-sub">Play the computer</h1>
-      <p className="mt-1 text-[14px] text-muted">Pick a level. You can take moves back and ask for a hint.</p>
+    <div className="flex min-h-0 flex-1 flex-col g-panel p-5 lg:overflow-y-auto">
+      <PanelHeader title="Play the computer" />
+      <p className="mt-2 text-[14px] g-muted">Pick a level. You can take moves back and ask for a hint.</p>
       <div className="mt-4 grid grid-cols-2 gap-2">
         {LEVELS.map((l) => (
           <button
@@ -243,12 +244,12 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
             type="button"
             aria-pressed={setup.level === l.level}
             onClick={() => setSetup((s) => ({ ...s, level: l.level }))}
-            className={`rounded-md border px-3 py-2 text-left transition ${setup.level === l.level ? "border-velvet bg-maple-soft" : "border-rule hover:border-black/40"}`}
+            className="g-choice px-3 py-2 text-left"
           >
             <span className="block text-[14px] font-semibold">
               {l.level}. {l.name}
             </span>
-            <span className="block text-[12px] text-muted">Rating {l.elo}</span>
+            <span className="block text-[12px] g-muted">Rating {l.elo}</span>
           </button>
         ))}
       </div>
@@ -266,17 +267,17 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
             type="button"
             aria-pressed={setup.colour === c}
             onClick={() => setSetup((s) => ({ ...s, colour: c }))}
-            className={`rounded-md border py-2 text-[14px] ${setup.colour === c ? "border-velvet bg-maple-soft font-semibold" : "border-rule"}`}
+            className="g-choice py-2 text-[14px] font-semibold"
           >
             {label}
           </button>
         ))}
       </div>
-      <button type="button" className="btn btn-solid mt-5 h-[48px] w-full text-[16px]" onClick={() => start(setup.colour, setup.level)}>
+      <button type="button" className="g-btn g-btn-primary sticky bottom-3 z-10 mt-5 lg:static h-[48px] w-full text-[16px]" onClick={() => start(setup.colour, setup.level)}>
         Play
       </button>
       {!token && (
-        <p className="mt-3 text-[13px] text-muted">
+        <p className="mt-3 text-[13px] g-muted">
           <Link href="/account?next=/play/computer" className="underline underline-offset-2">
             Sign in
           </Link>{" "}
@@ -286,22 +287,25 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
     </div>
   ) : (
     <>
-      <p className="flex items-center justify-between text-[13px] text-muted">
-        <span>
+      <p className="hidden items-center gap-2 text-[13px] g-muted lg:flex">
+        <Link href={"/play"} aria-label="Back" className="g-btn g-btn-ghost !min-h-[34px] !px-2 !text-[13px]">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
+            </Link>
+        <span className="flex-1">
           vs Computer · Level {level.level} ({level.name})
         </span>
         {!following && (
-          <button type="button" className="font-medium text-velvet underline underline-offset-2" onClick={() => setViewPly(null)}>
+          <button type="button" className="font-medium text-[var(--g-gold)] underline underline-offset-2" onClick={() => setViewPly(null)}>
             Back to the game
           </button>
         )}
       </p>
       {over ? (
-        <div className="rounded-md bg-velvet p-5 text-white">
-          <p className="font-display h-sub">{game.result!.score === "1/2-1/2" ? "½–½" : game.result!.score}</p>
-          <p className="mt-1 text-[15px] text-maple-soft">{game.result!.text}</p>
+        <div className="g-panel p-5 ring-1 ring-[var(--g-gold)]/40">
+          <p className="g-title">{game.result!.score === "1/2-1/2" ? "½–½" : game.result!.score}</p>
+          <p className="mt-1 text-[15px] text-[var(--g-text)]">{game.result!.text}</p>
           {saveNote && game.savedId && (
-            <p className="mt-1 text-[13px] text-maple">
+            <p className="mt-1 text-[13px] text-[var(--g-gold)]">
               {saveNote}{" "}
               <Link href="/play/history" className="underline underline-offset-2">
                 Game history
@@ -309,27 +313,27 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
             </p>
           )}
           <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" className="btn btn-light h-[42px]" onClick={() => start(game.colour === "w" ? "b" : "w", game.level)}>
+            <button type="button" className="g-btn g-btn-primary h-[42px]" onClick={() => start(game.colour === "w" ? "b" : "w", game.level)}>
               Play again
             </button>
-            <button type="button" className="btn h-[42px] border border-white/40 text-white hover:bg-white/10" onClick={() => update(null)}>
+            <button type="button" className="g-btn" onClick={() => update(null)}>
               Change level
             </button>
           </div>
         </div>
       ) : (
-        <div className="rounded-md border border-rule bg-white p-4">
+        <div className="g-panel p-4">
           <p className="text-[15px] font-medium">{thinking ? "The computer is thinking…" : myTurn ? "Your move" : "…"}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <button type="button" className={`${btn} btn-outline`} disabled={!myTurn} onClick={hint}>
+            <button type="button" className={`${btn}`} disabled={!myTurn} onClick={hint}>
               💡 Hint
             </button>
-            <button type="button" className={`${btn} btn-outline`} disabled={game.moves.length < 1} onClick={takeBack}>
+            <button type="button" className={`${btn}`} disabled={game.moves.length < 1} onClick={takeBack}>
               ↶ Take back
             </button>
             <button
               type="button"
-              className={`${btn} btn-outline`}
+              className={`${btn}`}
               onClick={() => update({ ...game, result: { score: game.colour === "w" ? "0-1" : "1-0", text: "You resigned" } })}
             >
               ⚑ Resign
@@ -337,12 +341,13 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
           </div>
         </div>
       )}
-      <MovePanel moves={plies.map((p) => p.san)} ply={shownPly} onGo={goTo} onFlip={() => setFlipped((f) => !f)} />
+      <MovePanel moves={plies.map((p) => p.san)} ply={shownPly} onGo={goTo} onFlip={() => setFlipped((f) => !f)} className="order-first lg:order-none" />
     </>
   )
 
   return (
     <PlayLayout
+      boardOnPhones={!!game}
       top={bar(top)}
       bottom={bar(bottom)}
       board={

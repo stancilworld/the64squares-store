@@ -5,16 +5,22 @@ import { useSyncExternalStore } from "react"
 // How the board looks and sounds, remembered per browser.
 
 export const BOARD_THEMES = {
-  green: { label: "Green", light: "#ecead1", dark: "#75955a" },
+  velvet: { label: "Velvet", light: "#ecdfc4", dark: "#3e6b52" },
   walnut: { label: "Walnut", light: "#ecd9b6", dark: "#8b5a3c" },
-  blue: { label: "Blue", light: "#dee3e6", dark: "#8ca2ad" },
+  slate: { label: "Slate", light: "#dfe3e6", dark: "#6f8796" },
   sand: { label: "Sand", light: "#f0d9b5", dark: "#b58863" },
+  marble: { label: "Marble", light: "#e9e6df", dark: "#9c958a" },
 } as const
 export const PIECE_SETS = {
-  modern: { label: "Modern" },
-  classic: { label: "Classic" },
-  playful: { label: "Playful" },
+  glossy: { label: "Glossy", ext: "svg" },
+  wood: { label: "3D Wood", ext: "webp" },
+  modern: { label: "Flat", ext: "svg" },
+  classic: { label: "Classic", ext: "svg" },
+  playful: { label: "Playful", ext: "svg" },
 } as const
+
+// The picture for a piece, like "wK" (white king), in a piece set.
+export const pieceSrc = (set: keyof typeof PIECE_SETS, code: string) => `/pieces/${set}/${code}.${PIECE_SETS[set]?.ext ?? "svg"}`
 
 export type BoardSettings = {
   theme: keyof typeof BOARD_THEMES
@@ -24,8 +30,9 @@ export type BoardSettings = {
   animation: "off" | "fast" | "normal"
 }
 
-const DEFAULTS: BoardSettings = { theme: "green", pieces: "modern", sound: true, legalMoves: true, animation: "normal" }
-const KEY = "t64:board"
+const DEFAULTS: BoardSettings = { theme: "velvet", pieces: "glossy", sound: true, legalMoves: true, animation: "normal" }
+// v2: new defaults (velvet board, glossy pieces) for everyone.
+const KEY = "t64:board:v2"
 const listeners = new Set<() => void>()
 let current: BoardSettings | null = null
 

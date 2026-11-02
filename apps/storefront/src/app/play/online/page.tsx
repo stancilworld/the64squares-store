@@ -1,8 +1,9 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { FindGame } from "@/components/play/find-game"
 import { PreviewLayout } from "@/components/play/preview-board"
 import { getPlayPass } from "@/lib/play"
-import { PlayShell } from "../shell"
+import { Loading } from "../loading-text"
 
 export const metadata: Metadata = { title: "Play online", description: "Rated chess games against players of similar strength." }
 
@@ -13,8 +14,8 @@ async function Online() {
 
 export default function OnlinePage() {
   return (
-    <PlayShell>
+    <Suspense fallback={<Loading />}>
       <Online />
-    </PlayShell>
+    </Suspense>
   )
 }

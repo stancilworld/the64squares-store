@@ -34,18 +34,18 @@ export function Leaderboard({ meId }: { meId: string | null }) {
               setRows(null)
               setSpeed(s)
             }}
-            className={`h-[40px] rounded-md px-4 text-[14px] font-medium ${speed === s ? "bg-velvet text-white" : "bg-linen hover:bg-maple-soft"}`}
+            className="g-choice h-[40px] px-4 text-[14px] font-semibold"
           >
             {SPEED_LABEL[s]}
           </button>
         ))}
       </div>
-      <div className="mt-4 overflow-hidden rounded-md border border-rule">
+      <div className="mt-4 g-panel overflow-hidden">
         {rows == null ? (
-          <p className="px-4 py-10 text-center text-muted">Loading…</p>
+          <p className="px-4 py-10 text-center g-muted">Loading…</p>
         ) : rows.length ? (
           <table className="w-full text-[14px]">
-            <thead className="bg-linen text-left text-[12px] text-muted">
+            <thead className="bg-[var(--g-panel-2)] text-left text-[12px] text-[var(--g-muted)]">
               <tr>
                 <th className="w-[56px] px-3 py-2.5 font-medium">#</th>
                 <th className="px-3 py-2.5 font-medium">Player</th>
@@ -55,14 +55,14 @@ export function Leaderboard({ meId }: { meId: string | null }) {
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={r.player_id} className={`border-t border-rule ${r.player_id === meId ? "bg-maple-soft" : ""}`}>
-                  <td className="px-3 py-2.5 text-muted">{i + 1}</td>
+                <tr key={r.player_id} className={`border-t border-[var(--g-line)] ${r.player_id === meId ? "bg-[var(--g-panel-3)]" : ""}`}>
+                  <td className="px-3 py-2.5 g-muted">{i + 1}</td>
                   <td className="px-3 py-2.5 font-medium">{r.name}</td>
-                  <td className="px-3 py-2.5 text-right font-display text-[18px]">
+                  <td className="px-3 py-2.5 text-right text-[18px] font-bold">
                     {r.rating}
-                    {r.provisional && <span className="text-[13px] text-muted">?</span>}
+                    {r.provisional && <span className="text-[13px] g-muted">?</span>}
                   </td>
-                  <td className="hidden px-3 py-2.5 text-right text-muted sm:table-cell">
+                  <td className="hidden px-3 py-2.5 text-right g-muted sm:table-cell">
                     {r.wins} / {r.draws} / {r.losses}
                   </td>
                 </tr>
@@ -70,10 +70,10 @@ export function Leaderboard({ meId }: { meId: string | null }) {
             </tbody>
           </table>
         ) : (
-          <p className="px-4 py-10 text-center text-muted">No rated {SPEED_LABEL[speed].toLowerCase()} games yet. Be the first!</p>
+          <p className="px-4 py-10 text-center g-muted">No rated {SPEED_LABEL[speed].toLowerCase()} games yet. Be the first!</p>
         )}
       </div>
-      <p className="mt-3 text-[13px] text-muted">A &quot;?&quot; means the rating is still settling: it becomes firm after a few more games.</p>
+      <p className="mt-3 text-[13px] g-muted">A &quot;?&quot; means the rating is still settling: it becomes firm after a few more games.</p>
     </div>
   )
 }

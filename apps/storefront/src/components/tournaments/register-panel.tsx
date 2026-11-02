@@ -35,7 +35,7 @@ export function RegisterPanel({ t, me, ticket }: { t: Tournament; me: Me; ticket
           Ticket <span className="font-mono font-medium">{ticket.ticket_code}</span>
         </p>
         {t.mode === "online" && t.format === "arena" && (
-          <Link href={`/tournaments/${t.handle}/arena`} className="btn btn-solid mt-5 w-full">
+          <Link href={`/play/arena/${t.handle}`} className="btn btn-solid mt-5 w-full">
             Open the arena
           </Link>
         )}
@@ -55,7 +55,7 @@ export function RegisterPanel({ t, me, ticket }: { t: Tournament; me: Me; ticket
         <p className="font-display h-sub">{t.status === "cancelled" ? "Cancelled" : "Registration closed"}</p>
         <p className="mt-2 text-[15px] text-muted">{t.registration_note}</p>
         {t.mode === "online" && t.format === "arena" && t.status !== "cancelled" && (
-          <Link href={`/tournaments/${t.handle}/arena`} className="btn btn-solid mt-5 w-full">
+          <Link href={`/play/arena/${t.handle}`} className="btn btn-solid mt-5 w-full">
             {t.status === "completed" ? "Final standings" : "Watch the arena"}
           </Link>
         )}
