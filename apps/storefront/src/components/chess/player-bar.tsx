@@ -1,7 +1,9 @@
 "use client"
 
 import type { Colour } from "./board"
+import { Avatar, LevelBadge } from "@/components/play/avatar"
 import { pieceSrc, useBoardSettings } from "@/lib/chess/settings"
+import type { Level } from "@/lib/profile-types"
 
 const fmt = (ms: number) => {
   const s = Math.max(0, ms) / 1000
@@ -36,26 +38,40 @@ type Props = {
   clock?: { ms: number; running: boolean } | null
   note?: React.ReactNode
   isBot?: boolean
+  avatarUrl?: string | null
+  level?: Level | null
+  href?: string | null
 }
 
 // The strip above or below the board: who it is, what they've taken, and their clock.
-export function PlayerBar({ name, colour, rating, provisional, diff, taken = [], lead = 0, clock, note, isBot }: Props) {
+export function PlayerBar({ name, colour, rating, provisional, diff, taken = [], lead = 0, clock, note, isBot, avatarUrl, level, href }: Props) {
   const { pieces } = useBoardSettings()
   const other = colour === "w" ? "b" : "w"
   return (
     <div className="flex h-[52px] items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2.5">
-        <span
-          aria-hidden="true"
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[15px] font-bold ${
-            isBot ? "bg-[var(--g-gold)] text-[#1d1408]" : colour === "w" ? "bg-[#ece9e2] text-[#2b2826]" : "bg-[#2b2826] text-white ring-1 ring-white/15"
-          }`}
-        >
-          {isBot ? "⚙" : name.trim().charAt(0).toUpperCase() || "?"}
-        </span>
+        {isBot || !avatarUrl ? (
+          <span
+            aria-hidden="true"
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[15px] font-bold ${
+              isBot ? "bg-[var(--g-gold)] text-[#1d1408]" : colour === "w" ? "bg-[#ece9e2] text-[#2b2826]" : "bg-[#2b2826] text-white ring-1 ring-white/15"
+            }`}
+          >
+            {isBot ? "⚙" : name.trim().charAt(0).toUpperCase() || "?"}
+          </span>
+        ) : (
+          <Avatar url={avatarUrl} name={name} size={36} />
+        )}
         <div className="min-w-0">
           <p className="flex items-baseline gap-1.5 truncate text-[15px] font-semibold leading-tight">
-            <span className="truncate">{name}</span>
+            {href ? (
+              <a href={href} className="truncate hover:underline">
+                {name}
+              </a>
+            ) : (
+              <span className="truncate">{name}</span>
+            )}
+            {level && <LevelBadge level={level} compact />}
             {rating != null && (
               <span className="shrink-0 font-normal text-[var(--g-muted)]">
                 ({rating}

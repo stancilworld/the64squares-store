@@ -2,19 +2,53 @@ import http from "node:http"
 import { Server, type Socket } from "socket.io"
 import { playerFromToken } from "./auth.js"
 import { config } from "./config.js"
-import { gamePgn, leaderboard, liveGamesFor, migrate, ratingsFor, recentGamesFor } from "./db.js"
+import { gamePgn, leaderboard, liveGamesFor, migrate, playerStats, ratingsFor, recentGamesFor } from "./db.js"
 import { type Color, type Game, isGuest, type Player } from "./game.js"
 import { speedOf, type Speed } from "./glicko.js"
 import { GameManager } from "./manager.js"
-import { arenaStandings, registerArena, startArenas } from "./arena.js"
+import { arenaStandings, online, registerArena, startArenas } from "./arena.js"
+import { xpForGame } from "./levels.js"
+import { addXp, ensureProfile, getProfile, getProfiles, migrateProfiles, publicProfile, readAvatar, removeAvatar, searchProfiles, setAvatar, updateProfile } from "./profiles.js"
 import { registerSeek, SEEK_TIME_CONTROLS, seekCounts, startSeeking } from "./seek.js"
 
 type Ack = (res: Record<string, unknown>) => void
 
-const send = (res: http.ServerResponse, status: number, body: string, type = "application/json", origin?: string) => {
-  const headers: Record<string, string> = { "content-type": type, "cache-control": "no-store" }
-  if (origin && config.origins.includes(origin)) headers["access-control-allow-origin"] = origin
+const send = (res: http.ServerResponse, status: number, body: string | Buffer, type = "application/json", origin?: string, cache = "no-store") => {
+  const headers: Record<string, string> = { "content-type": type, "cache-control": cache }
+  if (origin && config.origins.includes(origin)) {
+    headers["access-control-allow-origin"] = origin
+    headers["access-control-allow-headers"] = "authorization, content-type"
+    headers["access-control-allow-methods"] = "GET, POST, DELETE, OPTIONS"
+  }
   res.writeHead(status, headers).end(body)
+}
+
+const json = (res: http.ServerResponse, status: number, body: unknown, origin?: string) => send(res, status, JSON.stringify(body), "application/json", origin)
+
+// Reads an uploaded file, refusing anything over `max` bytes.
+const readBody = (req: http.IncomingMessage, max: number) =>
+  new Promise<Buffer | null>((resolve) => {
+    const parts: Buffer[] = []
+    let size = 0
+    req.on("data", (c: Buffer) => {
+      size += c.length
+      if (size > max) {
+        resolve(null)
+        req.destroy()
+      } else parts.push(c)
+    })
+    req.on("end", () => resolve(Buffer.concat(parts)))
+    req.on("error", () => resolve(null))
+  })
+
+const bearer = (req: http.IncomingMessage) => /^Bearer (.+)$/.exec(req.headers.authorization ?? "")?.[1] ?? null
+
+// Everything public about a player: profile, ratings, results, and whether they're online.
+const fullProfile = async (idOrUsername: string) => {
+  const p = await getProfile(idOrUsername)
+  if (!p) return null
+  const [ratings, stats] = await Promise.all([ratingsFor(p.player_id), playerStats(p.player_id)])
+  return { ...publicProfile(p), ratings, stats, online: online.has(p.player_id) }
 }
 
 // Plain web endpoints: a health check, a game's PGN, and a player's recent games.
@@ -23,6 +57,34 @@ const server = http.createServer(async (req, res) => {
   const path = url.pathname.replace(/^\/game(?=\/)/, "")
   const origin = req.headers.origin
   try {
+    if (req.method === "OPTIONS") return send(res, 204, "", "text/plain", origin)
+    let a = /^\/avatars\/([A-Za-z0-9_-]+\.webp)$/.exec(path)
+    if (a && req.method === "GET") {
+      const img = await readAvatar(a[1])
+      return img ? send(res, 200, img, "image/webp", origin, "public, max-age=31536000, immutable") : send(res, 404, "Not found", "text/plain", origin)
+    }
+    if (path === "/profile/avatar" && (req.method === "POST" || req.method === "DELETE")) {
+      const player = await playerFromToken(bearer(req))
+      if (!player || isGuest(player.id)) return json(res, 401, { error: "sign-in" }, origin)
+      await ensureProfile(player)
+      if (req.method === "DELETE") {
+        await removeAvatar(player.id)
+        return json(res, 200, { ok: true }, origin)
+      }
+      const body = await readBody(req, 6_000_000)
+      if (!body?.length) return json(res, 413, { error: "Pictures can be up to 6 MB" }, origin)
+      return json(res, 200, await setAvatar(player.id, body), origin)
+    }
+    a = /^\/profiles\/([A-Za-z0-9_]{3,60})$/.exec(path)
+    if (a && req.method === "GET") {
+      const p = await fullProfile(a[1])
+      return p ? json(res, 200, { profile: p }, origin) : json(res, 404, { error: "not-found" }, origin)
+    }
+    if (path === "/profiles" && req.method === "GET") {
+      const ids = (url.searchParams.get("ids") ?? "").split(",").filter((x) => /^(cus|guest)_[A-Za-z0-9]{6,40}$/.test(x)).slice(0, 50)
+      const rows = await getProfiles(ids)
+      return json(res, 200, { profiles: rows.map((p) => ({ ...publicProfile(p), online: online.has(p.player_id) })) }, origin)
+    }
     if (path === "/health") return send(res, 200, JSON.stringify({ ok: true, live_games: manager.liveCount() }), "application/json", origin)
     let m = /^\/games\/([A-Za-z0-9]{6,20})\.pgn$/.exec(path)
     if (m && req.method === "GET") {
@@ -120,7 +182,17 @@ const seatFor = (id: string, c: Color) => {
 
 // Players are known from their play token; anyone may watch.
 io.use(async (socket, next) => {
-  socket.data.player = await playerFromToken(socket.handshake.auth?.token)
+  const player = await playerFromToken(socket.handshake.auth?.token)
+  // Signed-in players play under their profile's display name.
+  if (player && !isGuest(player.id)) {
+    try {
+      const profile = await ensureProfile(player)
+      if (profile) player.name = profile.display_name
+    } catch (e) {
+      console.error("profile lookup failed", e)
+    }
+  }
+  socket.data.player = player
   next()
 })
 
@@ -216,7 +288,33 @@ io.on("connection", (socket) => {
     const player = me()
     if (!player || isGuest(player.id)) return ack({ ok: false, error: "sign-in" })
     const colour = input?.colour === "b" ? "b" : "w"
-    ack(await manager.saveComputerGame(player, colour, Number(input?.level) || 1, input?.moves as string[], input?.resigned === true))
+    const level = Number(input?.level) || 1
+    const res = await manager.saveComputerGame(player, colour, level, input?.moves as string[], input?.resigned === true)
+    if (res.ok) await addXp(player.id, xpForGame({ result: res.result, mode: "computer", computerLevel: level, plies: res.plies }))
+    ack(res)
+  })
+
+  socket.on("profile:mine", async (_: unknown, ack: unknown) => {
+    if (!guard(ack) || limited(socket)) return
+    const player = me()
+    if (!player || isGuest(player.id)) return ack({ ok: false, error: "sign-in" })
+    await ensureProfile(player)
+    ack({ ok: true, profile: await fullProfile(player.id) })
+  })
+
+  socket.on("profile:update", async (input: unknown, ack: unknown) => {
+    if (!guard(ack) || limited(socket)) return
+    const player = me()
+    if (!player || isGuest(player.id)) return ack({ ok: false, error: "sign-in" })
+    const res = await updateProfile(player.id, (input ?? {}) as Record<string, unknown>)
+    if (res.ok) player.name = res.profile.display_name
+    ack(res)
+  })
+
+  socket.on("profile:search", async (q: unknown, ack: unknown) => {
+    if (!guard(ack) || limited(socket) || typeof q !== "string") return
+    const rows = await searchProfiles(q.slice(0, 40))
+    ack({ ok: true, profiles: rows.map((p) => ({ ...publicProfile(p), online: online.has(p.player_id) })) })
   })
 
   socket.on("disconnect", () => {
@@ -273,6 +371,17 @@ io.on("connection", (socket) => {
 
 const main = async () => {
   await migrate()
+  await migrateProfiles()
+  // Experience for both players when a game against a person ends.
+  manager.whenGameEnds(async (g) => {
+    if (g.r.status !== "finished" || !g.r.result) return
+    for (const c of ["w", "b"] as const) {
+      const p = c === "w" ? g.r.white : g.r.black
+      if (!p) continue
+      const result = g.r.result === "1/2-1/2" ? "draw" : (g.r.result === "1-0") === (c === "w") ? "win" : "loss"
+      await addXp(p.id, xpForGame({ result, mode: g.r.mode, plies: g.r.moves.length }))
+    }
+  })
   await startArenas(io, manager)
   startSeeking(io, manager)
   const restored = await manager.restore()

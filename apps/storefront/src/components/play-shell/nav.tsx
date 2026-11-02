@@ -15,6 +15,7 @@ export const PLAY_NAV = [
   { href: "/play/tournaments", label: "Tournaments", icon: "trophy" },
   { href: "/play/history", label: "History", icon: "history" },
   { href: "/play/leaderboard", label: "Leaderboard", icon: "chart" },
+  { href: "/play/profile", label: "Profile", icon: "user" },
 ]
 const MOBILE_TABS = ["/play", "/play/online", "/play/computer", "/play/tournaments", "/play/history"]
 

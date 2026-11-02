@@ -13,6 +13,7 @@ import { PlayLayout } from "@/components/chess/play-layout"
 import { replay, START_FEN } from "@/lib/chess/replay"
 import { playSound, soundForSan } from "@/lib/chess/sounds"
 import type { PlayPass } from "@/lib/play"
+import type { PublicProfile } from "@/lib/profile-types"
 import { usePlayPass } from "./use-play-pass"
 import { GAME_URL, type GameState, LIVE_KEY, type Presence, resultText, SPEED_LABEL, speedOf, tcText } from "@/lib/game-types"
 
@@ -56,6 +57,7 @@ export function GameView({ id, initialPass }: Props) {
   const [nextGame, setNextGame] = useState<string | null>(null)
   const [nextIn, setNextIn] = useState(3)
   const link = useSyncExternalStore(noSubscribe, () => window.location.href, () => "")
+  const [profiles, setProfiles] = useState<Record<string, PublicProfile>>({})
 
   const apply = useCallback((g: GameState) => {
     const t = performance.now()
@@ -110,6 +112,20 @@ export function GameView({ id, initialPass }: Props) {
     const t = setInterval(() => setNow(performance.now()), 100)
     return () => clearInterval(t)
   }, [active])
+
+  // Pictures and levels of both players.
+  const ids = [game?.white?.id, game?.black?.id].filter((x): x is string => !!x && x !== "computer").sort().join(",")
+  useEffect(() => {
+    if (!ids) return
+    let live = true
+    fetch(`${GAME_URL}/game/profiles?ids=${ids}`)
+      .then((r) => r.json())
+      .then((d: { profiles: PublicProfile[] }) => live && setProfiles(Object.fromEntries(d.profiles.map((p) => [p.player_id, p]))))
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [ids])
 
   const myColour: Colour | null = game && meId ? (game.white?.id === meId ? "w" : game.black?.id === meId ? "b" : null) : null
 
@@ -296,6 +312,9 @@ export function GameView({ id, initialPass }: Props) {
         rating={p?.rating}
         diff={over ? p?.diff : null}
         isBot={p?.id === "computer"}
+        avatarUrl={p ? profiles[p.id]?.avatar_url : null}
+        level={p ? profiles[p.id]?.level : null}
+        href={p && profiles[p.id] ? `/play/player/${profiles[p.id].username}` : null}
         taken={mat.taken[c]}
         lead={c === "w" ? mat.lead : -mat.lead}
         clock={hasClock ? { ms: clockOf(c), running: game.clock_running === c } : null}

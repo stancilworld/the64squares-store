@@ -207,3 +207,21 @@ export const leaderboard = async (speed: Speed, limit = 50) => {
   )
   return rows.map(publicRating)
 }
+
+// Wins, draws and losses for a player's profile (games against the computer counted apart).
+export const playerStats = async (playerId: string) => {
+  const { rows } = await pool.query(
+    `select (mode = 'computer') as vs_computer,
+            count(*)::int as games,
+            count(*) filter (where (white_id = $1 and result = '1-0') or (black_id = $1 and result = '0-1'))::int as wins,
+            count(*) filter (where result = '1/2-1/2')::int as draws
+       from play.game where (white_id = $1 or black_id = $1) and status = 'finished'
+      group by 1`,
+    [playerId]
+  )
+  const pick = (c: boolean) => {
+    const r = rows.find((x) => x.vs_computer === c) ?? { games: 0, wins: 0, draws: 0 }
+    return { games: r.games, wins: r.wins, draws: r.draws, losses: r.games - r.wins - r.draws }
+  }
+  return { people: pick(false), computer: pick(true) }
+}

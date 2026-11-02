@@ -36,7 +36,7 @@ type Arena = {
 const DEFAULT_LENGTH_MS = 60 * 60 * 1000
 const arenas = new Map<string, Arena>()
 // Connections per player, so a player who closed the page isn't paired.
-const online = new Map<string, number>()
+export const online = new Map<string, number>()
 
 export const migrateArena = async () => {
   await pool.query(`

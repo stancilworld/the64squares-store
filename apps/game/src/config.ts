@@ -1,4 +1,6 @@
-// Settings from the environment (deploy/setup-vps.sh writes them).
+import path from "node:path"
+
+// Settings from the environment (deploy/build.sh writes them).
 const need = (name: string, fallback?: string) => {
   const v = process.env[name] ?? fallback
   if (!v) throw new Error(`${name} is not set`)
@@ -12,4 +14,7 @@ export const config = {
   playTokenSecret: need("PLAY_TOKEN_SECRET", process.env.NODE_ENV === "production" ? undefined : "local-play-secret"),
   // Websites allowed to connect (comma-separated).
   origins: (process.env.STORE_CORS || "http://localhost:8000").split(",").map((s) => s.trim()).filter(Boolean),
+  // Where this server is reached from browsers (for picture links), and where pictures are kept.
+  publicUrl: (process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 9200}`).replace(/\/$/, ""),
+  avatarDir: process.env.AVATAR_DIR || path.resolve("uploads/avatars"),
 }

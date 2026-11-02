@@ -57,7 +57,11 @@ export function Leaderboard({ meId }: { meId: string | null }) {
               {rows.map((r, i) => (
                 <tr key={r.player_id} className={`border-t border-[var(--g-line)] ${r.player_id === meId ? "bg-[var(--g-panel-3)]" : ""}`}>
                   <td className="px-3 py-2.5 g-muted">{i + 1}</td>
-                  <td className="px-3 py-2.5 font-medium">{r.name}</td>
+                  <td className="px-3 py-2.5 font-medium">
+                    <a href={`/play/player/${r.player_id}`} className="hover:underline">
+                      {r.name}
+                    </a>
+                  </td>
                   <td className="px-3 py-2.5 text-right text-[18px] font-bold">
                     {r.rating}
                     {r.provisional && <span className="text-[13px] g-muted">?</span>}

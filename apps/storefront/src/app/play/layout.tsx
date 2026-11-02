@@ -13,7 +13,7 @@ async function Account() {
   const c = await getCustomer()
   return (
     <Link
-      href={c ? "/account" : "/account?next=/play"}
+      href={c ? "/play/profile" : "/account?next=/play"}
       className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-medium text-[var(--g-muted)] hover:bg-[var(--g-panel)] hover:text-white"
     >
       <GIcon name="user" size={20} />

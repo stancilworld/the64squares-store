@@ -228,7 +228,8 @@ export class GameManager {
       })
     )
     await saveGame(g.r, g.pgn())
-    return { ok: true as const, id: g.r.id }
+    const mine = result === "1/2-1/2" ? "draw" : (result === "1-0") === (colour === "w") ? "win" : "loss"
+    return { ok: true as const, id: g.r.id, result: mine as "win" | "draw" | "loss", plies: san.length }
   }
 
   async accept(id: string, player: Player) {
