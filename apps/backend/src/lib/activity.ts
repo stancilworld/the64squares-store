@@ -150,6 +150,12 @@ export const describe = (method: string, path: string, body: Record<string, unkn
         },
         "tournament"
       )
+    case "fair-play":
+      return {
+        action:
+          body.action === "ban" ? `Banned a player for fair play (${body.scope ?? "rated"})` : body.action === "warn" ? "Warned a player for fair play" : body.action === "unban" ? "Lifted a fair-play ban" : "Cleared a fair-play flag",
+        area: "Fair play",
+      }
     case "tournament-checkin":
       return { action: body.undo ? `Undid check-in for ${body.code}` : `Checked in ${body.code}`, area: "Tournaments" }
     case "posts":

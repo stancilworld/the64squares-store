@@ -85,9 +85,14 @@ PLAY_SECRET=$(tr -d '[:space:]' < "$PLAY_FILE")
 backend_env() { grep -m1 "^$1=" "$APP/apps/backend/.env" | cut -d= -f2-; }
 (
   umask 077
-  printf 'DATABASE_URL=%s\nSTORE_CORS=%s\nPLAY_TOKEN_SECRET=%s\n' \
-    "$(backend_env DATABASE_URL)" "$(backend_env STORE_CORS)" "$PLAY_SECRET" > "$BASE/game.env"
+  printf 'DATABASE_URL=%s\nSTORE_CORS=%s\nPLAY_TOKEN_SECRET=%s\nPUBLIC_URL=%s\nAVATAR_DIR=%s\n' \
+    "$(backend_env DATABASE_URL)" "$(backend_env STORE_CORS)" "$PLAY_SECRET" "https://$API_DOMAIN" "$BASE/uploads/avatars" > "$BASE/game.env"
 )
+install -d -o "$APP_USER" -g "$APP_USER" "$BASE/uploads/avatars"
+# A native chess engine makes the fair-play checks faster; without it the bundled one is used.
+if [ ! -x /usr/games/stockfish ]; then
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq stockfish >/dev/null 2>&1 || echo "(stockfish package not installed; using the bundled engine)"
+fi
 (cd "$APP/apps/game" && as_app npm run build)
 # Older installs: add the service and the web server route the first time.
 if ! cmp -s "$APP/deploy/systemd/the64squares-game.service" /etc/systemd/system/the64squares-game.service; then

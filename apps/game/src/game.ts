@@ -52,6 +52,8 @@ export type GameRecord = {
   black_rating: number | null
   white_diff: number | null
   black_diff: number | null
+  // Time each move took, in ms (for fair-play checks).
+  move_ms?: number[]
 }
 
 // Each side's first move doesn't use its clock, but must come within this time.
@@ -192,6 +194,7 @@ export class Game {
       else this.r.black_ms = this.r.black_ms - used + this.r.increment_ms
     }
     this.r.moves.push(san)
+    ;(this.r.move_ms ??= []).push(Math.max(0, now - (this.r.turn_started_at ?? now)))
     this.r.turn_started_at = now
     // A move declines a draw offer from the other side; an own offer stays open.
     if (this.r.draw_offer && this.r.draw_offer !== color) this.r.draw_offer = null

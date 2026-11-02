@@ -1,6 +1,7 @@
 import crypto from "node:crypto"
 import type { Server, Socket } from "socket.io"
 import { getRating } from "./db.js"
+import { banOf } from "./fairplay.js"
 import { isGuest, parseTimeControl, type Player } from "./game.js"
 import { PROVISIONAL_RD, speedOf } from "./glicko.js"
 import type { GameManager } from "./manager.js"
@@ -68,6 +69,7 @@ export const registerSeek = (io: Server, socket: Socket, manager: GameManager, m
     const tc = String(input?.tc ?? "")
     const parsed = SEEK_TIME_CONTROLS.includes(tc) ? parseTimeControl(tc) : null
     if (!parsed) return reply({ ok: false, error: "bad-time-control" })
+    if (await banOf(player.id)) return reply({ ok: false, error: "fair-play-ban" })
     const live = manager.liveFor(player.id)
     if (live.length) return reply({ ok: false, error: "in-game", game_id: live[0] })
     const r = await getRating(player.id, speedOf(parsed.initial_ms, parsed.increment_ms))

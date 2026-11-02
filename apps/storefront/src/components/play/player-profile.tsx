@@ -91,7 +91,10 @@ export function PlayerProfile({ username, meId }: { username: string; meId: stri
             ) : null}
           </div>
         </div>
-        {p.bio && <p className="border-t border-[var(--g-line)] px-6 py-4 text-[15px]">{p.bio}</p>}
+        {p.fair_play_closed && (
+        <p className="border-t border-[var(--g-line)] bg-[#3a1d1a] px-6 py-3 text-[14px] text-[#ff8a7d]">This account was closed for rated play after a fair-play review.</p>
+      )}
+      {p.bio && <p className="border-t border-[var(--g-line)] px-6 py-4 text-[15px]">{p.bio}</p>}
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-[1fr_1fr]">

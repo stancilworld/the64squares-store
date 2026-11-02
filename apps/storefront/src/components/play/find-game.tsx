@@ -63,6 +63,7 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
         setSeeking({ since: t, rating: res.rating ?? 1500, provisional: !!res.provisional })
         setNow(t)
       } else if (res.error === "in-game") setError({ text: "You're already in a game.", game: res.game_id })
+      else if (res.error === "fair-play-ban") setError({ text: "Your account is closed for rated games after a fair-play review." })
       else setError({ text: "Couldn't start the search. Please try again." })
     })
   }

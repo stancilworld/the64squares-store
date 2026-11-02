@@ -18,6 +18,7 @@ export type Results = { games: number; wins: number; draws: number; losses: numb
 export type FullProfile = PublicProfile & {
   ratings: { speed: "bullet" | "blitz" | "rapid" | "classical"; rating: number; provisional: boolean; games: number }[]
   stats: { people: Results; computer: Results }
+  fair_play_closed?: boolean
 }
 
 export const TITLE_COLOURS: Record<string, string> = {

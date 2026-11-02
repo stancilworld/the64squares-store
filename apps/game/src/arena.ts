@@ -1,3 +1,4 @@
+import { banOf } from "./fairplay.js"
 import type { Server, Socket } from "socket.io"
 import { applyResult, emptyStanding, pairPool, rank, type Standing } from "./arena-rules.js"
 import { pool } from "./db.js"
@@ -233,6 +234,7 @@ export const registerArena = (
     if (phase(a) !== "live") return ack({ ok: false, error: phase(a) === "before" ? "not-started" : "over" })
     const name = await isRegistered(a.t.id, p.id)
     if (!name) return ack({ ok: false, error: "not-registered" })
+    if (await banOf(p.id)) return ack({ ok: false, error: "fair-play-ban" })
     if (!a.standings.has(p.id)) {
       const s = emptyStanding(p.id, name, Date.now())
       a.standings.set(p.id, s)

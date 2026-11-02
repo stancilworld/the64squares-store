@@ -16,11 +16,19 @@ type Incoming = { game_id: string; from: PublicProfile; initial_ms: number; incr
 type Outgoing = { game_id: string; to: PublicProfile; at: number }
 type Toast = { id: number; text: string; href?: string }
 
-const state: { socket: Socket | null; incoming: Incoming[]; outgoing: Outgoing | null; toasts: Toast[]; version: number } = {
+const state: {
+  socket: Socket | null
+  incoming: Incoming[]
+  outgoing: Outgoing | null
+  toasts: Toast[]
+  notice: { status: "warned" | "banned"; scope?: string } | null
+  version: number
+} = {
   socket: null,
   incoming: [],
   outgoing: null,
   toasts: [],
+  notice: null,
   version: 0,
 }
 const listeners = new Set<() => void>()
@@ -72,6 +80,7 @@ const ERRORS: Record<string, string> = {
   offline: "is offline right now",
   busy: "is in a game right now",
   "not-friends": "isn't on your friends list",
+  "fair-play-ban": "can't be challenged: your account is closed after a fair-play review",
 }
 export const challengeError = (name: string, error?: string) => (error && ERRORS[error] ? `${name} ${ERRORS[error]}.` : "The challenge couldn't be sent.")
 
@@ -102,6 +111,10 @@ export function PlayLive({ pass }: { pass: PlayPass | null }) {
       changed()
       router.push(`/play/${c.game_id}`)
     })
+    s.on("fairplay:notice", (n: { status: "warned" | "banned"; scope?: string }) => {
+      state.notice = n
+      changed()
+    })
     s.on("friends:changed", (c: { type: string; from?: PublicProfile; by?: string }) => {
       if (c.type === "request" && c.from) toast(`${c.from.display_name} sent you a friend request.`, "/play/friends?tab=requests")
       if (c.type === "accepted" && c.by) toast(`${c.by} accepted your friend request.`, "/play/friends")
@@ -130,8 +143,35 @@ export function PlayLive({ pass }: { pass: PlayPass | null }) {
 
   const c = state.incoming[0]
   const o = state.outgoing
+  const n = state.notice
   return (
     <>
+      {n && (
+        <div className="fixed inset-x-0 bottom-[74px] z-[64] flex justify-center px-3 lg:bottom-4" role="status">
+          <div className="flex w-full max-w-[560px] items-start gap-3 rounded-2xl border border-[#c4483d]/60 bg-[#3a1d1a] p-4 text-[14px] shadow-2xl">
+            <p className="flex-1">
+              {n.status === "banned" ? (
+                <>
+                  <b>Your account is closed for {n.scope === "all" ? "games with other players" : "rated games and tournaments"}</b> after a fair-play
+                  review: your games matched computer moves far more than is humanly normal.{" "}
+                </>
+              ) : (
+                <>
+                  <b>Fair-play warning.</b> Our checks found games that look like computer help. Using an engine or any outside help while playing
+                  isn&apos;t allowed; next time the account will be closed for rated play.{" "}
+                </>
+              )}
+              <a href="/contact" className="underline underline-offset-2">
+                Contact us
+              </a>{" "}
+              if you think this is a mistake.
+            </p>
+            <button type="button" aria-label="Close" className="g-muted text-[16px]" onClick={() => ((state.notice = null), changed())}>
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       {c && (
         <div className="fixed inset-x-0 top-3 z-[70] flex justify-center px-3" role="alertdialog" aria-label="Challenge">
           <div className="w-full max-w-[420px] rounded-2xl border border-[var(--g-gold)]/50 bg-[var(--g-panel)] p-4 shadow-2xl">

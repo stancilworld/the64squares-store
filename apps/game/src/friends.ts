@@ -1,5 +1,6 @@
 import type { Server, Socket } from "socket.io"
 import { online } from "./arena.js"
+import { banOf } from "./fairplay.js"
 import { pool } from "./db.js"
 import { isGuest, type Player } from "./game.js"
 import type { GameManager } from "./manager.js"
@@ -128,6 +129,7 @@ export const registerFriends = (io: Server, socket: Socket, manager: GameManager
     const p = signedIn()
     if (!p) return reply({ ok: false, error: "sign-in" })
     if ((await relation(p.id, input.to)) !== "friends") return reply({ ok: false, error: "not-friends" })
+    if ((await banOf(p.id))?.scope === "all") return reply({ ok: false, error: "fair-play-ban" })
     if (!online.has(input.to)) return reply({ ok: false, error: "offline" })
     if (manager.liveFor(input.to).length) return reply({ ok: false, error: "busy" })
     const colour = input.colour === "w" || input.colour === "b" ? input.colour : "random"

@@ -7,6 +7,7 @@ import { type Color, type Game, isGuest, type Player } from "./game.js"
 import { speedOf, type Speed } from "./glicko.js"
 import { GameManager } from "./manager.js"
 import { arenaStandings, online, registerArena, startArenas } from "./arena.js"
+import { banOf, migrateFairPlay, registerFairPlay, startFairPlay } from "./fairplay.js"
 import { migrateFriends, registerFriends } from "./friends.js"
 import { xpForGame } from "./levels.js"
 import { addXp, ensureProfile, getProfile, getProfiles, migrateProfiles, publicProfile, readAvatar, removeAvatar, searchProfiles, setAvatar, updateProfile } from "./profiles.js"
@@ -49,7 +50,8 @@ const fullProfile = async (idOrUsername: string) => {
   const p = await getProfile(idOrUsername)
   if (!p) return null
   const [ratings, stats] = await Promise.all([ratingsFor(p.player_id), playerStats(p.player_id)])
-  return { ...publicProfile(p), ratings, stats, online: online.has(p.player_id) }
+  const ban = await banOf(p.player_id)
+  return { ...publicProfile(p), ratings, stats, online: online.has(p.player_id), fair_play_closed: !!ban }
 }
 
 // Plain web endpoints: a health check, a game's PGN, and a player's recent games.
@@ -216,6 +218,7 @@ io.on("connection", (socket) => {
     if (!guard(ack) || limited(socket)) return
     const player = me()
     if (!player) return ack({ ok: false, error: "sign-in" })
+    if ((await banOf(player.id))?.scope === "all") return ack({ ok: false, error: "fair-play-ban" })
     const colour = input?.colour === "w" || input?.colour === "b" ? (input.colour as Color) : "random"
     try {
       const g = await manager.createChallenge(player, String(input?.tc ?? ""), colour)
@@ -331,6 +334,7 @@ io.on("connection", (socket) => {
     if (!guard(ack) || limited(socket) || !isId(id)) return
     const player = me()
     if (!player) return ack({ ok: false, error: "sign-in" })
+    if ((await banOf(player.id))?.scope === "all") return ack({ ok: false, error: "fair-play-ban" })
     const res = await manager.accept(id, player)
     socket.join(room(id))
     ack(res.ok ? { ok: true } : res)
@@ -369,12 +373,15 @@ io.on("connection", (socket) => {
   registerArena(io, socket, manager, me, limited)
   registerSeek(io, socket, manager, me, limited)
   registerFriends(io, socket, manager, me, limited)
+  registerFairPlay(io, socket, manager, me)
 })
 
 const main = async () => {
   await migrate()
   await migrateProfiles()
   await migrateFriends()
+  await migrateFairPlay()
+  startFairPlay(manager)
   // Experience for both players when a game against a person ends.
   manager.whenGameEnds(async (g) => {
     if (g.r.status !== "finished" || !g.r.result) return

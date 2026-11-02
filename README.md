@@ -21,6 +21,8 @@ apps/
 | Keys | Razorpay, Resend, Google and Delhivery keys: the main admin (OWNER_EMAIL) enters them in Settings → Payments & delivery → Keys, or on the server with deploy/set-keys.sh |
 | Tournaments | Online and over-the-board events, free registration with a QR ticket (T64-XXXXXX), admin check-in and CSV export. Online events are always free to enter (Online Gaming Act 2025); paid entry is for offline events, paid at the venue |
 | Online play | /play hub: Play online (rated pairing by Glicko-2 rating, leaderboard), Play the computer (Stockfish in the browser, 8 levels, hint and takeback), Play a friend by link, Arena tournaments. Board: drag or click, legal-move dots, highlights, sounds, themes, move replay; games survive closed tabs (return banner, claim win if the opponent leaves); game history and rematch |
+| Social & profiles | Guests can play without an account (casual games). Profiles with picture, username, city and bio; XP levels (Pawn → Grandmaster); friends with requests, online status and direct challenges |
+| Fair play | Every rated game is checked with a chess engine (accuracy vs rating, engine match, average loss, even timing, leaving the game during own moves). Suspicious players appear in the admin under Fair play with the evidence; the admin clears, warns or bans (a ban refunds opponents' rating points). Nobody is banned automatically |
 | Next | Real products, then the Android and iOS apps |
 
 ## Run it locally

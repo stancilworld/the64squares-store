@@ -6,14 +6,14 @@ After=network.target postgresql.service
 Type=simple
 User=the64squares
 WorkingDirectory=/opt/the64squares/app/apps/game
-# Written by deploy/build.sh: DATABASE_URL, PLAY_TOKEN_SECRET, STORE_CORS.
+# Written by deploy/build.sh: DATABASE_URL, PLAY_TOKEN_SECRET, STORE_CORS, PUBLIC_URL, AVATAR_DIR.
 EnvironmentFile=/opt/the64squares/game.env
 Environment=NODE_ENV=production
 Environment=PORT=9200
 ExecStart=/usr/bin/node /opt/the64squares/app/apps/game/dist/index.js
 Restart=always
 RestartSec=3
-MemoryMax=400M
+MemoryMax=700M
 
 [Install]
 WantedBy=multi-user.target

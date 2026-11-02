@@ -187,6 +187,34 @@ export function GameView({ id, initialPass }: Props) {
     }
   }, [active, game?.clock_running, myColour, myClock])
 
+  // Fair play: tell the server when the player comes back after leaving the game during their move.
+  const awaySince = useRef<number | null>(null)
+  const watchFocus = !!game && game.rated && active && !!myColour && game.turn === myColour
+  useEffect(() => {
+    if (!watchFocus) {
+      awaySince.current = null
+      return
+    }
+    const leave = () => {
+      if (awaySince.current == null) awaySince.current = Date.now()
+    }
+    const back = () => {
+      if (awaySince.current == null) return
+      const away = Date.now() - awaySince.current
+      awaySince.current = null
+      if (away >= 1500) socket.current?.emit("game:focus", { id, away_ms: away })
+    }
+    const vis = () => (document.hidden ? leave() : back())
+    document.addEventListener("visibilitychange", vis)
+    window.addEventListener("blur", leave)
+    window.addEventListener("focus", back)
+    return () => {
+      document.removeEventListener("visibilitychange", vis)
+      window.removeEventListener("blur", leave)
+      window.removeEventListener("focus", back)
+    }
+  }, [watchFocus, id])
+
   const emit = <T,>(event: string, payload: unknown) =>
     new Promise<T>((ok) => socket.current?.emit(event, payload, (res: T) => ok(res)))
 

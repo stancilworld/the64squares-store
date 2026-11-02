@@ -430,3 +430,11 @@ export const TournamentRegisterBody = z
   })
   .strict()
 export type TournamentRegisterBodyType = z.infer<typeof TournamentRegisterBody>
+
+// Play → Fair play: the decision on a flagged player.
+export const FairPlayDecisionBody = z.object({
+  action: z.enum(["clear", "warn", "ban", "unban"]),
+  scope: z.enum(["rated", "all"]).optional(),
+  note: z.string().trim().max(500).optional(),
+})
+export type FairPlayDecisionBodyType = z.infer<typeof FairPlayDecisionBody>

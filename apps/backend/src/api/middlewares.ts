@@ -33,6 +33,7 @@ import {
   RegistrationStatusBody,
   CheckInBody,
   TournamentRegisterBody,
+  FairPlayDecisionBody,
   ChatbotTestBody,
 } from "./admin/validators"
 import { staffGuard } from "./staff-guard"
@@ -219,6 +220,11 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/store/tournaments/:handle/register",
       middlewares: [authenticate("customer", ["bearer", "session"]), validateAndTransformBody(TournamentRegisterBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/fair-play/:id",
+      middlewares: [validateAndTransformBody(FairPlayDecisionBody)],
     },
     {
       method: ["POST"],

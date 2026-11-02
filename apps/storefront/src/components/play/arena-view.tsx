@@ -100,6 +100,8 @@ export function ArenaView({ idOrHandle, token, meId, myName }: { idOrHandle: str
             ? "You're not registered for this tournament."
             : res.error === "not-started"
               ? "The arena hasn't started yet."
+              : res.error === "fair-play-ban"
+                ? "Your account is closed for tournaments after a fair-play review."
               : res.error === "over"
                 ? "This arena has finished."
                 : "That didn't work. Please try again."

@@ -59,6 +59,7 @@ export const PERMISSIONS: Permission[] = [
 
   // Tournaments
   { key: "tournaments.manage", group: "Tournaments", label: "Manage tournaments", description: "Create, edit, publish, cancel and delete tournaments.", default: false },
+  { key: "fairplay.review", group: "Tournaments", label: "Fair play review", description: "See players flagged by the anti-cheat checks and clear, warn or ban them.", default: false },
   { key: "tournaments.checkin", group: "Tournaments", label: "Players & check-in", description: "See who registered (names, emails, phones), download the list, check players in at the door, cancel a place.", default: true },
 
   // Settings
@@ -153,6 +154,7 @@ const RULES: Rule[] = [
   r("read", /^\/invoices(\/|$)/, "orders.view"),
 
   // Tournaments: players' details and check-in need their own toggle, even to read.
+  r("any", /^\/fair-play(\/|$)/, "fairplay.review"),
   r("any", /^\/tournament-checkin(\/|$)/, "tournaments.checkin"),
   r("any", /^\/tournaments\/[^/]+\/registrations(\/|$)/, "tournaments.checkin"),
   r("write", /^\/tournaments(\/|$)/, "tournaments.manage"),
