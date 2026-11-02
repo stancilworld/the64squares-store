@@ -20,6 +20,7 @@ const NAV: Record<string, string | string[]> = {
   "/app/product-editor": "products.edit",
   "/app/product-order": "products.edit",
   "/app/website/contact": "content.contact",
+  "/app/tournaments": ["tournaments.manage", "tournaments.checkin"],
   "/app/website/chatbot": ["content.chatbot", "messages.view"],
   "/app/messages": ["messages.view", "mailbox.view"],
   "/app/website": [

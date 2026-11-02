@@ -48,7 +48,7 @@ export const PERMISSIONS: Permission[] = [
   { key: "subscribers.view", group: "Customers & marketing", label: "View newsletter subscribers", description: "See the newsletter sign-up list.", default: false },
 
   // Website
-  { key: "content.homepage", group: "Website", label: "Edit Homepage", description: "Banner, featured collection, gang band and newsletter section.", default: true },
+  { key: "content.homepage", group: "Website", label: "Edit Homepage", description: "Banner, featured collection and newsletter section.", default: true },
   { key: "content.about", group: "Website", label: "Edit About us & team faces", description: "Who are we?, Faces behind The 64 Squares and Get in touch.", default: true },
   { key: "content.footer", group: "Website", label: "Edit menu, footer & announcement bar", description: "Top-menu words and links, footer links and social links, the announcement strip, and the footer animation.", default: true },
   { key: "content.blog", group: "Website", label: "Write blog posts", description: "Create and edit draft posts.", default: true },
@@ -56,6 +56,10 @@ export const PERMISSIONS: Permission[] = [
   { key: "content.contact", group: "Website", label: "Edit Contact page", description: "The ways to reach you, the form's questions, and where messages are emailed.", default: false },
   { key: "content.chatbot", group: "Website", label: "Edit the chat bot", description: "The chat bubble on the website: its answers, buttons, WhatsApp handover and AI.", default: false },
   { key: "content.help", group: "Website", label: "Edit help pages", description: "Delivery, Returns & warranty, FAQs, Privacy, Terms.", default: false },
+
+  // Tournaments
+  { key: "tournaments.manage", group: "Tournaments", label: "Manage tournaments", description: "Create, edit, publish, cancel and delete tournaments.", default: false },
+  { key: "tournaments.checkin", group: "Tournaments", label: "Players & check-in", description: "See who registered (names, emails, phones), download the list, check players in at the door, cancel a place.", default: true },
 
   // Settings
   { key: "settings.branding", group: "Settings", label: "Branding & upload limits", description: "The admin sign-in logo and the file size limits.", default: false },
@@ -147,6 +151,11 @@ const RULES: Rule[] = [
   r("write", /^\/invoice-settings(\/|$)/, "settings.store"),
   r("write", /^\/invoices(\/|$)/, "orders.edit"),
   r("read", /^\/invoices(\/|$)/, "orders.view"),
+
+  // Tournaments: players' details and check-in need their own toggle, even to read.
+  r("any", /^\/tournament-checkin(\/|$)/, "tournaments.checkin"),
+  r("any", /^\/tournaments\/[^/]+\/registrations(\/|$)/, "tournaments.checkin"),
+  r("write", /^\/tournaments(\/|$)/, "tournaments.manage"),
 
   // Settings.
   r("write", /^\/(shipping-options|shipping-option-types|shipping-profiles|stock-locations|fulfillment-sets|fulfillment-providers)(\/|$)/, "settings.shipping"),

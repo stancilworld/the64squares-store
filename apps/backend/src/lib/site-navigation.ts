@@ -47,7 +47,7 @@ export const DEFAULT_SITE_NAVIGATION: SiteNavigation = {
       { label: "About us", href: "/about" },
       { label: "The 64 Squares Journal", href: "/blog" },
     ],
-    extra_links: [],
+    extra_links: [{ label: "Tournaments", href: "/tournaments" }],
   },
   footer: {
     tagline: "Chess sets, boards and clocks, made in India.",

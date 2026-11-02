@@ -139,6 +139,19 @@ export const describe = (method: string, path: string, body: Record<string, unkn
       return { action: `${verb(method, hasId)} team face`, area: "Website" }
     case "pages":
       return { action: `${verb(method, hasId)} help page`, area: "Website" }
+    case "tournaments":
+      if (sub === "registrations") {
+        return withTarget({ action: body.status === "cancelled" ? "Cancelled a player's place" : "Restored a player's place", area: "Tournaments" }, "tournament")
+      }
+      return withTarget(
+        {
+          action: body.status === "published" ? "Published tournament" : body.status === "cancelled" ? "Cancelled tournament" : `${verb(method, hasId)} tournament`,
+          area: "Tournaments",
+        },
+        "tournament"
+      )
+    case "tournament-checkin":
+      return { action: body.undo ? `Undid check-in for ${body.code}` : `Checked in ${body.code}`, area: "Tournaments" }
     case "posts":
       return {
         action: body.status === "published" ? "Published blog post" : `${verb(method, hasId)} blog post`,

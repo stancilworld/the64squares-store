@@ -28,6 +28,11 @@ import {
   MailSendBody,
   MailActionBody,
   ChatbotBody,
+  TournamentBody,
+  UpdateTournamentBody,
+  RegistrationStatusBody,
+  CheckInBody,
+  TournamentRegisterBody,
   ChatbotTestBody,
 } from "./admin/validators"
 import { staffGuard } from "./staff-guard"
@@ -205,6 +210,35 @@ export default defineMiddlewares({
     {
       matcher: "/store/account/orders*",
       middlewares: [authenticate("customer", ["bearer", "session"])],
+    },
+    {
+      matcher: "/store/account/tournaments*",
+      middlewares: [authenticate("customer", ["bearer", "session"])],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/tournaments/:handle/register",
+      middlewares: [authenticate("customer", ["bearer", "session"]), validateAndTransformBody(TournamentRegisterBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/tournaments",
+      middlewares: [validateAndTransformBody(TournamentBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/tournaments/:id",
+      middlewares: [validateAndTransformBody(UpdateTournamentBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/tournaments/:id/registrations/:rid",
+      middlewares: [validateAndTransformBody(RegistrationStatusBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/tournament-checkin",
+      middlewares: [validateAndTransformBody(CheckInBody)],
     },
   ],
 })

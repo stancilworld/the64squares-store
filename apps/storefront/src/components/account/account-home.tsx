@@ -7,14 +7,15 @@ import { useState, useTransition } from "react"
 import { type AccountOrder, deleteAddress, setPassword, signOut, updateDetails } from "@/lib/auth"
 import { notifyCartChanged } from "@/lib/cart-events"
 import { formatPrice } from "@/lib/format"
+import { eventDay, eventTime, type Ticket } from "@/lib/tournament-types"
 import { Field, PrimaryButton } from "../checkout/fields"
 import { FillMedia } from "../media"
 import { orderDate, stepLabel } from "../order-details"
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="border-t border-black/25 pt-8">
-      <h2 className="text-[18px] font-semibold lg:text-[24px]">{title}</h2>
+    <section className="border-t border-rule pt-8">
+      <h2 className="font-display h-sub">{title}</h2>
       <div className="mt-5">{children}</div>
     </section>
   )
@@ -85,7 +86,7 @@ function Password() {
   )
 }
 
-export function AccountHome({ customer, orders }: { customer: HttpTypes.StoreCustomer; orders: AccountOrder[] }) {
+export function AccountHome({ customer, orders, tickets = [] }: { customer: HttpTypes.StoreCustomer; orders: AccountOrder[]; tickets?: Ticket[] }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const addresses = customer.addresses ?? []
@@ -93,7 +94,7 @@ export function AccountHome({ customer, orders }: { customer: HttpTypes.StoreCus
     <div className={`space-y-12 ${pending ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[26px] font-semibold lg:text-[34px]">Hi{customer.first_name ? `, ${customer.first_name}` : ""}!</h1>
+          <h1 className="font-display h-page">Hi{customer.first_name ? `, ${customer.first_name}` : ""}!</h1>
           <p className="mt-1 text-[15px] text-black/70 lg:text-[17px]">{customer.email}</p>
         </div>
         <button
@@ -155,6 +156,34 @@ export function AccountHome({ customer, orders }: { customer: HttpTypes.StoreCus
           </div>
         )}
       </Section>
+
+      {tickets.length > 0 && (
+        <Section title="Your tournaments">
+          <ul className="space-y-3">
+            {tickets.map((t) => (
+              <li key={t.id}>
+                <Link
+                  href={`/account/tickets/${t.ticket_code}`}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-black/20 p-4 hover:border-black lg:p-5"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-[16px] font-medium">{t.tournament.title}</span>
+                    <span className="block text-[13px] text-muted">
+                      {eventDay(t.tournament.starts_at)}, {eventTime(t.tournament.starts_at)}
+                    </span>
+                  </span>
+                  <span className="text-right text-[13px]">
+                    <span className="block font-mono font-medium">{t.ticket_code}</span>
+                    <span className={t.status === "cancelled" ? "text-love" : "text-muted"}>
+                      {t.status === "cancelled" ? "Cancelled" : t.checked_in_at ? "Checked in" : "Show ticket"}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <Section title="Your details">
         <Details customer={customer} />

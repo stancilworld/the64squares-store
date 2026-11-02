@@ -380,3 +380,52 @@ export const MailSendBody = z.object({
     .optional(),
 })
 export type MailSendBodyType = z.infer<typeof MailSendBody>
+
+// Tournaments (lib/tournaments.ts).
+const handleText = z.string().trim().min(1).max(120).regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers and dashes")
+const longText = z.string().max(20000)
+const optionalInt = (min: number, max: number) => z.number().int().min(min).max(max).nullable().optional()
+export const TournamentBody = z
+  .object({
+    title: z.string().trim().min(1).max(160),
+    handle: handleText,
+    summary: z.string().trim().max(300).nullable().optional(),
+    description: longText.optional(),
+    format: z.enum(["arena", "swiss", "round_robin", "knockout"]).optional(),
+    mode: z.enum(["online", "offline"]).optional(),
+    time_control: z.string().trim().min(1).max(40).optional(),
+    rounds: optionalInt(1, 50),
+    starts_at: z.coerce.date(),
+    ends_at: z.coerce.date().nullable().optional(),
+    registration_closes_at: z.coerce.date().nullable().optional(),
+    venue: z.string().trim().max(400).nullable().optional(),
+    capacity: optionalInt(1, 100000),
+    entry_fee: z.number().int().min(0).max(1_000_000).optional(),
+    rating_min: optionalInt(0, 3500),
+    rating_max: optionalInt(0, 3500),
+    prizes: longText.nullable().optional(),
+    rules: longText.nullable().optional(),
+    image_url: z.string().url().max(2000).nullable().optional(),
+    status: z.enum(["draft", "published", "cancelled", "completed"]).optional(),
+  })
+  .strict()
+export const UpdateTournamentBody = TournamentBody.partial().strict()
+export type TournamentBodyType = z.infer<typeof TournamentBody>
+export type UpdateTournamentBodyType = z.infer<typeof UpdateTournamentBody>
+
+export const RegistrationStatusBody = z.object({ status: z.enum(["confirmed", "cancelled"]) }).strict()
+export type RegistrationStatusBodyType = z.infer<typeof RegistrationStatusBody>
+
+export const CheckInBody = z.object({ code: z.string().trim().min(6).max(20), undo: z.boolean().optional() }).strict()
+export type CheckInBodyType = z.infer<typeof CheckInBody>
+
+export const TournamentRegisterBody = z
+  .object({
+    player_name: z.string().trim().min(2).max(120),
+    phone: z.string().trim().regex(/^[0-9+\- ]{7,20}$/, "Please enter a valid phone number").nullable().optional(),
+    fide_id: z.string().trim().regex(/^[0-9]{3,12}$/, "A FIDE ID is numbers only").nullable().optional(),
+    rating: z.number().int().min(0).max(3500).nullable().optional(),
+    city: z.string().trim().max(80).nullable().optional(),
+  })
+  .strict()
+export type TournamentRegisterBodyType = z.infer<typeof TournamentRegisterBody>

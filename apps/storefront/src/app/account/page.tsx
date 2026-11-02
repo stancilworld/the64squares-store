@@ -4,6 +4,7 @@ import { AccountHome } from "@/components/account/account-home"
 import { SignIn } from "@/components/account/sign-in"
 import { getCustomer, getMyOrders } from "@/lib/auth"
 import { getCheckoutConfig } from "@/lib/checkout"
+import { getMyTickets } from "@/lib/tournament-actions"
 
 export const metadata: Metadata = { title: "Account", robots: { index: false } }
 
@@ -15,7 +16,8 @@ async function Account({ searchParams }: PageProps<"/account">) {
     const config = await getCheckoutConfig()
     return <SignIn google={config.google} next={next} />
   }
-  return <AccountHome customer={customer} orders={await getMyOrders()} />
+  const [orders, tickets] = await Promise.all([getMyOrders(), getMyTickets()])
+  return <AccountHome customer={customer} orders={orders} tickets={tickets} />
 }
 
 export default function AccountPage(props: PageProps<"/account">) {

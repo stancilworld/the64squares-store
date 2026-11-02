@@ -21,10 +21,10 @@ type Email = { subject: string; html: string; text: string }
 
 const layout = (title: string, inner: string) => `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title></head>
-<body style="margin:0;background:#f6f4f0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f4f0;padding:24px 12px">
+<body style="margin:0;background:#f3f1ec;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f1ec;padding:24px 12px">
 <tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:24px;padding:32px 28px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:8px;padding:32px 28px">
 <tr><td style="padding-bottom:20px"><a href="${storeUrl()}"><img src="${storeUrl()}/brand/logo-header.png" alt="The 64 Squares" height="48" style="height:48px;border:0"></a></td></tr>
 <tr><td style="font-size:16px;line-height:24px">${inner}</td></tr>
 <tr><td style="padding-top:28px;border-top:1px solid #eee;margin-top:28px;font-size:13px;line-height:20px;color:#777">
@@ -33,7 +33,7 @@ Questions? Just reply to this email.<br><a href="${storeUrl()}" style="color:#77
 </table></td></tr></table></body></html>`
 
 const button = (href: string, label: string) =>
-  `<p style="margin:24px 0"><a href="${href}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 28px;border-radius:999px;font-weight:600">${esc(label)}</a></p>`
+  `<p style="margin:24px 0"><a href="${href}" style="display:inline-block;background:#000;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600">${esc(label)}</a></p>`
 
 export type EmailOrder = {
   id: string
@@ -157,6 +157,49 @@ export const signInCodeEmail = (code: string): Email => {
 <p style="margin:0;color:#777;font-size:14px">If you didn't ask for this, you can ignore this email. Nobody can sign in without the code.</p>`
     ),
     text: `Your The 64 Squares code is ${code}. It works for 10 minutes. If you didn't ask for it, ignore this email.`,
+  }
+}
+
+// To a player: their tournament ticket.
+export const tournamentTicketEmail = (
+  t: {
+    ticket_code: string
+    player_name: string
+    tournament: { title: string; mode: string; format_label: string; time_control: string; starts_at: unknown; venue: string | null; entry_fee: number }
+  },
+  ticketUrl: string
+): Email => {
+  const ev = t.tournament
+  const when = new Intl.DateTimeFormat("en-IN", {
+    weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata",
+  }).format(new Date(ev.starts_at as string)) + " IST"
+  const where = ev.mode === "offline" ? ev.venue || "Venue to be announced" : "Online, on The 64 Squares"
+  const rows: [string, string][] = [
+    ["When", when],
+    ["Where", where],
+    ["Format", `${ev.format_label}, ${ev.time_control}`],
+    ["Player", t.player_name],
+  ]
+  if (ev.entry_fee > 0) rows.push(["Entry fee", `${money(ev.entry_fee)}${ev.mode === "offline" ? ", paid at the venue" : ""}`])
+  const subject = `Your ticket for ${ev.title}: ${t.ticket_code}`
+  return {
+    subject,
+    html: layout(
+      subject,
+      `<h1 style="font-size:24px;line-height:30px;margin:0 0 8px">You're registered</h1>
+<p style="margin:0 0 20px">See you at <strong>${esc(ev.title)}</strong>.</p>
+<p style="margin:0 0 4px;color:#777;font-size:13px">Ticket</p>
+<p style="font-size:30px;letter-spacing:4px;font-weight:700;margin:0 0 16px">${esc(t.ticket_code)}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 8px">${rows
+        .map(
+          ([k, v]) =>
+            `<tr><td style="padding:8px 0;border-bottom:1px solid #eee;color:#777;font-size:14px;width:96px;vertical-align:top">${esc(k)}</td><td style="padding:8px 0;border-bottom:1px solid #eee">${esc(v)}</td></tr>`
+        )
+        .join("")}</table>
+${button(ticketUrl, "Show my ticket and QR code")}
+<p style="margin:0;color:#777;font-size:14px">${ev.mode === "offline" ? "Show the QR code at the door to check in." : "Keep this code handy: you may need it to join on the day."} Can't make it? Cancel from your ticket page so someone else can play.</p>`
+    ),
+    text: `You're registered for ${ev.title}.\nTicket: ${t.ticket_code}\n${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}\n\nYour ticket and QR code: ${ticketUrl}`,
   }
 }
 
