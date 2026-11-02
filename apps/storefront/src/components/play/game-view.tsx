@@ -12,9 +12,11 @@ import { PlayerBar } from "@/components/chess/player-bar"
 import { PlayLayout } from "@/components/chess/play-layout"
 import { replay, START_FEN } from "@/lib/chess/replay"
 import { playSound, soundForSan } from "@/lib/chess/sounds"
+import type { PlayPass } from "@/lib/play"
+import { usePlayPass } from "./use-play-pass"
 import { GAME_URL, type GameState, LIVE_KEY, type Presence, resultText, SPEED_LABEL, speedOf, tcText } from "@/lib/game-types"
 
-type Props = { id: string; token: string | null; meId: string | null }
+type Props = { id: string; initialPass: PlayPass | null }
 type Pending = { from: Square; to: Square; promotion?: "q" | "r" | "b" | "n" }
 
 const noSubscribe = () => () => {}
@@ -31,7 +33,10 @@ const store = {
   },
 }
 
-export function GameView({ id, token, meId }: Props) {
+export function GameView({ id, initialPass }: Props) {
+  const pass = usePlayPass(initialPass)
+  const token = pass?.token ?? null
+  const meId = pass?.me.id ?? null
   const router = useRouter()
   const socket = useRef<Socket | null>(null)
   const [game, setGame] = useState<GameState | null>(null)
@@ -248,9 +253,18 @@ export function GameView({ id, token, meId }: Props) {
                 Accept and play
               </button>
             ) : (
-              <Link href={`/account?next=${encodeURIComponent(`/play/${id}`)}`} className="g-btn g-btn-primary mt-8 w-full">
-                Sign in to play
-              </Link>
+              <button type="button" disabled className="g-btn g-btn-primary mt-8 w-full">
+                Getting ready…
+              </button>
+            )}
+            {pass?.me.guest && (
+              <p className="g-muted mt-3 text-[13px]">
+                You&apos;ll play as {pass.me.name}.{" "}
+                <Link href={`/account?next=${encodeURIComponent(`/play/${id}`)}`} className="text-[var(--g-gold)] underline underline-offset-2">
+                  Sign in
+                </Link>{" "}
+                to play under your own name.
+              </p>
             )}
           </>
         )}

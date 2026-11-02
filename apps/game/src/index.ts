@@ -3,7 +3,7 @@ import { Server, type Socket } from "socket.io"
 import { playerFromToken } from "./auth.js"
 import { config } from "./config.js"
 import { gamePgn, leaderboard, liveGamesFor, migrate, ratingsFor, recentGamesFor } from "./db.js"
-import { type Color, type Game, type Player } from "./game.js"
+import { type Color, type Game, isGuest, type Player } from "./game.js"
 import { speedOf, type Speed } from "./glicko.js"
 import { GameManager } from "./manager.js"
 import { arenaStandings, registerArena, startArenas } from "./arena.js"
@@ -214,7 +214,7 @@ io.on("connection", (socket) => {
   socket.on("computer:save", async (input: { colour?: unknown; level?: unknown; moves?: unknown; resigned?: unknown }, ack: unknown) => {
     if (!guard(ack) || limited(socket)) return
     const player = me()
-    if (!player) return ack({ ok: false, error: "sign-in" })
+    if (!player || isGuest(player.id)) return ack({ ok: false, error: "sign-in" })
     const colour = input?.colour === "b" ? "b" : "w"
     ack(await manager.saveComputerGame(player, colour, Number(input?.level) || 1, input?.moves as string[], input?.resigned === true))
   })

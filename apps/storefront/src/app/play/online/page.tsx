@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Play online", description: "Rated ch
 
 async function Online() {
   const pass = await getPlayPass()
-  return <PreviewLayout myName={pass?.me.name} panel={<FindGame token={pass?.token ?? null} meId={pass?.me.id ?? null} />} />
+  return <PreviewLayout myName={pass?.me.name} panel={<FindGame initialPass={pass} />} />
 }
 
 export default function OnlinePage() {

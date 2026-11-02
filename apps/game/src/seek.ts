@@ -1,7 +1,7 @@
 import crypto from "node:crypto"
 import type { Server, Socket } from "socket.io"
 import { getRating } from "./db.js"
-import { parseTimeControl, type Player } from "./game.js"
+import { isGuest, parseTimeControl, type Player } from "./game.js"
 import { PROVISIONAL_RD, speedOf } from "./glicko.js"
 import type { GameManager } from "./manager.js"
 import { pickPairs } from "./seek-rules.js"
@@ -72,7 +72,7 @@ export const registerSeek = (io: Server, socket: Socket, manager: GameManager, m
     if (live.length) return reply({ ok: false, error: "in-game", game_id: live[0] })
     const r = await getRating(player.id, speedOf(parsed.initial_ms, parsed.increment_ms))
     seeks.set(player.id, { player, socketId: socket.id, tc, ...parsed, rating: r.rating, since: Date.now() })
-    reply({ ok: true, rating: Math.round(r.rating), provisional: r.rd > PROVISIONAL_RD, waiting: seekCounts()[tc] ?? 1 })
+    reply({ ok: true, rating: Math.round(r.rating), provisional: r.rd > PROVISIONAL_RD, guest: isGuest(player.id), waiting: seekCounts()[tc] ?? 1 })
     void match(io, manager)
   })
 

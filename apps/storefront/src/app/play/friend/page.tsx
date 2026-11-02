@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Play a friend", description: "Create
 
 async function Friend() {
   const pass = await getPlayPass()
-  return <PreviewLayout myName={pass?.me.name} panel={<NewGame token={pass?.token ?? null} />} />
+  return <PreviewLayout myName={pass?.me.name} panel={<NewGame initialPass={pass} />} />
 }
 
 export default function FriendPage() {

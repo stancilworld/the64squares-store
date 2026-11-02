@@ -1,7 +1,7 @@
 import crypto from "node:crypto"
 import { Chess } from "chess.js"
 import { getRating, loadGame, loadLiveGames, saveGame, saveRating } from "./db.js"
-import { type Color, Game, type GameRecord, type Mode, parseTimeControl, type Player, type Reason, type Result } from "./game.js"
+import { type Color, Game, type GameRecord, isGuest, type Mode, parseTimeControl, type Player, type Reason, type Result } from "./game.js"
 import { speedOf, update } from "./glicko.js"
 
 type View = ReturnType<Game["view"]>
@@ -158,6 +158,8 @@ export class GameManager {
     opts: { mode: Mode; tournamentId?: string | null; rated?: boolean }
   ) {
     const now = Date.now()
+    // A game with a guest in it never counts for ratings.
+    const rated = (opts.rated ?? true) && !isGuest(white.id) && !isGuest(black.id)
     const speed = speedOf(initial_ms, increment_ms)
     const [wr, br] = await Promise.all([getRating(white.id, speed), getRating(black.id, speed)])
     const g = new Game(
@@ -169,9 +171,9 @@ export class GameManager {
         creator_id: white.id,
         initial_ms,
         increment_ms,
-        rated: opts.rated ?? true,
-        white_rating: opts.rated === false ? null : Math.round(wr.rating),
-        black_rating: opts.rated === false ? null : Math.round(br.rating),
+        rated,
+        white_rating: rated ? Math.round(wr.rating) : null,
+        black_rating: rated ? Math.round(br.rating) : null,
       })
     )
     g.start(now)

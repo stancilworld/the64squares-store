@@ -21,6 +21,8 @@ export type Reason =
 
 export type Player = { id: string; name: string }
 
+export const isGuest = (id: string | null | undefined) => !!id && id.startsWith("guest_")
+
 export type Mode = "friend" | "arena" | "online" | "computer"
 
 export type GameRecord = {

@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { io } from "socket.io-client"
 import { GAME_URL } from "@/lib/game-types"
+import type { PlayPass } from "@/lib/play"
 import { TimeControlPicker } from "./time-control-picker"
+import { usePlayPass } from "./use-play-pass"
 
 const COLOURS = [
   ["w", "White"],
@@ -15,7 +17,9 @@ const COLOURS = [
 ] as const
 
 // Play a friend: pick a time control and colour, then share the game's link.
-export function NewGame({ token }: { token: string | null }) {
+export function NewGame({ initialPass }: { initialPass: PlayPass | null }) {
+  const pass = usePlayPass(initialPass)
+  const token = pass?.token ?? null
   const router = useRouter()
   const [tc, setTc] = useState("10+0")
   const [colour, setColour] = useState<(typeof COLOURS)[number][0]>("random")
@@ -62,14 +66,17 @@ export function NewGame({ token }: { token: string | null }) {
           </button>
         ))}
       </div>
-      {token ? (
-        <button type="button" disabled={busy} onClick={create} className="g-btn g-btn-primary sticky bottom-[76px] z-10 mt-5 lg:static h-[48px] w-full text-[16px] disabled:opacity-60">
+        <button type="button" disabled={busy || !token} onClick={create} className="g-btn g-btn-primary sticky bottom-[76px] z-10 mt-5 lg:static h-[48px] w-full text-[16px] disabled:opacity-60">
           {busy ? "Creating…" : "Create game link"}
         </button>
-      ) : (
-        <Link href="/account?next=/play/friend" className="g-btn g-btn-primary mt-5 h-[48px] w-full">
-          Sign in to play
-        </Link>
+      {pass?.me.guest && (
+        <p className="g-muted mt-3 text-[13px]">
+          Playing as {pass.me.name}.{" "}
+          <Link href="/account?next=/play/friend" className="text-[var(--g-gold)] underline underline-offset-2">
+            Sign in
+          </Link>{" "}
+          to use your own name.
+        </p>
       )}
       {error && <p className="mt-3 text-[14px] text-[#ff8a7d]">{error}</p>}
       <p className="mt-3 text-[12px] g-muted">Games with friends are casual: they don&apos;t change your rating.</p>

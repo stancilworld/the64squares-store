@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Game", robots: { index: false } }
 async function Game({ params }: PageProps<"/play/[id]">) {
   const { id } = await params
   const pass = await getPlayPass()
-  return <GameView id={id} token={pass?.token ?? null} meId={pass?.me.id ?? null} />
+  return <GameView id={id} initialPass={pass} />
 }
 
 export default function GamePage(props: PageProps<"/play/[id]">) {

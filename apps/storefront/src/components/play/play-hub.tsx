@@ -16,7 +16,7 @@ const CARDS = [
 ]
 
 // The Play menu: the ways to play beside an empty board, and the way back to a live game.
-export function PlayHub({ meId, myName }: { meId: string | null; myName: string | null }) {
+export function PlayHub({ meId, myName, signedIn }: { meId: string | null; myName: string | null; signedIn: boolean }) {
   const [live, setLive] = useState<Live | null>(null)
 
   useEffect(() => {
@@ -43,6 +43,19 @@ export function PlayHub({ meId, myName }: { meId: string | null; myName: string 
               </span>
               <span className="text-[14px] font-bold">Return →</span>
             </Link>
+          )}
+          {!signedIn && (
+            <div className="rounded-xl border border-[var(--g-line)] bg-[var(--g-panel)] px-4 py-3 text-[14px]">
+              <p>
+                <b>Play right away as a guest</b> — no sign-up needed.
+              </p>
+              <p className="g-muted mt-0.5 text-[13px]">
+                <Link href="/account?next=/play" className="text-[var(--g-gold)] underline underline-offset-2">
+                  Create a free account
+                </Link>{" "}
+                for a rating, game history, friends and tournaments.
+              </p>
+            </div>
           )}
           {CARDS.map((c) => (
             <Link
