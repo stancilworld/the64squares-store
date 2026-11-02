@@ -28,7 +28,7 @@ say() { printf "\n\033[1;34m==> %s\033[0m\n" "$1"; }
 fail() { printf "\n\033[1;31m%s\033[0m\n" "$1"; exit 1; }
 
 [ "$(id -u)" = 0 ] || fail "Run this as root."
-[ -f "$ENV_FILE" ] || fail "The64Squares is not installed here yet (no $ENV_FILE)."
+[ -f "$ENV_FILE" ] || fail "The 64 Squares is not installed here yet (no $ENV_FILE)."
 
 exec 9>/run/the64squares-setup.lock
 flock -n 9 || fail "The setup or go-live is already running. Wait for it to finish, then run this again."
@@ -179,7 +179,7 @@ for url in "https://$LIVE_DOMAIN/" "https://$LIVE_API/health" "https://$LIVE_API
   [ "$code" = 200 ] || ok=no
 done
 
-printf "\n\033[1;32m================ The64Squares is live ================\033[0m\n"
+printf "\n\033[1;32m================ The 64 Squares is live ================\033[0m\n"
 echo "Store:  https://$LIVE_DOMAIN"
 echo "Admin:  https://$LIVE_API/app   (same login as before)"
 echo "www.$LIVE_DOMAIN and $OLD_STORE now redirect to https://$LIVE_DOMAIN"

@@ -1,13 +1,14 @@
 // Swatch colours for product colour options. Colours added in the admin's simple product form
 // carry their own swatch (served by GET /store/colours); these are the built-in ones.
 export const DEFAULT_SWATCHES: Record<string, string> = {
-  "sunshine yellow": "#f6c445",
-  "sky blue": "#7fb2e5",
-  "crayon red": "#e5484d",
-  "leaf green": "#5dbb63",
-  "natural": "#d8b98a",
+  "natural": "#e2c99a",
+  "maple": "#e8d8b8",
+  "walnut": "#6b4423",
+  "rosewood": "#65231f",
+  "sheesham": "#8a5a35",
+  "ebony black": "#1c1a18",
   "white": "#ffffff",
-  "black": "#1e1e1e",
+  "black": "#1c1a18",
 }
 
 export const swatchFrom = (palette: Record<string, string>, colour: string) => {

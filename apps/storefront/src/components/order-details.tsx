@@ -24,7 +24,7 @@ export function OrderDetails({ order }: { order: AccountOrder }) {
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-[96px]">
       <div>
         {order.step === "canceled" ? (
-          <p className="rounded-[22px] bg-pill p-5 text-[15px] lg:text-[17px]">This order was cancelled.</p>
+          <p className="rounded-md bg-pill p-5 text-[15px] lg:text-[17px]">This order was cancelled.</p>
         ) : (
           <ol className="flex items-start justify-between gap-2" aria-label="Order progress">
             {STEPS.map((s, i) => (
@@ -70,7 +70,7 @@ export function OrderDetails({ order }: { order: AccountOrder }) {
                 <p className="mt-[2px] text-[12px] italic lg:text-[14px]">Quantity: {i.quantity}</p>
                 <p className="mt-2 text-[15px] lg:text-[17px]">{formatPrice(i.total)}</p>
               </div>
-              <span className="relative h-[82px] w-[92px] shrink-0 overflow-hidden rounded-[16px] bg-placeholder lg:h-[110px] lg:w-[124px] lg:rounded-[22px]">
+              <span className="relative h-[82px] w-[92px] shrink-0 overflow-hidden rounded-md bg-placeholder lg:h-[110px] lg:w-[124px] lg:rounded-md">
                 {i.thumbnail && <FillMedia src={i.thumbnail} sizes="124px" alt="" />}
               </span>
             </li>
@@ -120,14 +120,14 @@ export function OrderDetails({ order }: { order: AccountOrder }) {
               href={order.invoice_url}
               target="_blank"
               rel="noreferrer"
-              className="mt-5 flex h-[42px] items-center justify-center rounded-full border-[1.5px] border-black text-[15px] hover:bg-pill"
+              className="mt-5 flex h-[42px] items-center justify-center rounded-full border border-black text-[15px] hover:bg-linen"
             >
               Download GST invoice
             </a>
           )}
         </div>
         <p className="text-center text-[13px] italic underline underline-offset-2 lg:text-[15px]">
-          <Link href="/contact">Having a Problem? Contact Us.</Link>
+          <Link href="/contact">Need help? Contact us</Link>
         </p>
       </aside>
     </div>

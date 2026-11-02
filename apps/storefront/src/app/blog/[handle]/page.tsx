@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: PageProps<"/blog/[handle]">):
   const post = await getPost(handle)
   return post
     ? { title: post.title, description: post.excerpt ?? undefined }
-    : { title: "The64Squares Journal" }
+    : { title: "The 64 Squares Journal" }
 }
 
 async function Post({ params }: { params: Promise<{ handle: string }> }) {
@@ -30,7 +30,7 @@ async function Post({ params }: { params: Promise<{ handle: string }> }) {
           <ArrowLeftLong className="h-[10px] w-[40px]" />
           Back to Blog
         </Link>
-        <h1 className="mx-auto mt-6 max-w-[900px] text-center font-display text-[56px] leading-[40px] lg:mt-[14px] lg:text-[128px] lg:leading-[81px]">
+        <h1 className="mx-auto mt-6 max-w-[900px] text-center font-display h-page lg:mt-[14px]">
           {post.title}
         </h1>
       </div>

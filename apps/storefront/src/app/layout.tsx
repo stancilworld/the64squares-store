@@ -3,6 +3,7 @@ import { Suspense } from "react"
 import "@fontsource/inter/400.css"
 import "@fontsource/inter/500.css"
 import "@fontsource/inter/600.css"
+import "@fontsource-variable/fraunces/full.css"
 import "./globals.css"
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
@@ -18,13 +19,12 @@ const DESCRIPTION = "Premium chess sets, boards, pieces and clocks, made in Indi
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: "The64Squares | Premium chess sets, boards & tournaments", template: "%s | The64Squares" },
+  title: { default: "The 64 Squares | Premium chess sets, boards & tournaments", template: "%s | The 64 Squares" },
   description: DESCRIPTION,
-  icons: { icon: "/brand/logo-header.png" },
   openGraph: {
     type: "website",
-    siteName: "The64Squares",
-    title: "The64Squares | Premium chess sets, boards & tournaments",
+    siteName: "The 64 Squares",
+    title: "The 64 Squares | Premium chess sets, boards & tournaments",
     description: DESCRIPTION,
     locale: "en_IN",
   },

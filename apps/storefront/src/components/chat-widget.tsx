@@ -70,8 +70,8 @@ function Words({ text }: { text: string }) {
   )
 }
 
-const chip = "rounded-full border-[1.5px] border-black bg-white px-4 py-[9px] text-[14px] font-medium leading-none hover:bg-[#f6c445] disabled:opacity-50"
-const box = "h-[44px] w-full rounded-full border-[1.5px] border-black bg-white px-4 text-[15px] outline-none placeholder:text-black/40 focus:shadow-[3px_3px_0_#000]"
+const chip = "rounded-full border border-rule bg-white px-4 py-[9px] text-[14px] font-medium leading-none hover:bg-linen disabled:opacity-50"
+const box = "h-[44px] w-full rounded-full border border-rule bg-white px-4 text-[15px] outline-none placeholder:text-black/40 focus:shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
 
 const never = () => () => {}
 type Kept = { session: string; msgs: Msg[]; at: number }
@@ -212,18 +212,18 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
           role="dialog"
           aria-label={`Chat with ${config.name}`}
           data-chat-panel
-          className="chat-pop fixed inset-0 z-[60] flex flex-col bg-white [&>*:not(img):not(video)]:relative [&>*:not(img):not(video)]:z-[1] sm:inset-auto sm:bottom-[100px] sm:right-5 sm:h-[min(640px,calc(100dvh-130px))] sm:w-[400px] sm:rounded-[32px] sm:border-[1.5px] sm:border-black sm:shadow-[8px_8px_0_#000]"
+          className="chat-pop fixed inset-0 z-[60] flex flex-col bg-white [&>*:not(img):not(video)]:relative [&>*:not(img):not(video)]:z-[1] sm:inset-auto sm:bottom-[100px] sm:right-5 sm:h-[min(640px,calc(100dvh-130px))] sm:w-[400px] sm:rounded-xl sm:border sm:border-black sm:shadow-[0_24px_60px_rgba(0,0,0,0.18)]"
         >
           {/* Header: big hello on a fresh chat, a slim bar once talking. */}
           <div
-            className={`relative z-[1] shrink-0 bg-[#f6c445] sm:rounded-t-[30px] ${fresh ? "px-6 pb-6 pt-5" : "flex items-center gap-3 border-b-[1.5px] border-black px-4 py-3"}`}
+            className={`relative z-[1] shrink-0 bg-velvet text-white sm:rounded-t-xl ${fresh ? "px-6 pb-6 pt-5" : "flex items-center gap-3 border-b border-white/15 px-4 py-3"}`}
           >
             {fresh ? (
               <>
                 <div className="absolute right-4 top-4">
                   <HeaderButtons onClose={close} />
                 </div>
-                <h2 className="pt-6 font-display text-[58px] leading-[44px]">{config.name}</h2>
+                <h2 className="pt-6 font-display h-section">{config.name}</h2>
                 <p className="mt-3 max-w-[310px] text-[15px] leading-[21px]">
                   <Words text={config.greeting} />
                 </p>
@@ -231,8 +231,8 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
             ) : (
               <>
                 <Sticker size="sm" />
-                <p className="min-w-0 flex-1 truncate pt-1 font-display text-[40px] leading-[30px]">{config.name}</p>
-                <button type="button" onClick={startOver} className="rounded-full px-3 py-1.5 text-[13px] font-medium hover:bg-black/10">
+                <p className="min-w-0 flex-1 truncate pt-1 font-display text-[22px] leading-tight">{config.name}</p>
+                <button type="button" onClick={startOver} className="rounded-full px-3 py-1.5 text-[13px] font-medium hover:bg-white/10">
                   Start over
                 </button>
                 <HeaderButtons onClose={close} />
@@ -248,7 +248,7 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
                     key={q.id}
                     type="button"
                     onClick={() => quick(q)}
-                    className="group flex min-h-[92px] flex-col items-start justify-between gap-2 rounded-[24px] border-[1.5px] border-black bg-white p-3.5 text-left text-[15px] font-medium leading-tight transition-colors hover:bg-[#f6c445] focus-visible:bg-[#f6c445] focus-visible:outline-none"
+                    className="group flex min-h-[92px] flex-col items-start justify-between gap-2 rounded-xl border border-rule bg-white p-3.5 text-left text-[15px] font-medium leading-tight transition-colors hover:bg-linen focus-visible:bg-velvet text-white focus-visible:outline-none"
                   >
                     <QuickIcon action={q.action} />
                     {q.label}
@@ -263,7 +263,7 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
               if (m.role === "user") {
                 return (
                   <div key={m.id} className={`flex justify-end ${firstOfTurn ? "mt-1" : ""}`}>
-                    <p className="max-w-[80%] whitespace-pre-wrap break-words rounded-[22px] rounded-br-[6px] bg-black px-4 py-2.5 text-[15px] leading-[22px] text-white">{m.text}</p>
+                    <p className="max-w-[80%] whitespace-pre-wrap break-words rounded-xl rounded-br-[6px] bg-black px-4 py-2.5 text-[15px] leading-[22px] text-white">{m.text}</p>
                   </div>
                 )
               }
@@ -290,9 +290,9 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
                         <Link
                           key={p.handle}
                           href={`/products/${p.handle}`}
-                          className="w-[148px] shrink-0 rounded-[24px] border-[1.5px] border-black bg-white p-2 transition-transform hover:-translate-y-0.5"
+                          className="w-[148px] shrink-0 rounded-xl border border-rule bg-white p-2 transition-transform hover:-translate-y-0.5"
                         >
-                          <span className="relative block aspect-[232/211] w-full overflow-hidden rounded-[18px] bg-placeholder">
+                          <span className="relative block aspect-[232/211] w-full overflow-hidden rounded-xl bg-placeholder">
                             {p.thumbnail && <Image src={p.thumbnail} alt="" fill sizes="148px" className="object-cover" />}
                           </span>
                           <span className="mt-2 block truncate px-1 text-[14px] font-medium">{p.title}</span>
@@ -307,7 +307,7 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
             {busy && (
               <div className="flex items-end gap-2" aria-label="Typing">
                 <Sticker size="xs" />
-                <span className="flex gap-1 rounded-[22px] rounded-bl-[6px] border-[1.5px] border-black bg-white px-4 py-3.5">
+                <span className="flex gap-1 rounded-xl rounded-bl-[6px] border border-rule bg-white px-4 py-3.5">
                   {[0, 1, 2].map((i) => (
                     <span key={i} className="h-[7px] w-[7px] animate-bounce rounded-full bg-black motion-reduce:animate-none" style={{ animationDelay: `${i * 150}ms` }} />
                   ))}
@@ -365,7 +365,7 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
               ask(text)
             }}
           >
-            <div className="flex items-center gap-1 rounded-full border-[1.5px] border-black bg-white p-1 pl-4 focus-within:shadow-[3px_3px_0_#000]">
+            <div className="flex items-center gap-1 rounded-full border border-rule bg-white p-1 pl-4 focus-within:shadow-[0_2px_8px_rgba(0,0,0,0.12)]">
               <label htmlFor="chat-input" className="sr-only">
                 Your question
               </label>
@@ -423,7 +423,7 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
 function Sticker({ size }: { size: "sm" | "xs" }) {
   const box = size === "sm" ? "h-[42px] w-[42px]" : "h-[30px] w-[30px]"
   return (
-    <span aria-hidden="true" className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-black bg-white ${box}`}>
+    <span aria-hidden="true" className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-rule bg-white ${box}`}>
       <Image src="/brand/logo-header.png" alt="" width={64} height={64} className="h-[78%] w-[78%] object-contain" />
     </span>
   )
@@ -435,7 +435,7 @@ function HeaderButtons({ onClose }: { onClose: () => void }) {
       type="button"
       aria-label="Close chat"
       onClick={onClose}
-      className="flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-black bg-white hover:bg-black hover:text-white"
+      className="flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-full border border-rule bg-white hover:bg-black hover:text-white"
     >
       <CloseIcon className="h-[16px] w-[16px]" />
     </button>
@@ -479,7 +479,7 @@ function QuickIcon({ action }: { action: ChatbotConfig["quick"][number]["action"
 
 function Bubble({ children }: { children: React.ReactNode }) {
   return (
-    <p className="max-w-[calc(100%-44px)] whitespace-pre-wrap break-words rounded-[22px] rounded-bl-[6px] border-[1.5px] border-black bg-white px-4 py-2.5 text-[15px] leading-[22px]">
+    <p className="max-w-[calc(100%-44px)] whitespace-pre-wrap break-words rounded-xl rounded-bl-[6px] border border-rule bg-white px-4 py-2.5 text-[15px] leading-[22px]">
       {children}
     </p>
   )
@@ -491,14 +491,14 @@ const STEP_LABEL: Record<string, string> = { placed: "Placed", packed: "Packed",
 function OrderCard({ o }: { o: ChatOrder }) {
   const at = STEPS.indexOf(o.step)
   return (
-    <div data-chat-order className="min-w-0 flex-1 rounded-[24px] border-[1.5px] border-black bg-white p-4 shadow-[4px_4px_0_#f6c445]">
+    <div data-chat-order className="min-w-0 flex-1 rounded-xl border border-rule bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.12)]">
       <p className="text-[13px] text-muted">Order #{o.display_id}</p>
       <p className="mt-0.5 text-[16px] font-semibold">{o.step_text}</p>
       {o.step !== "canceled" && (
         <ol className="mt-3 grid grid-cols-4 gap-1" aria-label="Progress">
           {STEPS.map((s, i) => (
             <li key={s} className="flex flex-col gap-1">
-              <span className={`h-[7px] rounded-full border border-black ${i <= at ? "bg-[#f6c445]" : "bg-white"}`} />
+              <span className={`h-[7px] rounded-full border border-black ${i <= at ? "bg-velvet" : "bg-white"}`} />
               <span className={`text-[11px] ${i <= at ? "font-medium" : "text-muted"}`}>{STEP_LABEL[s]}</span>
             </li>
           ))}
@@ -536,7 +536,7 @@ function TrackForm({ session, onDone, onCancel }: { session: () => string; onDon
   return (
     <form
       data-chat-track
-      className="ml-[38px] flex flex-col gap-2 rounded-[24px] border-[1.5px] border-black bg-white p-3.5 shadow-[4px_4px_0_#f6c445]"
+      className="ml-[38px] flex flex-col gap-2 rounded-xl border border-rule bg-white p-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
       onSubmit={async (e) => {
         e.preventDefault()
         setBusy(true)
@@ -606,7 +606,7 @@ function MessageForm({ session, intro, lastQuestion, onDone, onCancel }: { sessi
   return (
     <form
       data-chat-message
-      className="ml-[38px] flex flex-col gap-2 rounded-[24px] border-[1.5px] border-black bg-white p-3.5 shadow-[4px_4px_0_#f6c445]"
+      className="ml-[38px] flex flex-col gap-2 rounded-xl border border-rule bg-white p-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
       onSubmit={async (e) => {
         e.preventDefault()
         setBusy(true)
@@ -638,7 +638,7 @@ function MessageForm({ session, intro, lastQuestion, onDone, onCancel }: { sessi
         id="chat-message"
         rows={3}
         maxLength={3000}
-        className={`w-full rounded-[20px] border-[1.5px] border-black bg-white px-4 py-2.5 text-[14px] outline-none placeholder:text-black/40 focus:ring-2 focus:ring-black/20 ${errors.message ? "border-red-600" : ""}`}
+        className={`w-full rounded-xl border border-rule bg-white px-4 py-2.5 text-[14px] outline-none placeholder:text-black/40 focus:ring-2 focus:ring-black/20 ${errors.message ? "border-red-600" : ""}`}
         placeholder="Your question"
         value={v.message}
         onChange={(e) => setV({ ...v, message: e.target.value })}

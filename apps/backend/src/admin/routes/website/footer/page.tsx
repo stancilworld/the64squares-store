@@ -6,7 +6,7 @@ const SECTIONS: SectionConfig[] = [
   {
     key: "footer_media",
     name: "Footer animation",
-    help: "Plays in the square on the left of the footer on every page. Without one, the footer shows The64Squares logo.",
+    help: "Plays in the square on the left of the footer on every page. Without one, the footer shows The 64 Squares logo.",
     fields: ["image_url"],
     many: false,
     allowVideo: true,

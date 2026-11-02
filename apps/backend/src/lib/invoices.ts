@@ -5,7 +5,7 @@ import type ContentModuleService from "../modules/content/service"
 import { saveSettingWorkflow } from "../workflows/setting"
 
 // GST tax invoices for orders. The seller is the GST-registered company;
-// The64Squares is its brand. Details are edited in the admin (Settings → Invoices).
+// The 64 Squares is its brand. Details are edited in the admin (Settings → Invoices).
 //
 // Each order gets one invoice number when it's placed (e.g. STN/2026-27/0001, counted per
 // financial year, April–March). The seller details, GST rate and number are frozen on the
@@ -36,7 +36,7 @@ export type InvoiceSettings = {
 export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
   enabled: false,
   legal_name: "",
-  brand_line: "The64Squares",
+  brand_line: "The 64 Squares",
   gstin: "",
   pan: "",
   address: "",
@@ -47,7 +47,7 @@ export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
   gst_rate: 18,
   default_hsn: "9504",
   signatory: "Authorised Signatory",
-  footer: "Thank you for shopping with The64Squares. This is a computer-generated invoice.",
+  footer: "Thank you for shopping with The 64 Squares. This is a computer-generated invoice.",
 }
 
 // GST state codes (first two digits of a GSTIN).
@@ -341,7 +341,7 @@ table.items td{padding:8px 6px;border-bottom:1px solid #eee;vertical-align:top}.
 <div class="bar"><button onclick="window.print()">Print / Save as PDF</button></div>
 <div class="page">
 <div class="top">
-<div>${opts.logoUrl ? `<img class="logo" src="${esc(opts.logoUrl)}" alt="The64Squares">` : ""}
+<div>${opts.logoUrl ? `<img class="logo" src="${esc(opts.logoUrl)}" alt="The 64 Squares">` : ""}
 <p style="margin:8px 0 0"><strong>${esc(s.legal_name)}</strong><br><span class="muted">${esc(s.brand_line)}</span><br>${esc(s.address).replace(/\n/g, "<br>")}<br>${esc(s.state)}${sellerCode ? ` (State code ${sellerCode})` : ""}</p>
 <p style="margin:6px 0 0">GSTIN: <strong>${esc(s.gstin)}</strong>${s.pan ? ` · PAN: ${esc(s.pan)}` : ""}${s.email ? `<br>${esc(s.email)}` : ""}${s.phone ? ` · ${esc(s.phone)}` : ""}</p></div>
 <div style="text-align:right"><h1>TAX INVOICE</h1><table class="meta" style="margin-top:8px;margin-left:auto">

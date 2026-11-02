@@ -25,7 +25,7 @@ import { CONTENT_MODULE } from "../modules/content"
 import ContentModuleService from "../modules/content/service"
 
 /**
- * First-run setup for The64Squares store: India region in INR with GST, an Indian
+ * First-run setup for The 64 Squares store: India region in INR with GST, an Indian
  * warehouse, free delivery, chess categories, SAMPLE products, homepage, About us
  * and help pages.
  *
@@ -157,14 +157,14 @@ export default async function initial_data_seed({
   )
   const contentService: ContentModuleService = container.resolve(CONTENT_MODULE)
 
-  logger.info("Seeding The64Squares store...")
+  logger.info("Seeding The 64 Squares store...")
 
   const {
     result: [salesChannel],
   } = await createSalesChannelsWorkflow(container).run({
     input: {
       salesChannelsData: [
-        { name: "The64Squares Website", description: "the64squares.in storefront" },
+        { name: "The 64 Squares Website", description: "the64squares.in storefront" },
       ],
     },
   })
@@ -174,7 +174,7 @@ export default async function initial_data_seed({
   } = await createApiKeysWorkflow(container).run({
     input: {
       api_keys: [
-        { title: "The64Squares Storefront", type: "publishable", created_by: "" },
+        { title: "The 64 Squares Storefront", type: "publishable", created_by: "" },
       ],
     },
   })
@@ -187,7 +187,7 @@ export default async function initial_data_seed({
     input: {
       stores: [
         {
-          name: "The64Squares",
+          name: "The 64 Squares",
           supported_currencies: [
             { currency_code: "inr", is_default: true, is_tax_inclusive: true },
           ],
@@ -197,8 +197,14 @@ export default async function initial_data_seed({
     },
   })
 
-  // India, rupees. Cash on Delivery is Medusa's system provider; checkout-v1 adds
-  // Razorpay once its provider is registered.
+  // India, rupees. Cash on Delivery is Medusa's system provider, plus Razorpay. (These
+  // scripts run in name order, so checkout-v1 runs before this region exists.)
+  const paymentProviders = await container
+    .resolve(Modules.PAYMENT)
+    .listPaymentProviders({}, { select: ["id"] })
+  const regionProviders = ["pp_system_default", "pp_razorpay_razorpay"].filter((id) =>
+    paymentProviders.some((p) => p.id === id)
+  )
   const {
     result: [region],
   } = await createRegionsWorkflow(container).run({
@@ -208,7 +214,7 @@ export default async function initial_data_seed({
           name: "India",
           currency_code: "inr",
           countries: ["in"],
-          payment_providers: ["pp_system_default"],
+          payment_providers: regionProviders,
           is_tax_inclusive: true,
         },
       ],
@@ -233,7 +239,7 @@ export default async function initial_data_seed({
     input: {
       locations: [
         {
-          name: "The64Squares Warehouse",
+          name: "The 64 Squares Warehouse",
           address: {
             address_1: "Pickup address to be confirmed",
             city: "",
@@ -416,7 +422,7 @@ export default async function initial_data_seed({
       page: "about",
       section: "intro",
       title: "Who are we?",
-      body: "The64Squares makes premium chess sets, boards and accessories for players, clubs and collectors across India.\n\n*Edit this text in the admin under Website, About us.*",
+      body: "The 64 Squares makes premium chess sets, boards and accessories for players, clubs and collectors across India.",
     },
     { page: "about", section: "team", title: "Meet our team" },
     {
@@ -498,5 +504,5 @@ Yes, every order comes with a GST invoice.
     },
   ])
 
-  logger.info("Finished seeding The64Squares store.")
+  logger.info("Finished seeding The 64 Squares store.")
 }

@@ -6,7 +6,7 @@ import { ChevronDown } from "@/components/icons"
 import { PostDate } from "@/components/post-date"
 import { getPosts } from "@/lib/data"
 
-export const metadata: Metadata = { title: "The64Squares Journal" }
+export const metadata: Metadata = { title: "The 64 Squares Journal" }
 
 const PAGE = 3
 
@@ -21,7 +21,7 @@ async function PostList({ limit }: { limit: number }) {
         {posts.map((p) => (
           <li key={p.handle} className="border-b border-black pb-[40px] pt-[40px] first:pt-0 lg:ml-[38px] lg:mr-[13px] lg:pb-[85px] lg:pt-[136px] lg:first:pt-0">
             <Link href={`/blog/${p.handle}`} className="group flex gap-5 sm:gap-[48px] lg:-mx-[20px]">
-              <div className="relative aspect-square w-[110px] shrink-0 overflow-hidden rounded-[16px] bg-placeholder sm:w-[200px] lg:w-[300px] lg:rounded-[34px]">
+              <div className="relative aspect-square w-[110px] shrink-0 overflow-hidden rounded-md bg-placeholder sm:w-[200px] lg:w-[300px] lg:rounded-md">
                 {(p.thumbnail_url || p.cover_url) && (
                   <FillMedia src={(p.thumbnail_url || p.cover_url)!} sizes="(min-width: 1024px) 300px, 200px" />
                 )}
@@ -62,7 +62,7 @@ async function PostListFromParams({ searchParams }: { searchParams: PageProps<"/
 export default function BlogPage({ searchParams }: PageProps<"/blog">) {
   return (
     <section className="mx-auto mb-[96px] max-w-[1440px] px-6 pt-[48px] lg:mb-[150px] lg:px-[199px] lg:pt-[85px]">
-      <h1 className="font-display text-[64px] lg:text-[128px]">The64Squares Journal</h1>
+      <h1 className="font-display h-page">The 64 Squares Journal</h1>
       <Suspense fallback={<PostList limit={PAGE} />}>
         <PostListFromParams searchParams={searchParams} />
       </Suspense>

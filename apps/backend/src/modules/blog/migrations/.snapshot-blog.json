@@ -129,7 +129,7 @@
           "length": null,
           "precision": null,
           "scale": null,
-          "default": "'The64Squares'",
+          "default": "'The 64 Squares'",
           "comment": null,
           "enumItems": [],
           "mappedType": "text"

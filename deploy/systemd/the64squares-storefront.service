@@ -1,5 +1,5 @@
 [Unit]
-Description=The64Squares storefront (Next.js)
+Description=The 64 Squares storefront (Next.js)
 After=network.target the64squares-backend.service
 
 [Service]

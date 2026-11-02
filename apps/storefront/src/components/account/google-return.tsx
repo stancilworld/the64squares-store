@@ -35,7 +35,7 @@ export function GoogleReturn() {
   return error ? (
     <div>
       <p className="text-[18px] text-red-700">{error}</p>
-      <Link href="/account" className="mt-6 inline-flex h-[42px] items-center rounded-full bg-ink px-8 text-[16px] text-white">
+      <Link href="/account" className="mt-6 btn btn-solid">
         Back to sign in
       </Link>
     </div>

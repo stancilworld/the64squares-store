@@ -46,7 +46,7 @@ const SECTIONS: Section[] = [
   },
   {
     title: "Blog",
-    description: "The64Squares Journal: write drafts and publish posts.",
+    description: "The 64 Squares Journal: write drafts and publish posts.",
     to: "/website/blog",
     sitePath: "/blog",
     icon: Newspaper,

@@ -79,7 +79,7 @@ export function ListCardView({
       <div className="relative w-full">
         <Link
           href={href}
-          className={`relative block w-full overflow-hidden bg-placeholder ${lg ? "aspect-[301/369] rounded-[24px] lg:rounded-[40px]" : "aspect-square rounded-[20px] lg:rounded-[28px]"}`}
+          className={`relative block w-full overflow-hidden bg-placeholder ${lg ? "aspect-[301/369] rounded-md lg:rounded-md" : "aspect-square rounded-md lg:rounded-md"}`}
         >
           {card.thumbnail && (
             <FillMedia src={card.thumbnail} alt={card.title} sizes={lg ? "(min-width: 1024px) 301px, 45vw" : "230px"} />
@@ -103,7 +103,7 @@ export function ListCardView({
         type="button"
         onClick={onToss}
         disabled={!card.inStock || busy}
-        className={`mt-[10px] inline-flex items-center justify-center rounded-full bg-black text-white hover:bg-ink disabled:opacity-50 ${lg ? "h-[39px] w-[170px] text-[16px]" : "h-[34px] w-[130px] text-[14px] lg:h-[39px] lg:w-[170px] lg:text-[16px]"}`}
+        className={`mt-[10px] inline-flex items-center justify-center rounded-full bg-black text-white hover:bg-velvet disabled:opacity-50 ${lg ? "h-[39px] w-[170px] text-[16px]" : "h-[34px] w-[130px] text-[14px] lg:h-[39px] lg:w-[170px] lg:text-[16px]"}`}
       >
         {!card.inStock ? "Sold out" : busy ? "Adding..." : card.variantId ? "Add to Cart" : "Choose options"}
       </button>

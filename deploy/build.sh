@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds and (re)starts The64Squares backend and storefront. Run as root.
+# Builds and (re)starts The 64 Squares backend and storefront. Run as root.
 # Called by setup-vps.sh, update.sh and go-live.sh.
 #
 # This server also runs another store (Stancil). Builds run inside a generous memory limit
@@ -76,7 +76,7 @@ curl -sf "http://localhost:$BACKEND_PORT/health" >/dev/null || {
 
 echo "-> Building storefront"
 KEY=$(cd / && sudo -u postgres psql -d "$DB_NAME" -Atc \
-  "select token from api_key where type = 'publishable' and title = 'The64Squares Storefront' and deleted_at is null order by created_at limit 1")
+  "select token from api_key where type = 'publishable' and title = 'The 64 Squares Storefront' and deleted_at is null order by created_at limit 1")
 [ -n "$KEY" ] || { echo "No publishable key found in the database."; exit 1; }
 cat > "$APP/apps/storefront/.env.local" <<EOF
 MEDUSA_BACKEND_URL=http://localhost:$BACKEND_PORT

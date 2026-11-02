@@ -1,6 +1,6 @@
-# The64Squares store
+# The 64 Squares store
 
-The64Squares' ecommerce website: a **Medusa v2** commerce engine with a Shopify-like admin, and a **Next.js** storefront. It started as a copy of the Stancil store and shares its checkout, accounts, admin and deployment.
+The 64 Squares' ecommerce website: a **Medusa v2** commerce engine with a Shopify-like admin, and a **Next.js** storefront. It started as a copy of the Stancil store and shares its checkout, accounts, admin and deployment.
 
 ```
 apps/
@@ -14,11 +14,11 @@ apps/
 | --- | --- |
 | Store setup | India region, INR, prices include 18% GST (confirm the rate for HSN 9504), warehouse, free standard delivery |
 | Catalogue | Categories (Chess Sets, Boards, Pieces, Clocks, Books, Accessories), Colour and Material options, Signature Collection, 6 **sample** products |
-| Content | Homepage, About us, help pages, blog (The64Squares Journal), menu and footer, all edited in the admin |
+| Content | Homepage, About us, help pages, blog (The 64 Squares Journal), menu and footer, all edited in the admin |
 | Checkout | Razorpay + Cash on Delivery, pincode check (Delhivery when its token is set), order emails via Resend, GST invoices, customer accounts (email code, password, Google) |
 | Admin | Staff roles (Admin / Moderator), activity log, scheduled publishing, mailbox, chat bot |
 | Keys | Razorpay, Resend, Google and Delhivery keys: the main admin (OWNER_EMAIL) enters them in Settings → Payments & delivery → Keys, or on the server with deploy/set-keys.sh |
-| Next | The64Squares design for the storefront, real products, then tournaments |
+| Next | The 64 Squares design for the storefront, real products, then tournaments |
 
 ## Run it locally
 
@@ -46,7 +46,7 @@ npm run dev                                           # http://localhost:8000
 
 The store runs on the same Hostinger VPS as Stancil (KVM 2: 2 CPU, 8 GB), fully separated from it:
 
-| | Stancil | The64Squares |
+| | Stancil | The 64 Squares |
 | --- | --- | --- |
 | Folder and Linux user | `/opt/stancil`, `stancil` | `/opt/the64squares`, `the64squares` |
 | Services | backend + worker + storefront | `the64squares-backend`, `the64squares-worker`, `the64squares-storefront` |

@@ -45,8 +45,8 @@ export type Chatbot = {
 
 export const DEFAULT_CHATBOT: Chatbot = {
   enabled: false,
-  name: "The64Squares Helper",
-  greeting: "Hi! I'm The64Squares' chess helper. Ask me about our chess sets, boards, tournaments, delivery or your order.",
+  name: "The 64 Squares Helper",
+  greeting: "Hi! I'm The 64 Squares' chess helper. Ask me about our chess sets, boards, tournaments, delivery or your order.",
   launcher_label: "Need help?",
   placeholder: "Type your question…",
   quick: [
@@ -65,7 +65,7 @@ export const DEFAULT_CHATBOT: Chatbot = {
   ],
   use_help_pages: true,
   whatsapp: "",
-  whatsapp_message: "Hi The64Squares! I have a question.",
+  whatsapp_message: "Hi The 64 Squares! I have a question.",
   allow_message: true,
   away_text: "Leave your question and we'll reply by email, usually within one working day.",
   ai_enabled: true,
@@ -379,7 +379,7 @@ const callProvider = async (p: Provider, system: string, history: Turn[], questi
 
 const systemPrompt = (bot: Chatbot, k: Knowledge, faqs: Known[], products: Product[], contact: string) =>
   [
-    `You are "${bot.name}", the friendly helper on the website of The64Squares (the64squares.in), an Indian brand that makes premium chess sets, boards, pieces and clocks, and runs online chess tournaments.`,
+    `You are "${bot.name}", the friendly helper on the website of The 64 Squares (the64squares.in), an Indian brand that makes premium chess sets, boards, pieces and clocks, and runs online chess tournaments.`,
     "Answer in short, warm, simple sentences (at most 80 words). If the shopper writes in Hindi or Hinglish, answer the same way.",
     "Use ONLY the facts below. If the answer isn't in them, say you're not sure and offer to connect them with the team. Never make up prices, dates, discounts, stock, sizes or policies.",
     "Never ask for personal details. For the status of an order, tell them to press 'Track my order'. For anything you can't solve, set handover to true.",

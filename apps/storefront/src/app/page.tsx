@@ -1,73 +1,90 @@
 import Image from "next/image"
 import Link from "next/link"
-import { headingLines, Hero } from "@/components/hero"
+import { Hero } from "@/components/hero"
 import { ImageCarousel } from "@/components/image-carousel"
-import { FillMedia, isVideo, Media } from "@/components/media"
 import { NewsletterSection } from "@/components/newsletter-section"
-import { getContent } from "@/lib/data"
+import { ProductCard } from "@/components/product-card"
+import { getCategories, getContent, getProductCards } from "@/lib/data"
+
+// Shown until pictures are uploaded in the admin (Website → Homepage).
+const DEFAULT_FEATURED_IMAGE = "/images/home-travel-case.jpg"
 
 export default async function HomePage() {
-  const blocks = await getContent("home")
+  const [blocks, products, categories] = await Promise.all([getContent("home"), getProductCards(), getCategories()])
   const of = (section: string) => blocks.filter((b) => b.section === section)
   const hero = of("hero")[0]
   const featured = of("featured_collection")[0]
-  const featuredImages = of("featured_image").map((b) => b.image_url)
+  const featuredImages = of("featured_image")
+    .map((b) => b.image_url)
+    .filter((src): src is string => !!src)
   const newsletter = of("newsletter")[0]
+  const picks = products.slice(0, 4)
 
   return (
     <>
       {hero && <Hero block={hero} />}
 
-      {featured && (
-        <section className="mx-auto mt-[56px] grid max-w-[1440px] items-center gap-10 px-6 lg:mt-[100px] lg:grid-cols-[675px_1fr] lg:gap-[58px] lg:pl-[111px] lg:pr-[110px]">
-          <ImageCarousel images={featuredImages} label={featured.title ?? "Featured collection"} />
-          <div className="max-w-[442px] lg:mt-[66px] lg:self-start">
-            {featured.eyebrow && <p className="text-[20px]">{featured.eyebrow}</p>}
-            <h2 className="mt-[5px] font-display text-[64px] leading-[42px] lg:text-[105px] lg:leading-[66px]">
-              {headingLines(featured.title).map((line, i) => (
-                <span key={i} className="block">
-                  {line}
-                </span>
-              ))}
-            </h2>
-            {featured.body && <p className="mt-[32px] text-[16px] leading-[25px]">{featured.body}</p>}
-            {featured.link_url && (
-              <Link
-                href={featured.link_url}
-                className="mt-[32px] inline-flex h-[42px] items-center justify-center rounded-full bg-ink px-[33px] text-[16px] text-white hover:bg-black"
-              >
-                {featured.link_label || "Explore This Collection"}
-              </Link>
-            )}
+      {categories.length > 0 && (
+        <nav aria-label="Categories" className="border-b border-rule">
+          <ul className="mx-auto flex max-w-[1440px] gap-x-8 gap-y-2 overflow-x-auto px-6 py-5 lg:justify-center lg:gap-x-12 lg:px-10">
+            {categories.map((c) => (
+              <li key={c.id} className="shrink-0">
+                <Link href={`/shop?category=${c.handle}`} className="font-display text-[19px] hover:text-velvet hover:underline hover:decoration-brass hover:underline-offset-8 lg:text-[21px]">
+                  {c.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+
+      {picks.length > 0 && (
+        <section className="mx-auto max-w-[1440px] px-6 pt-16 lg:px-10 lg:pt-24">
+          <div className="flex items-end justify-between gap-6">
+            <h2 className="font-display h-section">Pieces to play for a lifetime</h2>
+            <Link href="/shop" className="shrink-0 text-[15px] underline decoration-rule underline-offset-4 hover:decoration-black">
+              View all products
+            </Link>
+          </div>
+          <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 lg:mt-10 lg:grid-cols-4 lg:gap-x-6">
+            {picks.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
           </div>
         </section>
       )}
 
-      {newsletter && (
-        <div className="relative mx-auto max-w-[1440px]">
-          <NewsletterSection
-            block={newsletter}
-            bodyClassName="max-w-[752px]"
-            className="pb-[120px] pt-[72px] lg:pb-[140px] lg:pt-[152px] lg:pl-[118px]"
-          />
-          {newsletter.image_url &&
-            (isVideo(newsletter.image_url) || /\.gif(\?|$)/i.test(newsletter.image_url) ? (
-              <Media
-                src={newsletter.image_url}
-                className="pointer-events-none absolute bottom-0 right-0 w-[48%] max-w-[582px] select-none lg:left-[858px] lg:right-auto lg:w-[582px]"
-              />
+      {featured && (
+        <section className="mt-16 bg-maple-soft lg:mt-24">
+          <div className="mx-auto grid max-w-[1440px] items-center gap-10 px-6 py-14 lg:grid-cols-2 lg:gap-16 lg:px-10 lg:py-20">
+            {featuredImages.length > 1 ? (
+              <ImageCarousel images={featuredImages} label={featured.title ?? "Featured collection"} />
             ) : (
-              <Image
-                src={newsletter.image_url}
-                alt=""
-                width={582}
-                height={284}
-                sizes="(min-width: 1024px) 582px, 50vw"
-                className="pointer-events-none absolute bottom-0 right-0 w-[48%] max-w-[582px] select-none lg:left-[858px] lg:right-auto lg:w-[582px]"
-              />
-            ))}
-        </div>
+              <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-walnut sm:aspect-[4/3] lg:aspect-[4/5]">
+                <Image
+                  src={featuredImages[0] || DEFAULT_FEATURED_IMAGE}
+                  alt=""
+                  fill
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  className="object-cover"
+                />
+              </div>
+            )}
+            <div className="max-w-[480px]">
+              {featured.eyebrow && <p className="text-[14px] text-walnut">{featured.eyebrow}</p>}
+              <h2 className="font-display h-page mt-2">{featured.title}</h2>
+              {featured.body && <p className="mt-5 text-[17px] leading-[1.65]">{featured.body}</p>}
+              {featured.link_url && (
+                <Link href={featured.link_url} className="btn btn-solid mt-8">
+                  {featured.link_label || "Explore the collection"}
+                </Link>
+              )}
+            </div>
+          </div>
+        </section>
       )}
+
+      {newsletter && <NewsletterSection block={newsletter} className="py-16 lg:py-24" />}
     </>
   )
 }

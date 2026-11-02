@@ -8,7 +8,7 @@ import type { ContactPanelItem } from "@/lib/types"
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Get in touch with The64Squares: email, WhatsApp or send us a message.",
+  description: "Get in touch with The 64 Squares: email, WhatsApp or send us a message.",
 }
 
 const ICONS: Record<ContactPanelItem["type"], (p: { className?: string }) => ReactNode> = {
@@ -79,7 +79,7 @@ function PanelItem({ item }: { item: ContactPanelItem }) {
       <a
         href={v}
         {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-        className="mt-1 inline-flex h-[44px] items-center rounded-full border-[1.5px] border-black px-6 text-[16px] hover:bg-black hover:text-white"
+        className="mt-1 btn btn-outline"
       >
         {item.button_label || "Open"}
       </a>
@@ -90,7 +90,7 @@ function PanelItem({ item }: { item: ContactPanelItem }) {
   return (
     <li className="flex flex-col gap-[8px]">
       {item.label && (
-        <span className="flex items-center gap-[8px] text-[13px] font-semibold uppercase tracking-[0.08em] text-black/60">
+        <span className="flex items-center gap-[8px] text-[13px] font-medium text-muted">
           <Icon className="h-[18px] w-[18px]" />
           {item.label}
         </span>
@@ -107,12 +107,12 @@ export default async function ContactPage() {
   }
   return (
     <div className="mx-auto mb-[96px] max-w-[1440px] px-5 pt-[48px] lg:mb-[150px] lg:px-[128px] lg:pt-[63px]">
-      <h1 className="font-display text-[56px] leading-[1] lg:text-[96px]">{page.title}</h1>
+      <h1 className="font-display h-page">{page.title}</h1>
       {page.intro && <p className="mt-[16px] max-w-[760px] text-[17px] leading-[27px] lg:mt-[20px] lg:text-[20px] lg:leading-[31px]">{page.intro}</p>}
       <div className="mt-[40px] grid grid-cols-1 gap-[24px] lg:mt-[56px] lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] lg:gap-[40px]">
         {page.panel.length > 0 && (
-          <section aria-labelledby="contact-panel" className="self-start rounded-[40px] bg-pill px-[28px] py-[32px] lg:px-[40px] lg:py-[44px]">
-            <h2 id="contact-panel" className="font-display text-[36px] leading-[1] lg:text-[48px]">
+          <section aria-labelledby="contact-panel" className="self-start rounded-md bg-pill px-[28px] py-[32px] lg:px-[40px] lg:py-[44px]">
+            <h2 id="contact-panel" className="font-display h-section">
               {page.panel_title}
             </h2>
             <ul className="mt-[28px] flex flex-col gap-[26px]">
@@ -122,7 +122,7 @@ export default async function ContactPage() {
             </ul>
           </section>
         )}
-        <section aria-label="Send us a message" className="rounded-[40px] border-[1.5px] border-black px-[22px] py-[30px] lg:px-[48px] lg:py-[44px]">
+        <section aria-label="Send us a message" className="rounded-md border border-black px-[22px] py-[30px] lg:px-[48px] lg:py-[44px]">
           <ContactForm page={page} />
         </section>
       </div>

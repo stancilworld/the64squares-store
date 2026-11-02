@@ -24,57 +24,55 @@ export async function Header() {
 
   return (
     <>
-    {/* The bar stays at the top of the screen while the page scrolls. */}
-    <header className="sticky top-0 z-40 bg-white shadow-[0_3px_6px_rgba(0,0,0,0.08)] lg:shadow-none">
-      <div className="bg-white">
-        <div className="mx-auto flex h-[52px] max-w-[1440px] items-center px-5 sm:h-[64px] lg:h-[121px] lg:px-[65px] lg:pr-[109px]">
+      {/* The bar stays at the top of the screen while the page scrolls. */}
+      <header className="sticky top-0 z-40 border-b border-rule bg-white">
+        <div className="mx-auto flex h-[60px] max-w-[1440px] items-center gap-4 px-4 sm:px-6 lg:h-[76px] lg:px-10">
           <Suspense fallback={<MobileMenuView categoryLinks={categoryLinks} aboutLinks={aboutLinks} menu={menu} path="" />}>
             <MobileMenu categoryLinks={categoryLinks} aboutLinks={aboutLinks} menu={menu} />
           </Suspense>
 
-          <Link href="/" aria-label="The64Squares home" className="ml-[15px] shrink-0 lg:ml-0">
+          <Link href="/" aria-label="The 64 Squares home" className="shrink-0">
             <Image
               src="/brand/logo-header.webp"
-              alt="The64Squares"
-              width={215}
-              height={240}
+              alt="The 64 Squares"
+              width={388}
+              height={160}
               priority
-              className="h-[33px] w-auto sm:h-[44px] lg:h-[79px]"
+              className="h-[38px] w-auto lg:h-[50px]"
             />
           </Link>
-
-          <form
-            action="/shop"
-            method="get"
-            role="search"
-            className="ml-[58px] hidden h-[46px] w-[404px] shrink items-center rounded-full bg-pill pl-[13px] pr-4 xl:flex"
-          >
-            <SearchIcon className="h-[22px] w-[22px] shrink-0" />
-            <label htmlFor="site-search" className="sr-only">
-              Search
-            </label>
-            <input
-              id="site-search"
-              name="q"
-              type="search"
-              className="ml-2 h-full w-full bg-transparent text-[18px] outline-none"
-            />
-          </form>
 
           <Suspense fallback={<NavLinksView categoryLinks={categoryLinks} aboutLinks={aboutLinks} menu={menu} path="" />}>
             <NavLinks categoryLinks={categoryLinks} aboutLinks={aboutLinks} menu={menu} />
           </Suspense>
 
-          <div className="ml-auto flex items-center gap-[18px] sm:gap-[24px] lg:ml-[42px] lg:gap-[35px]">
+          <div className="ml-auto flex items-center gap-4 sm:gap-5">
+            <form
+              action="/shop"
+              method="get"
+              role="search"
+              className="hidden h-[40px] w-[260px] items-center rounded-md border border-rule bg-white px-3 focus-within:border-black xl:flex"
+            >
+              <SearchIcon className="h-[17px] w-[17px] shrink-0 text-muted" />
+              <label htmlFor="site-search" className="sr-only">
+                Search
+              </label>
+              <input
+                id="site-search"
+                name="q"
+                type="search"
+                placeholder="Search sets, boards, clocks"
+                className="ml-2 h-full w-full bg-transparent text-[14px] outline-none placeholder:text-muted"
+              />
+            </form>
             <ListLink />
-            <Link href="/account" aria-label="Account">
-              <UserIcon className="h-[20px] w-[19px] sm:h-[28px] sm:w-[27px] lg:h-[42px] lg:w-[38px]" />
+            <Link href="/account" aria-label="Account" className="hidden sm:block">
+              <UserIcon className="h-[22px] w-[21px]" />
             </Link>
             <CartLink />
           </div>
         </div>
-      </div>
-    </header>
+      </header>
 
       <Suspense fallback={<MobileSearchView path="" />}>
         <MobileSearch />

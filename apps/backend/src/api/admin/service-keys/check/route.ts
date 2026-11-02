@@ -45,9 +45,9 @@ export const POST = async (req: AuthenticatedMedusaRequest<{ service: Service }>
         return res.json({ ok: false, message: "Add the Resend API key first, then Save." })
       }
       const sent = await sendEmail(req.scope, OWNER_EMAIL, "test-email", {
-        subject: "Test email from The64Squares admin",
-        text: "If you're reading this, The64Squares's emails work: order confirmations, shipping updates and sign-in codes will arrive like this one.",
-        html: "<p>If you're reading this, The64Squares's emails work: order confirmations, shipping updates and sign-in codes will arrive like this one.</p>",
+        subject: "Test email from The 64 Squares admin",
+        text: "If you're reading this, The 64 Squares's emails work: order confirmations, shipping updates and sign-in codes will arrive like this one.",
+        html: "<p>If you're reading this, The 64 Squares's emails work: order confirmations, shipping updates and sign-in codes will arrive like this one.</p>",
       })
       return res.json(
         sent

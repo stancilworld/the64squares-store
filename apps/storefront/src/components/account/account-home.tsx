@@ -106,7 +106,7 @@ export function AccountHome({ customer, orders }: { customer: HttpTypes.StoreCus
               router.refresh()
             })
           }
-          className="h-[40px] rounded-full border-[1.5px] border-black px-6 text-[15px] hover:bg-pill"
+          className="h-[40px] rounded-md border border-black px-6 text-[15px] hover:bg-linen"
         >
           Sign out
         </button>
@@ -119,11 +119,11 @@ export function AccountHome({ customer, orders }: { customer: HttpTypes.StoreCus
               <li key={o.id}>
                 <Link
                   href={`/account/orders/${o.id}`}
-                  className="flex flex-wrap items-center gap-4 rounded-[22px] border-[1.5px] border-black/20 p-4 hover:border-black lg:p-5"
+                  className="flex flex-wrap items-center gap-4 rounded-md border border-black/20 p-4 hover:border-black lg:p-5"
                 >
                   <span className="flex -space-x-3">
                     {o.items.slice(0, 3).map((i) => (
-                      <span key={i.id} className="relative h-[56px] w-[56px] overflow-hidden rounded-[14px] border-2 border-white bg-placeholder">
+                      <span key={i.id} className="relative h-[56px] w-[56px] overflow-hidden rounded-md border-2 border-white bg-placeholder">
                         {i.thumbnail && <FillMedia src={i.thumbnail} sizes="56px" alt="" />}
                       </span>
                     ))}
@@ -149,7 +149,7 @@ export function AccountHome({ customer, orders }: { customer: HttpTypes.StoreCus
         ) : (
           <div>
             <p className="text-[16px]">No orders yet.</p>
-            <Link href="/shop" className="mt-4 inline-flex h-[42px] items-center rounded-full bg-ink px-8 text-[16px] text-white">
+            <Link href="/shop" className="mt-4 btn btn-solid">
               Browse the shop
             </Link>
           </div>
@@ -164,7 +164,7 @@ export function AccountHome({ customer, orders }: { customer: HttpTypes.StoreCus
         {addresses.length ? (
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {addresses.map((a) => (
-              <li key={a.id} className="rounded-[22px] bg-pill p-5 text-[14px] leading-[22px] lg:text-[16px] lg:leading-[26px]">
+              <li key={a.id} className="rounded-md bg-pill p-5 text-[14px] leading-[22px] lg:text-[16px] lg:leading-[26px]">
                 <p className="font-medium">{[a.first_name, a.last_name].filter(Boolean).join(" ")}</p>
                 <p>{[a.address_1, a.address_2].filter(Boolean).join(", ")}</p>
                 <p>{[a.city, a.province, a.postal_code].filter(Boolean).join(", ")}</p>

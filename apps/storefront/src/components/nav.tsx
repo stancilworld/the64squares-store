@@ -16,7 +16,7 @@ type Props = { categoryLinks: NavLink[]; aboutLinks: NavLink[]; menu: Menu }
 const isExternal = (href: string) => /^https?:\/\//.test(href)
 const aboutPaths = (links: NavLink[]) => ["/about", "/blog", "/contact", "/help", ...links.map((l) => l.href).filter((h) => h.startsWith("/"))]
 
-const underline = "underline decoration-[1.5px] underline-offset-[8px]"
+const underline = "underline decoration-brass decoration-2 underline-offset-[10px]"
 
 function Dropdown({
   label,
@@ -54,17 +54,17 @@ function Dropdown({
         className={`flex items-center gap-[6px] whitespace-nowrap ${active ? underline : ""}`}
       >
         {label}
-        <ChevronDown className="h-[12px] w-[12px]" />
+        <ChevronDown className="h-[10px] w-[10px]" />
       </button>
       {open && (
         <div className="absolute left-0 top-full pt-3">
-          <ul className="min-w-[220px] rounded-2xl border border-black/10 bg-white py-2 shadow-lg">
+          <ul className="min-w-[220px] rounded-md border border-rule bg-white py-2 shadow-[0_12px_32px_rgba(0,0,0,0.08)]">
             {links.map((l) => (
               <li key={l.href + l.label}>
                 <Link
                   href={l.href}
                   onClick={() => setOpen(false)}
-                  className="block px-5 py-2 text-[17px] hover:bg-pill"
+                  className="block px-4 py-2 text-[15px] hover:bg-linen"
                 >
                   {l.label}
                 </Link>
@@ -85,7 +85,7 @@ export function NavLinksView({ categoryLinks, aboutLinks, menu, path }: Props & 
   return (
     <nav
       aria-label="Main"
-      className="ml-[47px] hidden items-center gap-[43px] text-[20px] lg:flex xl:ml-[47px]"
+      className="ml-8 hidden items-center gap-8 text-[15px] lg:flex"
     >
       <Dropdown
         label={menu.categoriesLabel}
@@ -126,7 +126,7 @@ export function MobileMenuView({ categoryLinks, aboutLinks, menu, path }: Props 
   return (
     <div className="lg:hidden">
       <button type="button" aria-label="Open menu" onClick={() => setOpen(true)} className="-m-2 flex p-2">
-        <MenuIcon className="h-[18px] w-[18px] sm:h-6 sm:w-6" />
+        <MenuIcon className="h-[20px] w-[20px]" />
       </button>
       {open && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-white px-6 pb-10 pt-5">
@@ -135,11 +135,11 @@ export function MobileMenuView({ categoryLinks, aboutLinks, menu, path }: Props 
               <CloseIcon className="h-7 w-7" />
             </button>
           </div>
-          <form action="/shop" method="get" role="search" className="mt-4 flex h-[46px] items-center rounded-full bg-pill px-4">
+          <form action="/shop" method="get" role="search" className="mt-4 flex h-[46px] items-center rounded-md border border-rule px-4">
             <SearchIcon className="h-5 w-5" />
             <input name="q" type="search" placeholder="Search" aria-label="Search" className="ml-2 h-full w-full bg-transparent text-[17px] outline-none" />
           </form>
-          <nav className="mt-8 flex flex-col gap-6 text-[22px]" aria-label="Mobile">
+          <nav className="mt-8 flex flex-col gap-6 font-display text-[26px]" aria-label="Mobile">
             {menu.extraLinks.map((l) => (
               <Link key={l.href + l.label} href={l.href}>
                 {l.label}
@@ -147,7 +147,7 @@ export function MobileMenuView({ categoryLinks, aboutLinks, menu, path }: Props 
             ))}
             <div>
               <p className="font-medium">{menu.categoriesLabel}</p>
-              <ul className="mt-3 flex flex-col gap-3 pl-4 text-[18px]">
+              <ul className="mt-3 flex flex-col gap-3 pl-4 font-sans text-[17px]">
                 {categoryLinks.map((l) => (
                   <li key={l.href}>
                     <Link href={l.href}>{l.label}</Link>
@@ -158,7 +158,7 @@ export function MobileMenuView({ categoryLinks, aboutLinks, menu, path }: Props 
             {aboutLinks.length > 0 && (
               <div>
                 <p className="font-medium">{menu.aboutLabel}</p>
-                <ul className="mt-3 flex flex-col gap-3 pl-4 text-[18px]">
+                <ul className="mt-3 flex flex-col gap-3 pl-4 font-sans text-[17px]">
                   {aboutLinks.map((l) => (
                     <li key={l.href + l.label}>
                       <Link href={l.href}>{l.label}</Link>

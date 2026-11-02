@@ -15,7 +15,7 @@ export function MobileSearchView({ path }: { path: string }) {
     return null
   }
   return (
-        <form action="/shop" method="get" role="search" className="px-6 pt-[13px] lg:hidden">
+        <form action="/shop" method="get" role="search" className="border-b border-rule px-4 py-2.5 sm:px-6 lg:hidden">
           <label htmlFor="mobile-search" className="sr-only">
             Search
           </label>
@@ -23,8 +23,8 @@ export function MobileSearchView({ path }: { path: string }) {
             id="mobile-search"
             name="q"
             type="search"
-            placeholder="Search Here..."
-            className="h-[28px] w-full rounded-full border-[1.5px] border-[#bbbbbb] bg-white pl-[30px] pr-4 text-[16px] outline-none placeholder:text-[11px] placeholder:italic placeholder:text-[#9a9a9a] focus:border-ink sm:h-[40px] sm:placeholder:text-[15px]"
+            placeholder="Search sets, boards, clocks"
+            className="h-[40px] w-full rounded-md border border-rule bg-white px-3 text-[16px] outline-none placeholder:text-[14px] placeholder:text-muted focus:border-black"
           />
         </form>
   )

@@ -257,24 +257,24 @@ export type SiteNavigation = {
 // Same as what the designs show; used if the admin can't be reached.
 export const FALLBACK_NAVIGATION: SiteNavigation = {
   menu: {
-    categories_label: "Shop By Categories",
+    categories_label: "Shop",
     all_label: "All products",
     about_label: "About",
     about_links: [
       { label: "About us", href: "/about" },
-      { label: "The64Squares Journal", href: "/blog" },
+      { label: "The 64 Squares Journal", href: "/blog" },
     ],
     extra_links: [],
   },
   footer: {
-    tagline: "A little out of line",
-    col1_title: "Shop & explore",
+    tagline: "Chess sets, boards and clocks, made in India.",
+    col1_title: "Shop",
     col1_links: [
-      { label: "Categories", href: "/shop" },
+      { label: "All products", href: "/shop" },
       { label: "About us", href: "/about" },
       { label: "Contact", href: "/contact" },
     ],
-    col2_title: "Customer Support",
+    col2_title: "Help",
     col2_links: [
       { label: "Delivery", href: "/help/delivery" },
       { label: "Returns & warranty", href: "/help/returns-and-warranty" },
@@ -283,7 +283,7 @@ export const FALLBACK_NAVIGATION: SiteNavigation = {
       { label: "Terms", href: "/help/terms", same_line: true },
     ],
     socials: {
-      facebook: "https://www.facebook.com/share/1CN3cnz8vy/?mibextid=wwXIfr",
+      facebook: "",
       instagram: "",
       linkedin: "",
       youtube: "",

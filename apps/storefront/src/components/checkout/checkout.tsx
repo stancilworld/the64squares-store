@@ -97,12 +97,12 @@ function Summary({ cart, config, children }: { cart: Cart; config: CheckoutConfi
   return (
     <aside className="mt-[56px] h-fit lg:sticky lg:top-[150px] lg:mt-0" aria-labelledby="order-summary">
       <h2 id="order-summary" className="px-1 text-[18px] font-semibold lg:text-[22px]">
-        Your Order <span className="text-[13px] font-normal lg:text-[15px]">({count} {count === 1 ? "Item" : "Items"})</span>
+        Your order <span className="text-[13px] font-normal lg:text-[15px]">({count} {count === 1 ? "item" : "items"})</span>
       </h2>
       <ul className="mt-5 space-y-4 px-1">
         {items.map((l) => (
           <li key={l.id} className="flex items-center gap-3">
-            <span className="relative h-[56px] w-[64px] shrink-0 overflow-hidden rounded-[12px] bg-placeholder">
+            <span className="relative h-[56px] w-[64px] shrink-0 overflow-hidden rounded-md bg-placeholder">
               {l.thumbnail && <FillMedia src={l.thumbnail} sizes="64px" alt="" />}
             </span>
             <span className="min-w-0 flex-1 text-[13px] lg:text-[15px]">
@@ -128,7 +128,7 @@ function Summary({ cart, config, children }: { cart: Cart; config: CheckoutConfi
       {config.delivery_text && <p className="mt-3 px-1 text-[13px] text-black/60 lg:text-[14px]">{config.delivery_text}</p>}
       {children}
       <p className="mt-6 text-center text-[13px] italic underline underline-offset-2 lg:text-[15px]">
-        <Link href="/contact">Having a Problem? Contact Us.</Link>
+        <Link href="/contact">Need help? Contact us</Link>
       </p>
     </aside>
   )
@@ -149,7 +149,7 @@ function PayOption({
 }) {
   return (
     <label
-      className={`flex cursor-pointer items-start gap-4 rounded-[22px] border-[1.5px] p-5 lg:p-6 ${
+      className={`flex cursor-pointer items-start gap-4 rounded-md border p-5 lg:p-6 ${
         checked ? "border-black" : "border-black/25"
       } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
     >
@@ -161,7 +161,7 @@ function PayOption({
         disabled={!!disabled}
         onChange={onSelect}
       />
-      <span className="mt-[3px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.5px] border-black lg:h-[20px] lg:w-[20px]">
+      <span className="mt-[3px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border border-black lg:h-[20px] lg:w-[20px]">
         {checked && <span className="h-[10px] w-[10px] rounded-full bg-black" />}
       </span>
       <span>
@@ -305,7 +305,7 @@ export function Checkout({ config, customer }: { config: CheckoutConfig; custome
       order_id: started.razorpay_order_id,
       amount: started.amount,
       currency: started.currency,
-      name: "The64Squares",
+      name: "The 64 Squares",
       description: "Premium chess sets & tournaments",
       image: `${window.location.origin}/brand/logo-header.png`,
       prefill: { name: `${form.first_name} ${form.last_name}`.trim(), email: form.email, contact: `+91${form.phone}` },
@@ -343,7 +343,7 @@ export function Checkout({ config, customer }: { config: CheckoutConfig; custome
         <div className="mx-auto mt-16 max-w-[560px] text-center">
           <h1 className="text-[22px] font-semibold lg:text-[34px]">Nothing to check out yet</h1>
           <p className="mt-3 text-[16px] lg:text-[18px]">Tick the items you want in your cart, then press Checkout.</p>
-          <Link href="/cart" className="mt-6 inline-flex h-[42px] items-center rounded-full bg-ink px-8 text-[16px] text-white">
+          <Link href="/cart" className="mt-6 btn btn-solid">
             Go to your cart
           </Link>
         </div>
@@ -401,13 +401,13 @@ export function Checkout({ config, customer }: { config: CheckoutConfig; custome
               )}
               {error && <p className="mt-5 text-[15px] text-red-700" role="alert">{error}</p>}
               <PrimaryButton type="submit" disabled={busy} className="mt-8 lg:max-w-[400px]">
-                {busy ? "Saving…" : "Continue to Payment"}
+                {busy ? "Saving…" : "Continue to payment"}
               </PrimaryButton>
             </form>
           ) : (
             <div>
               <h1 className="text-[22px] font-semibold lg:text-[34px]">Payment</h1>
-              <div className="mt-6 rounded-[22px] bg-pill p-5 text-[14px] lg:p-6 lg:text-[16px]">
+              <div className="mt-6 rounded-md bg-pill p-5 text-[14px] lg:p-6 lg:text-[16px]">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="font-medium">Delivering to {a?.first_name} {a?.last_name}</p>

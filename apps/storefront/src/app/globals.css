@@ -1,25 +1,28 @@
 @import "tailwindcss";
 
-/* The64Squares heading font: Laia the Great Blondie. Capital and small letters are drawn
-   differently, so headings are typed in the designer's capitalisation. */
-@font-face {
-  font-family: "LaiatheGreatBlondie";
-  src: url("/fonts/LaiatheGreatBlondie.woff2") format("woff2");
-  font-display: swap;
-}
-
+/* The 64 Squares look: the black and white of the logo, the green velvet lining of the
+   travel boxes, walnut and maple from the boards, and a little brass. */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "LaiatheGreatBlondie", cursive;
+  --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
 
-  --color-ink: #1e1e1e;
-  --color-placeholder: #d9d9d9;
-  --color-placeholder-dark: #bdbdbd;
-  --color-pill: #e8e8e8;
-  --color-muted: #9a9a9a;
-  --color-rule: #cccccc;
+  --color-ink: #000000;
+  --color-velvet: #1f3a2b;
+  --color-velvet-deep: #172c20;
+  --color-walnut: #5c3b22;
+  --color-maple: #e8d8b8;
+  --color-maple-soft: #f4ede0;
+  --color-brass: #b08a4e;
+  --color-linen: #f3f1ec;
+
+  /* Older names still used by some components, mapped onto the palette. */
+  --color-placeholder: #ece8df;
+  --color-placeholder-dark: #d9d2c4;
+  --color-pill: #f3f1ec;
+  --color-muted: #6b6760;
+  --color-rule: #dcd8cf;
   /* Saved hearts and the counters on the List and Cart icons. */
-  --color-love: #e53935;
+  --color-love: #b3261e;
 }
 
 html {
@@ -32,17 +35,90 @@ body {
   font-family: var(--font-sans);
 }
 
-/* In the base layer so per-heading leading-* utilities can override the line height. */
 @layer base {
   .font-display {
     font-family: var(--font-display);
-    font-weight: 400;
-    line-height: 1;
+    font-weight: 420;
+    font-variation-settings: "SOFT" 40, "WONK" 0;
+    letter-spacing: -0.015em;
+    line-height: 1.08;
+  }
+}
+
+/* One type scale for every heading in the display face. */
+@layer components {
+  .h-hero {
+    font-size: 44px;
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+  }
+  .h-page {
+    font-size: 38px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+  .h-section {
+    font-size: 30px;
+    line-height: 1.1;
+  }
+  .h-sub {
+    font-size: 22px;
+    line-height: 1.2;
+  }
+  @media (min-width: 1024px) {
+    .h-hero {
+      font-size: 76px;
+    }
+    .h-page {
+      font-size: 56px;
+    }
+    .h-section {
+      font-size: 40px;
+    }
+    .h-sub {
+      font-size: 28px;
+    }
+  }
+
+  /* Buttons: solid black, or an outline on light backgrounds. */
+  .btn {
+    display: inline-flex;
+    height: 48px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 6px;
+    padding: 0 24px;
+    font-size: 15px;
+    font-weight: 500;
+    transition: background-color 150ms, color 150ms, border-color 150ms;
+  }
+  .btn-solid {
+    background: #000;
+    color: #fff;
+  }
+  .btn-solid:hover {
+    background: var(--color-velvet);
+  }
+  .btn-outline {
+    border: 1px solid #000;
+    color: #000;
+  }
+  .btn-outline:hover {
+    background: #000;
+    color: #fff;
+  }
+  .btn-light {
+    background: #fff;
+    color: #000;
+  }
+  .btn-light:hover {
+    background: var(--color-maple);
   }
 }
 
 :focus-visible {
-  outline: 2px solid #000;
+  outline: 2px solid var(--color-brass);
   outline-offset: 3px;
 }
 
@@ -68,6 +144,9 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .chat-pop {
     animation: none;
+  }
+  .btn {
+    transition: none;
   }
 }
 /* The chat's typing box shows its focus on the rounded pill around it instead. */

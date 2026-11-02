@@ -24,7 +24,7 @@ function Tick({ checked, onChange, label }: { checked: boolean; onChange: () => 
       aria-checked={checked}
       aria-label={label}
       onClick={onChange}
-      className="mt-[6px] flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-[4px] border-[1.5px] border-black lg:h-[20px] lg:w-[20px]"
+      className="mt-[6px] flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-[4px] border border-black lg:h-[20px] lg:w-[20px]"
     >
       {checked && <span className="h-full w-full rounded-[2px] bg-black" />}
     </button>
@@ -50,7 +50,7 @@ function Item({ line, onChange }: { line: Line; onChange: (fn: () => Promise<voi
             <p className="mt-[2px] text-[13px] text-black/60 lg:text-[15px]">{line.variant_title}</p>
           )}
           <p className="mt-[2px] text-[12px] italic lg:text-[14px]">Quantity: {line.quantity}</p>
-          <div className="mt-[6px] flex h-[22px] w-[74px] items-center justify-between rounded-full border border-black text-[12px] lg:h-[28px] lg:w-[92px] lg:text-[14px]">
+          <div className="mt-[6px] flex h-[22px] w-[74px] items-center justify-between rounded-md border border-black text-[12px] lg:h-[28px] lg:w-[92px] lg:text-[14px]">
             <button
               type="button"
               aria-label="One less"
@@ -84,14 +84,14 @@ function Item({ line, onChange }: { line: Line; onChange: (fn: () => Promise<voi
               }
               className="underline underline-offset-2"
             >
-              Move to Wishlist
+              Move to wishlist
             </button>
           </p>
           <p className="mt-2 text-[15px] lg:text-[17px]">{formatPrice(line.total ?? line.unit_price * line.quantity)}</p>
         </div>
         <Link
           href={`/products/${line.product_handle}`}
-          className="relative h-[82px] w-[92px] shrink-0 overflow-hidden rounded-[16px] bg-placeholder lg:h-[120px] lg:w-[135px] lg:rounded-[22px]"
+          className="relative h-[82px] w-[92px] shrink-0 overflow-hidden rounded-md bg-placeholder lg:h-[120px] lg:w-[135px] lg:rounded-md"
         >
           {line.thumbnail && <FillMedia src={line.thumbnail} sizes="135px" alt="" />}
         </Link>
@@ -152,7 +152,7 @@ function PriceTotal({ lines }: { lines: Line[] }) {
   return (
     <aside className="mt-[56px] h-fit lg:sticky lg:top-[150px] lg:mt-0" aria-labelledby="price-total">
       <h2 id="price-total" className="px-1 text-[18px] font-semibold lg:text-[22px]">
-        Price Total <span className="text-[13px] font-normal lg:text-[15px]">({count} {count === 1 ? "Item" : "Items"})</span>
+        Order total <span className="text-[13px] font-normal lg:text-[15px]">({count} {count === 1 ? "item" : "items"})</span>
       </h2>
       <dl className="mt-5 space-y-[14px] px-1 text-[13px] lg:text-[16px]">
         <div className="flex justify-between"><dt>Total MRP</dt><dd>{formatPrice(mrp)}</dd></div>
@@ -167,7 +167,7 @@ function PriceTotal({ lines }: { lines: Line[] }) {
       {count > 0 ? (
         <Link
           href="/checkout"
-          className="mt-8 flex h-[44px] w-full items-center justify-center rounded-full bg-black text-[16px] font-semibold text-white hover:bg-ink lg:h-[54px] lg:text-[18px]"
+          className="mt-8 flex h-[44px] w-full items-center justify-center rounded-md bg-black text-[16px] font-semibold text-white hover:bg-velvet lg:h-[54px] lg:text-[18px]"
         >
           Checkout
         </Link>
@@ -177,7 +177,7 @@ function PriceTotal({ lines }: { lines: Line[] }) {
         </p>
       )}
       <p className="mt-6 text-center text-[13px] italic underline underline-offset-2 lg:text-[15px]">
-        <Link href="/contact">Having a Problem? Contact Us.</Link>
+        <Link href="/contact">Need help? Contact us</Link>
       </p>
     </aside>
   )
@@ -197,7 +197,7 @@ export function Backpack({ cart }: { cart: HttpTypes.StoreCart | null }) {
   return (
     <div className={`lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-[96px] ${pending ? "opacity-60 transition-opacity" : ""}`}>
       <div>
-        <h1 className="text-[22px] font-semibold lg:text-[34px]">Your Cart</h1>
+        <h1 className="font-display h-page">Your cart</h1>
         {lines.length ? (
           <ul className="mt-7 space-y-6 lg:mt-10 lg:space-y-8">
             {lines.map((l) => (
@@ -207,7 +207,7 @@ export function Backpack({ cart }: { cart: HttpTypes.StoreCart | null }) {
         ) : (
           <div className="mt-8">
             <p className="text-[18px]">Your cart is empty.</p>
-            <Link href="/shop" className="mt-5 inline-flex h-[42px] items-center rounded-full bg-ink px-8 text-[16px] text-white">
+            <Link href="/shop" className="mt-5 btn btn-solid">
               Browse the shop
             </Link>
           </div>

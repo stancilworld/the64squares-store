@@ -54,7 +54,7 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
   const list = useList()
   const saved = list.has(product.id, selected?.id ?? null)
 
-  // "Add to Cart" adds to the cart; "Buy Now" adds and opens the cart.
+  // "Add to cart" adds to the cart; "Buy now" adds and opens the cart.
   const add = (thenOpenBackpack: boolean) => {
     if (!selected) {
       return
@@ -86,15 +86,15 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
 
   return (
     <div>
-      <p className="mt-4 text-[26px] text-muted">
+      <p className="mt-4 text-[22px]">
         {formatPrice(selected?.calculated_price?.calculated_amount ?? null)}
       </p>
-      <p className="text-[14px] text-black/60">Inclusive of all taxes</p>
+      <p className="text-[13px] text-muted">Inclusive of all taxes</p>
 
       {optionTitles.map((title) => (
-        <fieldset key={title} className="mt-8">
-          <legend className="text-[18px]">
-            {title}: <span className="text-black/70">{choice[title]}</span>
+        <fieldset key={title} className="mt-7">
+          <legend className="text-[14px] font-medium">
+            {title}: <span className="font-normal text-muted">{choice[title]}</span>
           </legend>
           <div className="mt-3 flex flex-wrap gap-3">
             {valuesFor(title).map((value) => {
@@ -109,7 +109,7 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
                     setChoice((c) => ({ ...c, [title]: value }))
                     setAdded(false)
                   }}
-                  className={`h-[40px] w-[44px] rounded-[8px] border ${active ? "outline outline-2 outline-offset-2 outline-black" : "border-black/15"}`}
+                  className={`h-[34px] w-[34px] rounded-full border ${active ? "outline outline-2 outline-offset-2 outline-black" : "border-black/15"}`}
                   style={{ backgroundColor: swatch(value) }}
                 />
               ) : (
@@ -121,7 +121,7 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
                     setChoice((c) => ({ ...c, [title]: value }))
                     setAdded(false)
                   }}
-                  className={`h-[42px] rounded-full border-[1.5px] px-5 text-[16px] ${active ? "border-black bg-black text-white" : "border-black"}`}
+                  className={`h-[40px] rounded-md border px-4 text-[14px] ${active ? "border-black bg-black text-white" : "border-rule hover:border-black"}`}
                 >
                   {value}
                 </button>
@@ -131,35 +131,35 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
         </fieldset>
       ))}
 
-      <div className="mt-10 flex flex-wrap items-center gap-4">
+      <div className="mt-8 flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={() => add(false)}
           disabled={!selected || !inStock(selected) || pending}
-          className="inline-flex h-[52px] min-w-[180px] items-center justify-center rounded-full bg-ink px-8 text-[18px] text-white hover:bg-black disabled:opacity-50"
+          className="btn btn-solid h-[52px] min-w-[180px] flex-1 disabled:opacity-50 sm:flex-none"
         >
-          {!selected ? "Choose options" : !inStock(selected) ? "Sold out" : pending ? "Adding..." : "Add to Cart"}
+          {!selected ? "Choose options" : !inStock(selected) ? "Sold out" : pending ? "Adding..." : "Add to cart"}
         </button>
         <button
           type="button"
           onClick={() => add(true)}
           disabled={!selected || !inStock(selected) || pending}
-          className="inline-flex h-[52px] min-w-[180px] items-center justify-center rounded-full border-[1.5px] border-black px-8 text-[18px] hover:bg-black hover:text-white disabled:opacity-50"
+          className="btn btn-outline h-[52px] min-w-[180px] flex-1 disabled:opacity-50 sm:flex-none"
         >
-          Buy Now
+          Buy now
         </button>
         <button
           type="button"
           onClick={toggleList}
           aria-pressed={saved}
-          className="inline-flex h-[52px] items-center gap-2 rounded-full px-4 text-[17px] hover:bg-pill"
+          className="inline-flex h-[52px] items-center gap-2 rounded-md px-3 text-[15px] hover:bg-linen"
         >
           <HeartIcon filled={saved} className={`h-[20px] w-[22px] ${saved ? "text-love" : ""}`} />
-          {saved ? "In your Wishlist" : "Add to Wishlist"}
+          {saved ? "In your wishlist" : "Add to wishlist"}
         </button>
       </div>
       {added && (
-        <p className="mt-4 text-[17px]">
+        <p className="mt-4 text-[15px]">
           Added to cart!{" "}
           <Link href="/cart" className="underline underline-offset-4">
             View cart

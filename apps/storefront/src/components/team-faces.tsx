@@ -152,7 +152,7 @@ function NameTag({ member, W, H }: { member: Placed; W: number; H: number }) {
       } -translate-y-full`}
       style={{ left, top }}
     >
-      <span className="font-display text-[32px] leading-none lg:text-[58px]">{member.name}</span>
+      <span className="font-display h-section">{member.name}</span>
       {member.role && (
         <span className="max-w-[56px] text-[10px] leading-[12px] text-white/85 lg:max-w-[60px] lg:text-[12px] lg:leading-[14px]">
           {member.role}

@@ -1,12 +1,12 @@
 {
   "login": {
-    "title": "Welcome to The64Squares",
-    "hint": "Sign in to manage The64Squares store"
+    "title": "Welcome to The 64 Squares",
+    "hint": "Sign in to manage The 64 Squares store"
   },
   "invite": {
-    "title": "Welcome to The64Squares",
-    "successHint": "Get started with The64Squares admin right away.",
-    "successAction": "Open The64Squares admin"
+    "title": "Welcome to The 64 Squares",
+    "successHint": "Get started with The 64 Squares admin right away.",
+    "successAction": "Open The 64 Squares admin"
   },
   "orders": {
     "refund": {
@@ -68,7 +68,7 @@
   "app": {
     "nav": {
       "common": {
-        "extensions": "The64Squares"
+        "extensions": "The 64 Squares"
       }
     }
   }

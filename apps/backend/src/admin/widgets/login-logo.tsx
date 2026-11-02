@@ -4,7 +4,7 @@ import { createPortal } from "react-dom"
 import defaultLogo from "../assets/logo.webp"
 import { BACKEND_URL } from "../lib/sdk"
 
-// Puts The64Squares logo (or the one uploaded under Branding) where Medusa's logo sits
+// Puts The 64 Squares logo (or the one uploaded under Branding) where Medusa's logo sits
 // on the admin sign-in page. The widget slot is inside the form, so the logo is moved
 // to the top of the page with a portal and Medusa's logo box is hidden.
 const LoginLogo = () => {
@@ -41,7 +41,7 @@ const LoginLogo = () => {
       {slot &&
         createPortal(
           <div className="mb-4 flex h-[112px] items-center justify-center">
-            {logo && <img src={logo} alt="The64Squares" className="max-h-[112px] max-w-[240px] object-contain" />}
+            {logo && <img src={logo} alt="The 64 Squares" className="max-h-[112px] max-w-[240px] object-contain" />}
           </div>,
           slot
         )}

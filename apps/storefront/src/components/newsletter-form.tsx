@@ -23,7 +23,7 @@ export function NewsletterForm({ label }: { label: string }) {
   }
 
   if (state === "done") {
-    return <p className="mt-[45px] text-[20px]">You&apos;re on the list. See you in your inbox!</p>
+    return <p className="mt-6 text-[16px]">You&apos;re subscribed. Look out for our next email.</p>
   }
 
   if (!open) {
@@ -31,7 +31,7 @@ export function NewsletterForm({ label }: { label: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-[45px] inline-flex h-[55px] items-center justify-center rounded-full bg-ink px-[43px] text-[18px] text-white hover:bg-black lg:w-[372px] lg:text-[20px]"
+        className="btn btn-solid mt-6"
       >
         {label}
       </button>
@@ -39,7 +39,7 @@ export function NewsletterForm({ label }: { label: string }) {
   }
 
   return (
-    <form onSubmit={submit} className="mt-[45px] flex max-w-[560px] flex-col gap-3 sm:flex-row">
+    <form onSubmit={submit} className="mt-6 flex max-w-[520px] flex-col gap-3 sm:flex-row">
       <label htmlFor="newsletter-email" className="sr-only">
         Email
       </label>
@@ -51,12 +51,12 @@ export function NewsletterForm({ label }: { label: string }) {
         autoFocus
         autoComplete="email"
         placeholder="Your email"
-        className="h-[55px] flex-1 rounded-full border-[1.5px] border-black px-6 text-[18px] outline-none"
+        className="h-[48px] flex-1 rounded-md border border-rule bg-white px-4 text-[16px] outline-none focus:border-black"
       />
       <button
         type="submit"
         disabled={state === "sending"}
-        className="h-[55px] rounded-full bg-ink px-8 text-[18px] text-white hover:bg-black disabled:opacity-60"
+        className="btn btn-solid disabled:opacity-60"
       >
         {state === "sending" ? "..." : "Subscribe"}
       </button>

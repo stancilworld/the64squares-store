@@ -22,7 +22,7 @@ fail() { printf "\n\033[1;31m%s\033[0m\n" "$1"; exit 1; }
 note() { printf "    %s\n" "$1"; }
 
 [ "$(id -u)" = 0 ] || fail "Run this as root."
-[ -f "$ENV_FILE" ] || fail "The64Squares is not installed here yet (no $ENV_FILE)."
+[ -f "$ENV_FILE" ] || fail "The 64 Squares is not installed here yet (no $ENV_FILE)."
 [ -f "$BASE/domains.env" ] && . "$BASE/domains.env"
 API_URL="$(grep -E '^MEDUSA_BACKEND_URL=' "$ENV_FILE" | cut -d= -f2- || true)"
 STORE_URL="$(grep -E '^STORE_CORS=' "$ENV_FILE" | cut -d= -f2- | cut -d, -f1 || true)"
@@ -89,7 +89,7 @@ ask RAZORPAY_WEBHOOK_SECRET "Razorpay Webhook Secret" secret "the secret you typ
 say "Emails (Resend)"
 note "resend.com → Domains → add the64squares.in and copy its DNS records into Hostinger; then API Keys → Create."
 ask RESEND_API_KEY "Resend API key" secret "starts with re_" '^re_[A-Za-z0-9_]+$'
-ask EMAIL_FROM "Send emails from" plain "e.g. The64Squares <orders@the64squares.in>, on the domain you added in Resend" '^[^<>]*<?[^ <>@]+@[^ <>@]+\.[a-z]{2,}>?$'
+ask EMAIL_FROM "Send emails from" plain "e.g. The 64 Squares <orders@the64squares.in>, on the domain you added in Resend" '^[^<>]*<?[^ <>@]+@[^ <>@]+\.[a-z]{2,}>?$'
 
 say "Sign in with Google (optional)"
 note "console.cloud.google.com → APIs & Services → Credentials → Create OAuth client ID → Web application."

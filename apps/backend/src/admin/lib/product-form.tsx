@@ -17,7 +17,7 @@ import { BadgePicker, type BadgeValue } from "./badge-picker"
 import { uploadImage } from "./upload"
 import { useUploadLimits } from "./upload-limits"
 
-// The simple The64Squares product form: everything about a product on one screen.
+// The simple The 64 Squares product form: everything about a product on one screen.
 // Saved by POST /admin/store-products(/:id) (src/lib/product-form.ts).
 
 type Colour = { name: string; hex: string }

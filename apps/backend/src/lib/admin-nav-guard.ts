@@ -3,7 +3,7 @@
 //   only tidiness, the server checks every action anyway (src/api/staff-guard.ts)
 // - hides technical settings from the menu (they're listed under Settings → Advanced settings)
 // - hides the links to Medusa's documentation and changelog
-// - shows "The64Squares Admin" and The64Squares logo in the browser tab instead of Medusa
+// - shows "The 64 Squares Admin" and The 64 Squares logo in the browser tab instead of Medusa
 // - opens the Dashboard after signing in, instead of the Orders list
 import { ADMIN_FAVICON } from "./brand/admin-favicon"
 
@@ -98,11 +98,11 @@ const script = (backendUrl: string) => `
   var style = document.createElement("style");
   document.head.appendChild(style);
 
-  // Browser tab: The64Squares name and logo.
+  // Browser tab: The 64 Squares name and logo.
   function fixHead() {
     var t = document.title;
     if (t.indexOf("Medusa") >= 0) {
-      document.title = t === "Medusa" ? "The64Squares Admin" : t.replace(/ - Medusa$/, " - The64Squares Admin").replace(/Medusa/g, "The64Squares");
+      document.title = t === "Medusa" ? "The 64 Squares Admin" : t.replace(/ - Medusa$/, " - The 64 Squares Admin").replace(/Medusa/g, "The 64 Squares");
     }
     var icon = document.querySelector('link[rel="icon"]');
     if (icon && icon.getAttribute("href") !== FAVICON) icon.setAttribute("href", FAVICON);
@@ -183,7 +183,7 @@ export const adminNavGuard = (backendUrl: string) => ({
   name: "t64-admin-nav-guard",
   transformIndexHtml() {
     return [
-      { tag: "title", children: "The64Squares Admin", injectTo: "head" as const },
+      { tag: "title", children: "The 64 Squares Admin", injectTo: "head" as const },
       { tag: "script", children: script(backendUrl), injectTo: "body" as const },
     ]
   },

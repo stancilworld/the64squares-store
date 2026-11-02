@@ -49,7 +49,7 @@ export const PERMISSIONS: Permission[] = [
 
   // Website
   { key: "content.homepage", group: "Website", label: "Edit Homepage", description: "Banner, featured collection, gang band and newsletter section.", default: true },
-  { key: "content.about", group: "Website", label: "Edit About us & team faces", description: "Who are we?, Faces behind The64Squares and Get in touch.", default: true },
+  { key: "content.about", group: "Website", label: "Edit About us & team faces", description: "Who are we?, Faces behind The 64 Squares and Get in touch.", default: true },
   { key: "content.footer", group: "Website", label: "Edit menu, footer & announcement bar", description: "Top-menu words and links, footer links and social links, the announcement strip, and the footer animation.", default: true },
   { key: "content.blog", group: "Website", label: "Write blog posts", description: "Create and edit draft posts.", default: true },
   { key: "content.blog_publish", group: "Website", label: "Publish blog posts", description: "Put posts live, edit live posts, delete posts. Without this, posts stay drafts for the admin to publish.", default: false },

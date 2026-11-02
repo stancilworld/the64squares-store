@@ -1,5 +1,5 @@
 [Unit]
-Description=The64Squares background jobs (Medusa worker)
+Description=The 64 Squares background jobs (Medusa worker)
 After=network.target postgresql.service redis-server.service
 
 [Service]

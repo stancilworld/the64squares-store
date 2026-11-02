@@ -10,7 +10,7 @@ export function CheckoutSteps({ current }: { current: (typeof STEPS)[number] }) 
     <>
       <Link href="/shop" className="inline-flex items-center gap-[3px] text-[12px] hover:underline lg:text-[15px]">
         <ArrowLeftLong className="h-[10px] w-[30px] lg:w-[40px]" />
-        Back to Shop
+        Back to shop
       </Link>
       <ol className="mx-auto mt-6 flex max-w-[620px] items-center justify-center gap-2 text-[15px] lg:mt-8 lg:gap-4 lg:text-[20px]">
         {STEPS.map((s, i) => (

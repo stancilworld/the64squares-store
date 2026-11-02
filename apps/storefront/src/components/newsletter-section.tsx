@@ -4,19 +4,17 @@ import { NewsletterForm } from "./newsletter-form"
 export function NewsletterSection({
   block,
   className = "",
-  bodyClassName = "max-w-[1184px]",
+  bodyClassName = "max-w-[520px]",
 }: {
   block: ContentBlock
   className?: string
   bodyClassName?: string
 }) {
   return (
-    <section className={`mx-auto max-w-[1440px] px-6 ${className}`}>
-      <h2 className="font-display text-[48px] leading-[36px] lg:text-[96px] lg:leading-[1]">{block.title}</h2>
-      {block.body && (
-        <p className={`mt-[20px] text-[16px] leading-[25px] lg:mt-[20px] ${bodyClassName}`}>{block.body}</p>
-      )}
-      <NewsletterForm label={block.link_label || "Subscribe for our newsletter"} />
+    <section className={`mx-auto max-w-[1440px] px-6 lg:px-10 ${className}`}>
+      <h2 className="font-display h-section">{block.title}</h2>
+      {block.body && <p className={`mt-3 text-[16px] leading-[1.6] text-muted ${bodyClassName}`}>{block.body}</p>}
+      <NewsletterForm label={block.link_label || "Subscribe"} />
     </section>
   )
 }

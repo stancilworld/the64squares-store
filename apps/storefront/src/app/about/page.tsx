@@ -23,7 +23,7 @@ export default async function AboutPage() {
     <>
       {intro && (
         <section className="pt-[56px] lg:pt-[60px]">
-          <h1 className="mx-auto max-w-[1440px] px-6 text-center font-display text-[56px] lg:px-[74px] lg:text-[96px]">
+          <h1 className="mx-auto max-w-[1440px] px-6 text-center font-display h-page lg:px-[74px]">
             {intro.title}
           </h1>
           {/* Full screen width; at least as tall as the old in-page picture (2880 × 856 shape at
@@ -50,7 +50,7 @@ export default async function AboutPage() {
 
       {team && (
         <section className="mx-auto mt-[96px] max-w-[1440px] px-6 lg:mt-[139px] lg:pl-[178px] lg:pr-[166px]">
-          <h2 className="text-center font-display text-[56px] lg:text-[96px]">{team.title}</h2>
+          <h2 className="text-center font-display h-page">{team.title}</h2>
           {faces.length > 0 ? (
             // Interactive faces (edited under About us → Team faces in the admin).
             <div className="-mx-3 mt-[16px] max-w-[1100px] sm:mx-auto sm:w-full lg:mt-[24px]">
@@ -74,18 +74,18 @@ export default async function AboutPage() {
             )}
           </div>
           <div className="lg:mt-[19px]">
-            <p className="font-display text-[44px] leading-[34px] lg:text-[96px] lg:leading-[70px]">
+            <p className="font-display h-page">
               {contact.title}
             </p>
             {contact.body && (
-              <p className="mt-[34px] font-display text-[44px] leading-[34px] lg:mt-[70px] lg:text-[96px] lg:leading-[70px]">
+              <p className="mt-[34px] font-display h-page lg:mt-[70px]">
                 {contact.body}
               </p>
             )}
             {contact.link_url && (
               <a
                 href={contact.link_url}
-                className="mt-[40px] inline-flex h-[42px] min-w-[140px] items-center justify-center rounded-full bg-ink px-6 text-[16px] text-white hover:bg-black lg:mt-[93px]"
+                className="mt-[40px] btn btn-solid lg:mt-[93px]"
               >
                 {contact.link_label || "Email us"}
               </a>

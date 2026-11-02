@@ -82,7 +82,7 @@ const InvoicesPage = () => {
         <F label="Company name (seller)" htmlFor="iv-legal" hint="The GST-registered company, as on the GST certificate.">
           <Input id="iv-legal" value={form.legal_name} onChange={(e) => set("legal_name", e.target.value)} />
         </F>
-        <F label="Line under the name" htmlFor="iv-brand" hint="e.g. The64Squares · a brand of your company">
+        <F label="Line under the name" htmlFor="iv-brand" hint="e.g. The 64 Squares · a brand of your company">
           <Input id="iv-brand" value={form.brand_line} onChange={(e) => set("brand_line", e.target.value)} />
         </F>
         <F label="GSTIN" htmlFor="iv-gstin" hint={form.gstin && !gstinOk ? "That doesn't look like a 15-character GSTIN." : "15 characters, e.g. 27ABCDE1234F1Z5"}>

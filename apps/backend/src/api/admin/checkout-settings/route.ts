@@ -17,7 +17,7 @@ const keys = async (req: AuthenticatedMedusaRequest) => {
     razorpay_webhook: k.razorpayWebhookSecrets.length > 0,
     razorpay_test_mode: k.razorpayMode === "test",
     resend: !!k.resendKey,
-    email_from: k.emailFrom || process.env.EMAIL_FROM || "The64Squares <hello@the64squares.in>",
+    email_from: k.emailFrom || process.env.EMAIL_FROM || "The 64 Squares <hello@the64squares.in>",
     email_reply_to: k.emailReplyTo || process.env.EMAIL_REPLY_TO || null,
     google: !!k.google,
     delhivery: !!k.delhiveryToken,

@@ -218,12 +218,12 @@ const readFiles = (files: FileList | File[]) =>
 const who = (m: Mail) => (m.from_name ? `${m.from_name} <${m.from_email}>` : m.from_email || "")
 const quoteOf = (m: Mail) => {
   const body = (m.text || "").trim().split("\n").map((l) => `> ${l}`).join("\n")
-  return `On ${formatWhen(m.date)}, ${m.folder === "sent" ? `The64Squares <${m.from_email}>` : who(m)} wrote:\n${body}`
+  return `On ${formatWhen(m.date)}, ${m.folder === "sent" ? `The 64 Squares <${m.from_email}>` : who(m)} wrote:\n${body}`
 }
 const forwardOf = (m: Mail) =>
   [
     "---------- Forwarded message ---------",
-    `From: ${m.folder === "sent" ? `The64Squares <${m.from_email}>` : who(m)}`,
+    `From: ${m.folder === "sent" ? `The 64 Squares <${m.from_email}>` : who(m)}`,
     `Date: ${formatWhen(m.date)}`,
     `Subject: ${m.subject || "(no subject)"}`,
     `To: ${m.to.map((t) => (t.name ? `${t.name} <${t.address}>` : t.address)).join(", ")}`,
@@ -551,7 +551,7 @@ export function Composer({
           )}
         </div>
         <Text size="xsmall" className="text-ui-fg-subtle">
-          From The64Squares &lt;{shop || "…"}&gt;
+          From The 64 Squares &lt;{shop || "…"}&gt;
         </Text>
       </div>
       <div className="grid grid-cols-[52px_1fr] items-center gap-x-2 gap-y-2">
@@ -1158,7 +1158,7 @@ function MessageCard({
   onMore: (el: HTMLElement) => void
 }) {
   const ours = m.folder === "sent"
-  const name = ours ? `The64Squares${m.sent_by ? ` (${m.sent_by})` : ""}` : m.from_name || m.from_email || ""
+  const name = ours ? `The 64 Squares${m.sent_by ? ` (${m.sent_by})` : ""}` : m.from_name || m.from_email || ""
   const toLine = m.to.map((t) => (t.address === shop.toLowerCase() ? "me" : t.name || t.address)).join(", ")
   return (
     <div data-mail={m.id} data-open={open ? "yes" : "no"} className={`${first ? "" : "border-t border-ui-border-base"} ${m.status === "new" ? "bg-ui-bg-base" : ""}`}>
@@ -1176,7 +1176,7 @@ function MessageCard({
         onContextMenu={onMenu}
         className="flex cursor-pointer items-start gap-3 px-4 py-3 outline-none hover:bg-ui-bg-base-hover focus-visible:bg-ui-bg-base-hover"
       >
-        <Avatar name={ours ? "The64Squares" : name} email={ours ? shop : m.from_email || ""} />
+        <Avatar name={ours ? "The 64 Squares" : name} email={ours ? shop : m.from_email || ""} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2">
             <Text size="small" weight="plus" className="truncate">

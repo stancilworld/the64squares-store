@@ -2,7 +2,7 @@ import type { MedusaContainer } from "@medusajs/framework/types"
 import { CONTENT_MODULE } from "../modules/content"
 import type ContentModuleService from "../modules/content/service"
 
-// The Contact page (admin → Website → Contact page): the panel of ways to reach The64Squares on the
+// The Contact page (admin → Website → Contact page): the panel of ways to reach The 64 Squares on the
 // left, and a form built in the admin on the right. Messages are saved (admin → Messages) and
 // emailed to `notify_email`.
 
@@ -71,12 +71,12 @@ const field = (id: string, type: FieldType, label: string, extra: Partial<FormFi
 
 export const DEFAULT_CONTACT_PAGE: ContactPage = {
   title: "Say hello",
-  intro: "Questions about an order, delivery or a piece for your little one? We'd love to hear from you.",
+  intro: "Questions about an order, a chess set or a tournament? We'd love to hear from you.",
   panel_title: "We're here to help",
   panel: [
     item("p_email", "email", "Email us", "hello@the64squares.in"),
     item("p_phone", "phone", "Call us", ""),
-    item("p_whatsapp", "whatsapp", "WhatsApp", "", { button_label: "Chat on WhatsApp", message: "Hi The64Squares! I have a question." }),
+    item("p_whatsapp", "whatsapp", "WhatsApp", "", { button_label: "Chat on WhatsApp", message: "Hi The 64 Squares! I have a question." }),
     item("p_instagram", "instagram", "Instagram", ""),
     item("p_hours", "hours", "When we're around", "Monday – Saturday: 10:00 AM – 7:00 PM IST\nSunday: closed"),
   ],

@@ -33,7 +33,7 @@ const EMPTY: FormState = {
   body: "",
   cover_url: null,
   thumbnail_url: null,
-  author: "The64Squares team",
+  author: "The 64 Squares team",
   status: "draft",
   published_at: null,
 }
@@ -267,7 +267,7 @@ const BlogPage = () => {
         <div>
           <Heading level="h1">Blog</Heading>
           <Text size="small" className="text-ui-fg-subtle">
-            The64Squares Journal. Newest posts show first on the website.
+            The 64 Squares Journal. Newest posts show first on the website.
           </Text>
         </div>
         <div className="flex flex-wrap gap-2">

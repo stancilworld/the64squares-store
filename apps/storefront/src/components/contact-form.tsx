@@ -8,7 +8,7 @@ import { SendIcon } from "./icons"
 type Value = string | boolean | string[]
 
 const box =
-  "w-full rounded-full border-[1.5px] border-black bg-white px-5 text-[15px] outline-none placeholder:text-black/40 focus:ring-2 focus:ring-black/20 lg:text-[16px]"
+  "w-full rounded-md border border-rule bg-white px-4 text-[15px] outline-none placeholder:text-muted focus:border-black lg:text-[16px]"
 
 const empty = (f: ContactField): Value => (f.type === "checkbox" ? false : f.type === "checkboxes" ? [] : "")
 
@@ -66,7 +66,7 @@ export function ContactForm({ page }: { page: ContactPage }) {
   if (state === "sent") {
     return (
       <div data-contact-sent className="flex min-h-[320px] flex-col items-start justify-center" role="status">
-        <h2 className="font-display text-[44px] leading-[1] lg:text-[64px]">{page.success_title || "Thank you!"}</h2>
+        <h2 className="font-display h-section">{page.success_title || "Thank you!"}</h2>
         <p className="mt-4 max-w-[520px] text-[17px] leading-[27px]">{page.success_text}</p>
         <button
           type="button"
@@ -74,7 +74,7 @@ export function ContactForm({ page }: { page: ContactPage }) {
             setValues(Object.fromEntries(page.fields.map((f) => [f.id, empty(f)])))
             setState("idle")
           }}
-          className="mt-8 inline-flex h-[46px] items-center rounded-full border-[1.5px] border-black px-7 text-[16px] hover:bg-black hover:text-white"
+          className="mt-8 btn btn-outline"
         >
           Send another message
         </button>
@@ -84,7 +84,7 @@ export function ContactForm({ page }: { page: ContactPage }) {
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col">
-      {page.form_title && <h2 className="font-display text-[40px] leading-[1] lg:text-[56px]">{page.form_title}</h2>}
+      {page.form_title && <h2 className="font-display h-section">{page.form_title}</h2>}
       {/* Robots fill this in; people never see it. */}
       <div aria-hidden="true" className="absolute left-[-9999px] h-px w-px overflow-hidden">
         <label>
@@ -105,7 +105,7 @@ export function ContactForm({ page }: { page: ContactPage }) {
       <button
         type="submit"
         disabled={state === "sending"}
-        className="mt-[30px] flex h-[52px] w-full items-center justify-center gap-3 rounded-full bg-black text-[17px] font-semibold text-white hover:bg-ink disabled:opacity-60 lg:h-[58px] lg:text-[18px]"
+        className="mt-[30px] flex h-[52px] w-full items-center justify-center gap-3 rounded-md bg-black text-[17px] font-semibold text-white hover:bg-velvet disabled:opacity-60 lg:h-[58px] lg:text-[18px]"
       >
         <SendIcon className="h-[20px] w-[20px]" />
         {state === "sending" ? "Sending…" : page.submit_label}
@@ -191,7 +191,7 @@ function Question({ f, value, error, onChange }: { f: ContactField; value: Value
           value={String(value)}
           maxLength={5000}
           onChange={(e) => onChange(e.target.value)}
-          className={`min-h-[140px] w-full rounded-[24px] border-[1.5px] border-black bg-white px-5 py-4 text-[15px] leading-[24px] outline-none placeholder:text-black/40 focus:ring-2 focus:ring-black/20 lg:text-[16px] ${red}`}
+          className={`min-h-[140px] w-full rounded-md border border-black bg-white px-5 py-4 text-[15px] leading-[24px] outline-none placeholder:text-black/40 focus:ring-2 focus:ring-black/20 lg:text-[16px] ${red}`}
           {...aria}
         />
       ) : f.type === "select" ? (
@@ -232,12 +232,12 @@ function Question({ f, value, error, onChange }: { f: ContactField; value: Value
   )
 }
 
-// Round (pick one) or square (tick) marker in The64Squares black outline style.
+// Round (pick one) or square (tick) marker in The 64 Squares black outline style.
 function Tick({ on, error, square }: { on: boolean; error: boolean; square?: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className={`mt-[1px] flex h-[20px] w-[20px] shrink-0 items-center justify-center border-[1.5px] peer-focus-visible:ring-2 peer-focus-visible:ring-black/30 ${
+      className={`mt-[1px] flex h-[20px] w-[20px] shrink-0 items-center justify-center border peer-focus-visible:ring-2 peer-focus-visible:ring-black/30 ${
         square ? "rounded-[6px]" : "rounded-full"
       } ${error ? "border-red-600" : "border-black"} ${on && square ? "bg-black" : "bg-white"}`}
     >

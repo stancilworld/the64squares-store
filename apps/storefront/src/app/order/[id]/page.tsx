@@ -17,7 +17,7 @@ async function OrderPage({ params, searchParams }: PageProps<"/order/[id]">) {
   return (
     <>
       <div className="mx-auto max-w-[760px] text-center">
-        <h1 className="font-display text-[48px] leading-none lg:text-[88px]">{fresh ? "Thank you!" : "Your order"}</h1>
+        <h1 className="font-display h-page">{fresh ? "Thank you!" : "Your order"}</h1>
         <p className="mt-4 text-[16px] lg:text-[20px]">
           Order <strong>#{order.display_id}</strong> · {orderDate(order.created_at)}
         </p>
@@ -39,7 +39,7 @@ async function OrderPage({ params, searchParams }: PageProps<"/order/[id]">) {
         <OrderDetails order={order} />
       </div>
       <div className="mt-12 text-center">
-        <Link href="/shop" className="inline-flex h-[42px] items-center rounded-full bg-ink px-8 text-[16px] text-white">
+        <Link href="/shop" className="btn btn-solid">
           Continue shopping
         </Link>
       </div>

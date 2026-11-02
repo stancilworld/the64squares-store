@@ -21,7 +21,7 @@ export const DEFAULT_CHECKOUT_SETTINGS: CheckoutSettings = {
   cod_enabled: true,
   cod_max: null,
   online_enabled: true,
-  delivery_text: "Free delivery across India in 5–9 days.",
+  delivery_text: "Free delivery across India in 3–7 days.",
   order_alert_email: process.env.OWNER_EMAIL || "",
 }
 

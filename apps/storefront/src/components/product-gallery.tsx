@@ -146,7 +146,7 @@ function Viewer({
             type="button"
             aria-label="Close"
             onClick={() => dialog.current?.close()}
-            className="flex h-[44px] w-[44px] items-center justify-center rounded-full hover:bg-pill"
+            className="flex h-[44px] w-[44px] items-center justify-center rounded-full hover:bg-linen"
           >
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
@@ -202,7 +202,7 @@ function Viewer({
                 aria-label={`Show photo ${i + 1}`}
                 aria-current={i === index}
                 onClick={() => go(i)}
-                className={`relative h-[64px] w-[64px] shrink-0 overflow-hidden rounded-[12px] bg-placeholder ${
+                className={`relative h-[64px] w-[64px] shrink-0 overflow-hidden rounded-md bg-placeholder ${
                   i === index ? "ring-2 ring-ink ring-offset-2" : "opacity-70 hover:opacity-100"
                 }`}
               >
@@ -263,7 +263,7 @@ export function ProductGallery({
   }, [selected])
 
   if (!count) {
-    return <div className="relative aspect-square overflow-hidden rounded-[40px] bg-placeholder" />
+    return <div className="relative aspect-square overflow-hidden rounded-md bg-placeholder" />
   }
 
   const go = (i: number) => setSelected((i + count) % count)
@@ -272,7 +272,7 @@ export function ProductGallery({
   return (
     <div className="grid min-w-0 gap-4">
       <div
-        className="group relative aspect-square overflow-hidden rounded-[40px] bg-placeholder"
+        className="group relative aspect-square overflow-hidden rounded-md bg-placeholder"
         role="region"
         aria-roledescription="carousel"
         aria-label={`${title} photos`}
@@ -348,11 +348,11 @@ export function ProductGallery({
                 setSelected(i)
                 setPreview(null)
               }}
-              className="relative aspect-square shrink-0 basis-[calc((100%-48px)/4)] overflow-hidden rounded-[20px] bg-placeholder transition-opacity hover:opacity-90"
+              className="relative aspect-square shrink-0 basis-[calc((100%-48px)/4)] overflow-hidden rounded-md bg-placeholder transition-opacity hover:opacity-90"
             >
               <Image src={img.url} alt="" fill sizes="160px" className="object-cover" />
               {i === selected && (
-                <span aria-hidden className="pointer-events-none absolute inset-0 rounded-[20px] ring-2 ring-inset ring-ink" />
+                <span aria-hidden className="pointer-events-none absolute inset-0 rounded-md ring-2 ring-inset ring-ink" />
               )}
             </button>
           ))}

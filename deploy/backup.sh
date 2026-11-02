@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Nightly backup of The64Squares database and uploaded images. Keeps 14 days.
+# Nightly backup of The 64 Squares database and uploaded images. Keeps 14 days.
 set -euo pipefail
 DIR=/opt/the64squares/backups
 STAMP=$(date +%F)

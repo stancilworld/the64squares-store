@@ -1,5 +1,5 @@
 [Unit]
-Description=The64Squares API and admin (Medusa server)
+Description=The 64 Squares API and admin (Medusa server)
 After=network.target postgresql.service redis-server.service
 
 [Service]

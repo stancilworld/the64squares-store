@@ -30,7 +30,7 @@ import type {
 } from "@medusajs/framework/types"
 import { getServiceKeys, type RazorpayCreds } from "../../lib/service-keys"
 
-// Razorpay (UPI, cards, net banking, wallets) for The64Squares.
+// Razorpay (UPI, cards, net banking, wallets) for The 64 Squares.
 //
 // How a payment goes:
 // 1. Checkout asks Medusa for a payment session → initiatePayment creates a Razorpay order

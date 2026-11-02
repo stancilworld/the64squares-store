@@ -65,23 +65,26 @@ async function Shop({ searchParams }: { searchParams: Promise<Search> }) {
   const oneCategory =
     wanted.category.length === 1 ? categories.find((c) => c.handle === wanted.category[0]) : undefined
   const title = q
-    ? `results for "${sp.q}"`
+    ? `Results for "${sp.q}"`
     : oneCategory
-      ? oneCategory.name.toLowerCase()
-      : "all products"
+      ? oneCategory.name
+      : "All products"
 
   return (
     <>
-      <div className="relative h-[180px] w-full bg-placeholder md:h-[347px]">
+      <div className="bg-velvet text-white">
+        <div className="mx-auto max-w-[1440px] px-6 py-10 lg:px-10 lg:py-14">
+          <h1 className="font-display h-page">{title}</h1>
+          <p className="mt-2 text-[15px] text-maple">
+            {filtered.length} {filtered.length === 1 ? "product" : "products"}
+          </p>
+        </div>
       </div>
-      <div className="mx-auto max-w-[1440px] px-5 pb-[96px] lg:grid lg:grid-cols-[192px_1fr] lg:pl-[53px] lg:pr-[88px] lg:pb-[150px]">
-        <h1 className="col-start-2 py-10 text-center font-display text-[56px] lg:pb-[50px] lg:pt-[59px] lg:text-[96px]">
-          {title}
-        </h1>
-        <div className="col-start-1 row-start-2 mb-8 lg:mb-0 lg:mt-[1px] lg:border-r-[3px] lg:border-rule lg:pr-[0px]">
+      <div className="mx-auto max-w-[1440px] px-6 pb-20 pt-8 lg:grid lg:grid-cols-[220px_1fr] lg:gap-10 lg:px-10 lg:pb-28 lg:pt-10">
+        <div className="mb-8 lg:mb-0">
           <ShopFilters groups={groups} />
         </div>
-        <div className="col-start-2 row-start-2 lg:pl-[53px]">
+        <div>
           <ProductGrid key={JSON.stringify(sp)} products={filtered} />
         </div>
       </div>

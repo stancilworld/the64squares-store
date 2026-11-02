@@ -2,9 +2,9 @@
 
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react"
 
-// Form fields in The64Squares style: rounded, black outline, like the newsletter box.
+// Form fields in The 64 Squares style: rounded, black outline, like the newsletter box.
 const box =
-  "h-[46px] w-full rounded-full border-[1.5px] border-black bg-white px-5 text-[15px] outline-none placeholder:text-black/40 focus:ring-2 focus:ring-black/20 disabled:bg-pill disabled:text-black/50 lg:h-[50px] lg:text-[16px]"
+  "h-[46px] w-full rounded-md border border-rule bg-white px-4 text-[15px] outline-none placeholder:text-muted focus:border-black disabled:bg-pill disabled:text-black/50 lg:h-[50px] lg:text-[16px]"
 
 export function Field({
   label,
@@ -55,7 +55,7 @@ export function PrimaryButton({ children, className = "", ...rest }: React.Butto
   return (
     <button
       {...rest}
-      className={`flex h-[44px] w-full items-center justify-center rounded-full bg-black text-[16px] font-semibold text-white hover:bg-ink disabled:opacity-60 lg:h-[54px] lg:text-[18px] ${className}`}
+      className={`flex h-[44px] w-full items-center justify-center rounded-md bg-black text-[16px] font-semibold text-white hover:bg-velvet disabled:opacity-60 lg:h-[54px] lg:text-[18px] ${className}`}
     >
       {children}
     </button>

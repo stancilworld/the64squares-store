@@ -458,7 +458,7 @@ export const sendMail = async (
       .join("")
 
   const mail = {
-    from: { name: "The64Squares", address: m.email },
+    from: { name: "The 64 Squares", address: m.email },
     to: input.to,
     cc: input.cc?.length ? input.cc : undefined,
     subject: input.subject,
@@ -519,7 +519,7 @@ export const sendMail = async (
     in_reply_to: original?.message_id ?? null,
     references,
     thread_id,
-    from_name: "The64Squares",
+    from_name: "The 64 Squares",
     from_email: m.email.toLowerCase(),
     reply_to: null,
     to: toList,

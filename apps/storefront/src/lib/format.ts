@@ -1,11 +1,11 @@
-const inr = new Intl.NumberFormat("en-IN", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-})
+const inr = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 })
 
-// "₹ 4,499.00", as in the designs.
-export const formatPrice = (amount: number | null | undefined) =>
-  amount === null || amount === undefined ? "" : `₹ ${inr.format(amount)}`
+// "₹4,499", or "₹4,499.50" when there are paise.
+export const formatPrice = (amount: number | null | undefined) => {
+  if (amount === null || amount === undefined) return ""
+  const whole = Number.isInteger(amount)
+  return `₹${whole ? inr.format(amount) : amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",

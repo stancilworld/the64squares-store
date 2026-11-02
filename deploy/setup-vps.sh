@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time setup of The64Squares store on an Ubuntu 24.04 VPS. Works on a fresh server and
+# One-time setup of The 64 Squares store on an Ubuntu 24.04 VPS. Works on a fresh server and
 # on a server that already runs another store (Stancil): it only adds its own user, folder,
 # database, Redis database number, services and web server file, and never touches the
 # other store's.
@@ -37,7 +37,7 @@ flock -n 9 || die "The setup is already running. Watch it with: tail -f /root/th
 
 # After go-live.sh the server runs the real domain; setup would put the staging addresses back.
 if [ -f "$BASE/domains.env" ]; then
-  die "The64Squares is already live ($(grep STORE_DOMAIN "$BASE/domains.env" | cut -d= -f2)). Use deploy/update.sh to update it."
+  die "The 64 Squares is already live ($(grep STORE_DOMAIN "$BASE/domains.env" | cut -d= -f2)). Use deploy/update.sh to update it."
 fi
 
 if [ -z "$OWNER_EMAIL" ] && [ -t 0 ]; then
@@ -191,7 +191,7 @@ if certbot --nginx --non-interactive --agree-tos "${EMAIL_ARG[@]}" --redirect \
   SSL_OK=yes
 fi
 
-printf "\n\033[1;32m================ The64Squares is installed ================\033[0m\n"
+printf "\n\033[1;32m================ The 64 Squares is installed ================\033[0m\n"
 echo "Store:  https://$STORE_DOMAIN"
 echo "Admin:  https://$API_DOMAIN/app"
 echo "Admin login: $OWNER_EMAIL"
