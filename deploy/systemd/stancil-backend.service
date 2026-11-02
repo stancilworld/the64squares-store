@@ -1,0 +1,20 @@
+[Unit]
+Description=Stancil API and admin (Medusa server)
+After=network.target postgresql.service redis-server.service
+
+
+[Service]
+Type=simple
+User=stancil
+WorkingDirectory=/opt/stancil/app/apps/backend/.medusa/server
+EnvironmentFile=/opt/stancil/app/apps/backend/.medusa/server/.env
+Environment=NODE_ENV=production
+Environment=MEDUSA_WORKER_MODE=server
+Environment=PORT=9000
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+MemoryMax=1200M
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+[Unit]
+Description=Stancil storefront (Next.js)
+After=network.target postgresql.service redis-server.service
+After=stancil-backend.service
+
+[Service]
+Type=simple
+User=stancil
+WorkingDirectory=/opt/stancil/app/apps/storefront
+EnvironmentFile=/opt/stancil/app/apps/storefront/.env.local
+Environment=NODE_ENV=production
+Environment=PORT=8000
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+MemoryMax=900M
+
+[Install]
+WantedBy=multi-user.target

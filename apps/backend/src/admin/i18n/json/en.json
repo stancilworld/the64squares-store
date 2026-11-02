@@ -1,0 +1,75 @@
+{
+  "login": {
+    "title": "Welcome to Stancil",
+    "hint": "Sign in to manage the Stancil store"
+  },
+  "invite": {
+    "title": "Welcome to Stancil",
+    "successHint": "Get started with the Stancil admin right away.",
+    "successAction": "Open the Stancil admin"
+  },
+  "orders": {
+    "refund": {
+      "systemPaymentDesc": "One or more of your payments is a system payment. Be aware that captures and refunds are not handled by the store for such payments."
+    },
+    "payment": {
+      "status": {
+        "authorized": "Not paid yet (COD)",
+        "captured": "Paid"
+      },
+      "isReadyToBeCaptured": "Payment <0/> is waiting. For Cash on Delivery, mark it as paid once the cash arrives.",
+      "capture": "Mark as paid",
+      "capture_short": "Mark as paid",
+      "capturePayment": "Mark {{amount}} as received?",
+      "capturePaymentSuccess": "{{amount}} marked as paid"
+    },
+    "fulfillment": {
+      "status": {
+        "notFulfilled": "Not packed"
+      }
+    }
+  },
+  "profile": {
+    "edit": {
+      "usageInsightsHint": "Share anonymous usage insights with the software maker. Leave this off if you are not sure."
+    }
+  },
+  "translations": {
+    "subtitle": "Manage translations of your store content"
+  },
+  "apiKeyManagement": {
+    "create": {
+      "createSecretHint": "Create a new secret API key to access the store API as an authenticated admin user."
+    }
+  },
+  "workflowExecutions": {
+    "subtitle": "View and keep track of background tasks in your store."
+  },
+  "notifications": {
+    "accessibility": {
+      "description": "Notifications about store activity will be listed here."
+    }
+  },
+  "auth": {
+    "login": {
+      "noProviders": "No sign-in method is set up. Ask your developer to check the server settings.",
+      "cloud": "Log in with cloud account"
+    }
+  },
+  "inventory": {
+    "domain": "Stock"
+  },
+  "promotions": {
+    "domain": "Discounts"
+  },
+  "priceLists": {
+    "domain": "Sales & price lists"
+  },
+  "app": {
+    "nav": {
+      "common": {
+        "extensions": "Stancil"
+      }
+    }
+  }
+}

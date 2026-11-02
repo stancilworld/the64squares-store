@@ -1,0 +1,410 @@
+import { z } from "@medusajs/framework/zod"
+import { FILE_TYPE_KEYS, MAX_ALLOWED_MB } from "../../lib/upload-limits"
+import { PERMISSION_KEYS } from "../../lib/permissions"
+
+const nullableText = z.string().nullable().optional()
+
+export const CharacterBody = z.object({
+  name: z.string().min(1),
+  handle: z
+    .string()
+    .min(1)
+    .regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers and dashes"),
+  greeting: z.string().optional(),
+  tagline: nullableText,
+  story: nullableText,
+  image_url: nullableText,
+  banner_url: nullableText,
+  collection_title: nullableText,
+  status: z.enum(["live", "coming_soon"]).optional(),
+  coming_soon_text: z.string().optional(),
+  rank: z.number().int().optional(),
+})
+export const UpdateCharacterBody = CharacterBody.partial()
+
+export const ContentBlockBody = z.object({
+  page: z.string().regex(/^[a-z0-9-]+$/).optional(),
+  section: z.string().regex(/^[a-z0-9_]+$/),
+  eyebrow: nullableText,
+  title: nullableText,
+  body: nullableText,
+  image_url: nullableText,
+  link_label: nullableText,
+  link_url: nullableText,
+  rank: z.number().int().optional(),
+  is_active: z.boolean().optional(),
+  // Unpublished changes (Save draft) and their optional publish time.
+  draft: z
+    .object({
+      eyebrow: nullableText,
+      title: nullableText,
+      body: nullableText,
+      image_url: nullableText,
+      link_label: nullableText,
+      link_url: nullableText,
+      rank: z.number().int().optional(),
+      is_active: z.boolean().optional(),
+      show_from: z.string().datetime().nullable().optional(),
+      show_until: z.string().datetime().nullable().optional(),
+    })
+    .strict()
+    .nullable()
+    .optional(),
+  publish_at: z.coerce.date().nullable().optional(),
+  show_from: z.coerce.date().nullable().optional(),
+  show_until: z.coerce.date().nullable().optional(),
+})
+export const UpdateContentBlockBody = ContentBlockBody.partial()
+
+export const ProductCharacterBody = z.object({
+  character_id: z.string().nullable(),
+})
+
+export type CharacterBodyType = z.infer<typeof CharacterBody>
+export type UpdateCharacterBodyType = z.infer<typeof UpdateCharacterBody>
+export type ContentBlockBodyType = z.infer<typeof ContentBlockBody>
+export type UpdateContentBlockBodyType = z.infer<typeof UpdateContentBlockBody>
+export type ProductCharacterBodyType = z.infer<typeof ProductCharacterBody>
+
+export const NewsletterBody = z.object({
+  email: z.string().email(),
+  source: z.string().max(40).optional(),
+})
+export type NewsletterBodyType = z.infer<typeof NewsletterBody>
+
+const handle = z
+  .string()
+  .min(1)
+  .regex(/^[a-z0-9-]+$/, "Use lowercase letters, numbers and dashes")
+
+export const PageBody = z.object({
+  handle,
+  title: z.string().min(1),
+  body: z.string().optional(),
+  is_published: z.boolean().optional(),
+  rank: z.number().int().optional(),
+})
+export const UpdatePageBody = PageBody.partial()
+export type PageBodyType = z.infer<typeof PageBody>
+export type UpdatePageBodyType = z.infer<typeof UpdatePageBody>
+
+export const PostBody = z.object({
+  title: z.string().min(1),
+  handle,
+  excerpt: nullableText,
+  body: z.string().optional(),
+  cover_url: nullableText,
+  thumbnail_url: nullableText,
+  author: z.string().min(1).optional(),
+  status: z.enum(["draft", "published"]).optional(),
+  published_at: z.coerce.date().nullable().optional(),
+})
+export const UpdatePostBody = PostBody.partial()
+export type PostBodyType = z.infer<typeof PostBody>
+export type UpdatePostBodyType = z.infer<typeof UpdatePostBody>
+
+// Upload limits in MB per file type, e.g. { png: 10, mp4: 50 }. Up to 100 MB (the server cap).
+export const UploadLimitsBody = z.object({
+  limits: z.partialRecord(z.enum(FILE_TYPE_KEYS), z.number().min(0.1).max(MAX_ALLOWED_MB)),
+})
+export type UploadLimitsBodyType = z.infer<typeof UploadLimitsBody>
+
+// A face in "Meet our team". box and mask are measured by the admin when a picture is uploaded.
+const TeamBox = z.object({
+  x: z.number().min(0),
+  y: z.number().min(0),
+  width: z.number().positive(),
+  height: z.number().positive(),
+})
+const teamMemberFields = {
+  role: nullableText,
+  image_url: nullableText,
+  color_image_url: nullableText,
+  canvas_width: z.number().int().positive().nullable().optional(),
+  canvas_height: z.number().int().positive().nullable().optional(),
+  box: TeamBox.nullable().optional(),
+  mask: z
+    .string()
+    .regex(/^[01]*$/, "Mask must be 0s and 1s")
+    .max(10000)
+    .nullable()
+    .optional(),
+  rank: z.number().int().optional(),
+  is_active: z.boolean().optional(),
+}
+export const TeamMemberBody = z.object({ name: z.string().min(1), ...teamMemberFields })
+export type TeamMemberBodyType = z.infer<typeof TeamMemberBody>
+export const UpdateTeamMemberBody = z.object({ name: z.string().min(1).optional(), ...teamMemberFields })
+export type UpdateTeamMemberBodyType = z.infer<typeof UpdateTeamMemberBody>
+
+// Staff & permissions.
+export const StaffUpdateBody = z.object({
+  role: z.enum(["admin", "moderator"]).optional(),
+  permissions: z.array(z.enum(PERMISSION_KEYS)).optional(),
+})
+export type StaffUpdateBodyType = z.infer<typeof StaffUpdateBody>
+export const StaffDefaultsBody = z.object({ permissions: z.array(z.enum(PERMISSION_KEYS)) })
+export type StaffDefaultsBodyType = z.infer<typeof StaffDefaultsBody>
+
+// Settings → Payments & delivery.
+export const CheckoutSettingsBody = z.object({
+  cod_enabled: z.boolean().optional(),
+  cod_max: z.number().min(1).max(10_000_000).nullable().optional(),
+  online_enabled: z.boolean().optional(),
+  delivery_text: z.string().max(200).optional(),
+  order_alert_email: z.union([z.string().email(), z.literal("")]).optional(),
+})
+export type CheckoutSettingsBodyType = z.infer<typeof CheckoutSettingsBody>
+
+// The simple product form (lib/product-form.ts).
+const BadgeBody = z.object({
+  kind: z.enum(["auto", "none", "new", "bestseller", "sale", "custom"]),
+  text: z.string().trim().max(24).nullable().optional(),
+  colour: z.enum(["black", "red", "yellow", "blue"]).nullable().optional(),
+})
+const money = z.number().positive().max(10_000_000)
+const size = z.number().nonnegative().max(100_000).nullable().optional()
+export const ProductFormBody = z.object({
+  title: z.string().trim().min(1).max(200),
+  handle: z.string().max(200).nullable().optional(),
+  description: z.string().max(5000).nullable().optional(),
+  status: z.enum(["published", "draft"]),
+  material_text: z.string().max(200).nullable().optional(),
+  age: z.string().max(60).nullable().optional(),
+  assembly: z.string().max(200).nullable().optional(),
+  badge: BadgeBody.nullable().optional(),
+  length: size,
+  width: size,
+  height: size,
+  weight: size,
+  character_id: z.string().nullable(),
+  collection_id: z.string().nullable(),
+  category_ids: z.array(z.string()).max(50),
+  materials: z.array(z.string().trim().min(1).max(60)).max(20),
+  colours: z.array(z.object({ name: z.string().trim().min(1).max(60), hex: z.string().regex(/^#[0-9a-fA-F]{6}$/) })).max(30),
+  variants: z
+    .array(
+      z.object({
+        colour: z.string().nullable(),
+        material: z.string().nullable(),
+        price: money,
+        stock: z.number().int().min(0).max(1_000_000).nullable(),
+      })
+    )
+    .max(300),
+  images: z.array(z.string().url()).max(40),
+  colour_images: z.record(z.string(), z.array(z.string().url()).max(40)),
+})
+export type ProductFormBodyType = z.infer<typeof ProductFormBody>
+
+// Settings → Invoices (lib/invoices.ts).
+export const InvoiceSettingsBody = z.object({
+  enabled: z.boolean().optional(),
+  legal_name: z.string().max(120).optional(),
+  brand_line: z.string().max(160).optional(),
+  gstin: z.string().max(20).optional(),
+  pan: z.string().max(12).optional(),
+  address: z.string().max(400).optional(),
+  state: z.string().max(60).optional(),
+  email: z.string().max(120).optional(),
+  phone: z.string().max(30).optional(),
+  prefix: z.string().regex(/^[A-Za-z0-9-]{0,10}$/).optional(),
+  gst_rate: z.number().min(0).max(28).optional(),
+  default_hsn: z.string().regex(/^[0-9]{0,8}$/).optional(),
+  signatory: z.string().max(80).optional(),
+  footer: z.string().max(400).optional(),
+})
+export type InvoiceSettingsBodyType = z.infer<typeof InvoiceSettingsBody>
+
+// Website → Menu & footer (lib/site-navigation.ts). Links are site paths ("/shop") or full
+// web addresses; never javascript: or other schemes.
+const href = z
+  .string()
+  .trim()
+  .max(300)
+  .refine((v) => v === "" || v.startsWith("/") || /^https?:\/\//i.test(v) || /^mailto:|^tel:/i.test(v), {
+    message: "Links must start with / or https://",
+  })
+const navLink = z.object({ label: z.string().trim().min(1).max(60), href })
+const footerLink = navLink.extend({ same_line: z.boolean().optional() })
+const social = z.string().trim().max(300).refine((v) => v === "" || /^https:\/\//i.test(v), { message: "Social links must start with https://" })
+export const SiteNavigationBody = z.object({
+  menu: z.object({
+    characters_label: z.string().trim().min(1).max(40),
+    characters_show: z.boolean(),
+    categories_label: z.string().trim().min(1).max(40),
+    all_label: z.string().trim().min(1).max(40),
+    about_label: z.string().trim().min(1).max(40),
+    about_links: z.array(navLink).max(10),
+    extra_links: z.array(navLink).max(4),
+  }),
+  footer: z.object({
+    tagline: z.string().trim().max(60),
+    col1_title: z.string().trim().max(40),
+    col1_links: z.array(footerLink).max(12),
+    col2_title: z.string().trim().max(40),
+    col2_links: z.array(footerLink).max(12),
+    socials: z.object({ facebook: social, instagram: social, linkedin: social, youtube: social, whatsapp: social }),
+  }),
+  announcement: z.object({
+    enabled: z.boolean(),
+    text: z.string().trim().max(160),
+    link_label: z.string().trim().max(40),
+    href,
+    colour: z.enum(["black", "red", "yellow", "blue"]),
+    starts_at: z.string().datetime({ offset: true }).nullable(),
+    ends_at: z.string().datetime({ offset: true }).nullable(),
+    dismissible: z.boolean(),
+  }),
+})
+export type SiteNavigationBodyType = z.infer<typeof SiteNavigationBody>
+
+export const ShopOrderBody = z.object({
+  order: z.array(z.string().min(1).max(100)).max(1000),
+  badges: z.record(z.string(), BadgeBody).optional(),
+})
+export type ShopOrderBodyType = z.infer<typeof ShopOrderBody>
+
+// Contact page (admin → Website → Contact page).
+const shortText = (max: number) => z.string().trim().max(max)
+export const ContactPageBody = z
+  .object({
+    title: shortText(80).min(1),
+    intro: shortText(600),
+    panel_title: shortText(80),
+    panel: z
+      .array(
+        z.object({
+          id: z.string().regex(/^[\w-]{1,40}$/),
+          type: z.enum(["email", "phone", "whatsapp", "instagram", "hours", "address", "link", "text"]),
+          label: shortText(60),
+          value: shortText(600),
+          button_label: shortText(40),
+          message: shortText(300),
+        })
+      )
+      .max(12),
+    form_title: shortText(80),
+    submit_label: shortText(40).min(1),
+    success_title: shortText(80),
+    success_text: shortText(400),
+    fields: z
+      .array(
+        z.object({
+          id: z.string().regex(/^[\w-]{1,40}$/),
+          type: z.enum(["text", "email", "phone", "textarea", "select", "radio", "checkbox", "checkboxes", "date", "number"]),
+          label: shortText(120).min(1),
+          placeholder: shortText(120),
+          help: shortText(200),
+          required: z.boolean(),
+          options: z.array(shortText(80).min(1)).max(30),
+          width: z.enum(["full", "half"]),
+        })
+      )
+      .min(1)
+      .max(25),
+    notify_email: z.string().trim().email().or(z.literal("")),
+    send_copy: z.boolean(),
+  })
+  .superRefine((v, ctx) => {
+    const ids = new Set<string>()
+    v.fields.forEach((f, i) => {
+      if (ids.has(f.id)) ctx.addIssue({ code: "custom", path: ["fields", i, "id"], message: "Two fields have the same id" })
+      ids.add(f.id)
+      if (["select", "radio", "checkboxes"].includes(f.type) && f.options.length < 1) {
+        ctx.addIssue({ code: "custom", path: ["fields", i, "options"], message: `"${f.label}" needs at least one choice` })
+      }
+    })
+    v.panel.forEach((p, i) => {
+      if (p.type === "link" && p.value && !/^(https?:\/\/|\/|mailto:|tel:)/i.test(p.value)) {
+        ctx.addIssue({ code: "custom", path: ["panel", i, "value"], message: "Links must start with / or https://" })
+      }
+      if (p.type === "instagram" && p.value && /^[a-z]+:/i.test(p.value) && !/^https:\/\//i.test(p.value)) {
+        ctx.addIssue({ code: "custom", path: ["panel", i, "value"], message: "Instagram must be @name or an https:// link" })
+      }
+    })
+  })
+export type ContactPageBodyType = z.infer<typeof ContactPageBody>
+
+export const ContactMessageBody = z.object({
+  status: z.enum(["new", "read", "done"]).optional(),
+  note: z.string().max(2000).nullable().optional(),
+})
+export type ContactMessageBodyType = z.infer<typeof ContactMessageBody>
+
+// Website → Chat bot.
+export const ChatbotBody = z.object({
+  enabled: z.boolean(),
+  host: z.string().trim().regex(/^[\w-]{1,80}$/),
+  name: shortText(60).min(1),
+  greeting: shortText(400).min(1),
+  launcher_label: shortText(40),
+  placeholder: shortText(80),
+  quick: z
+    .array(
+      z.object({
+        id: z.string().regex(/^[\w-]{1,40}$/),
+        label: shortText(40).min(1),
+        action: z.enum(["track", "products", "human", "ask"]),
+        value: shortText(300),
+      })
+    )
+    .max(8),
+  faqs: z
+    .array(
+      z.object({
+        id: z.string().regex(/^[\w-]{1,40}$/),
+        question: shortText(200).min(1),
+        answer: z.string().trim().min(1).max(2000),
+        keywords: shortText(300),
+      })
+    )
+    .max(150),
+  use_help_pages: z.boolean(),
+  whatsapp: z.string().trim().regex(/^[+\d\s()-]{0,20}$/, "Use digits only, e.g. +91 98765 43210"),
+  whatsapp_message: shortText(300),
+  allow_message: z.boolean(),
+  away_text: shortText(300),
+  ai_enabled: z.boolean(),
+  ai_instructions: z.string().trim().max(1500),
+  ai_daily_limit: z.number().int().min(0).max(100000),
+  hide_on: z.array(z.string().trim().regex(/^\/[\w\-/]*$/, "Start each with /, e.g. /checkout")).max(20),
+})
+export type ChatbotBodyType = z.infer<typeof ChatbotBody>
+export const ChatbotTestBody = z.object({ text: z.string().trim().min(1).max(800) })
+
+// Shop mailbox (Messages → Email).
+export const MailThreadBody = z.object({
+  status: z.enum(["new", "read", "done"]).optional(),
+  note: z.string().max(2000).nullable().optional(),
+})
+export type MailThreadBodyType = z.infer<typeof MailThreadBody>
+
+// One action on one or more conversations (from the list, a right-click or the toolbar).
+export const MailActionBody = z.object({
+  ids: z.array(z.string().min(1).max(600)).min(1).max(200),
+  action: z.enum(["read", "unread", "done", "inbox", "star", "unstar", "delete"]),
+})
+export type MailActionBodyType = z.infer<typeof MailActionBody>
+
+const mailAddress = z.string().trim().toLowerCase().email().max(200)
+export const MailSendBody = z.object({
+  to: z.array(mailAddress).min(1).max(20),
+  cc: z.array(mailAddress).max(20).optional(),
+  subject: z.string().trim().min(1).max(300),
+  text: z.string().min(1).max(50_000),
+  reply_to_id: z.string().max(100).nullable().optional(),
+  forward_id: z.string().max(100).nullable().optional(),
+  forward_attachments: z.array(z.number().int().min(0).max(200)).max(20).optional(),
+  attachments: z
+    .array(
+      z.object({
+        filename: z.string().trim().min(1).max(150),
+        content_type: z.string().max(150),
+        data: z.string().max(14_000_000),
+      })
+    )
+    .max(10)
+    .optional(),
+})
+export type MailSendBodyType = z.infer<typeof MailSendBody>
