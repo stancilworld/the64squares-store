@@ -203,6 +203,7 @@ const navLink = z.object({ label: z.string().trim().min(1).max(60), href })
 const footerLink = navLink.extend({ same_line: z.boolean().optional() })
 const social = z.string().trim().max(300).refine((v) => v === "" || /^https:\/\//i.test(v), { message: "Social links must start with https://" })
 export const SiteNavigationBody = z.object({
+  experience: z.object({ home: z.enum(["shop", "play"]), show_switch: z.boolean() }).optional(),
   menu: z.object({
     categories_label: z.string().trim().min(1).max(40),
     all_label: z.string().trim().min(1).max(40),

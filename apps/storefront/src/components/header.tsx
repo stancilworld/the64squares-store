@@ -5,11 +5,12 @@ import { SearchIcon, UserIcon } from "./icons"
 import { Suspense } from "react"
 import { CartLink } from "./cart-link"
 import { ListLink } from "./list-link"
+import { ExperienceSwitch } from "./experience-switch"
 import { MobileSearch, MobileSearchView } from "./mobile-search"
 import { MobileMenu, MobileMenuView, NavLinks, NavLinksView } from "./nav"
 
 export async function Header() {
-  const [categories, { menu: m }] = await Promise.all([getCategories(), getSiteNavigation()])
+  const [categories, { menu: m, experience }] = await Promise.all([getCategories(), getSiteNavigation()])
   const categoryLinks = [
     { href: "/shop", label: m.all_label },
     ...categories.map((c) => ({ href: `/shop?category=${c.handle}`, label: c.name })),
@@ -41,6 +42,7 @@ export async function Header() {
               className="h-[38px] w-auto lg:h-[50px]"
             />
           </Link>
+          {experience?.show_switch !== false && <ExperienceSwitch active="shop" className="hidden min-[400px]:flex" />}
 
           <Suspense fallback={<NavLinksView categoryLinks={categoryLinks} aboutLinks={aboutLinks} menu={menu} path="" />}>
             <NavLinks categoryLinks={categoryLinks} aboutLinks={aboutLinks} menu={menu} />

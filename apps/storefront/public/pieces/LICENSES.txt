@@ -1,5 +1,7 @@
 Chess piece artwork used on the64squares.in
 
+wood3d/   Original 3D pieces made for The 64 Squares (tools/pieces/render-wood3d.py). All rights reserved.
+
 modern/   Based on the "cburnett" pieces by Colin M.L. Burnett, recoloured and shaded by
           The 64 Squares. Licence: GNU GPL v2 or later (https://www.gnu.org/licenses/gpl-2.0.txt).
           Source: https://github.com/lichess-org/lila/tree/master/public/piece/cburnett
@@ -11,29 +13,5 @@ https://github.com/nmrugg/stockfish.js (see /engine/COPYING.txt).
 
 glossy/   Based on the "cburnett" pieces by Colin M.L. Burnett, with lighting and shading added
           by The 64 Squares. Licence: GNU GPL v2 or later.
-wood/     3D Staunton renders (the "Lord" set) by James Clarke
-          (https://github.com/clarkerubber/Staunton-Pieces), cropped and resized.
-          Licence: MIT. Copyright (c) 2014 clarkerubber.
-
----- MIT licence for wood/ ----
-The MIT License (MIT)
-
-Copyright (c) 2014 clarkerubber
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+ivory/    Based on the "cburnett" pieces by Colin M.L. Burnett, with ivory and ebony colours,
+          lighting and shading by The 64 Squares. Licence: GNU GPL v2 or later.

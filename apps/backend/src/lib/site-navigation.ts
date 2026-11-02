@@ -11,6 +11,8 @@ export type NavLink = { label: string; href: string }
 export type FooterLink = NavLink & { same_line?: boolean }
 
 export type SiteNavigation = {
+  // Shop or Play: what the home page opens, and whether visitors see the Shop/Play switch.
+  experience: { home: "shop" | "play"; show_switch: boolean }
   menu: {
     categories_label: string
     all_label: string
@@ -39,6 +41,7 @@ export type SiteNavigation = {
 }
 
 export const DEFAULT_SITE_NAVIGATION: SiteNavigation = {
+  experience: { home: "shop", show_switch: true },
   menu: {
     categories_label: "Shop",
     all_label: "All products",
@@ -92,6 +95,7 @@ export const resolveSiteNavigation = (stored: Record<string, unknown> | null | u
   const s = (stored ?? {}) as Partial<SiteNavigation>
   const d = DEFAULT_SITE_NAVIGATION
   return {
+    experience: { ...d.experience, ...(s.experience ?? {}) },
     menu: { ...d.menu, ...(s.menu ?? {}) },
     footer: { ...d.footer, ...(s.footer ?? {}), socials: { ...d.footer.socials, ...(s.footer?.socials ?? {}) } },
     announcement: { ...d.announcement, ...(s.announcement ?? {}) },

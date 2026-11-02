@@ -4,13 +4,16 @@ import { Hero } from "@/components/hero"
 import { ImageCarousel } from "@/components/image-carousel"
 import { NewsletterSection } from "@/components/newsletter-section"
 import { ProductCard } from "@/components/product-card"
-import { getCategories, getContent, getProductCards } from "@/lib/data"
+import { redirect } from "next/navigation"
+import { getCategories, getContent, getProductCards, getSiteNavigation } from "@/lib/data"
 
 // Shown until pictures are uploaded in the admin (Website → Homepage).
 const DEFAULT_FEATURED_IMAGE = "/images/home-travel-case.jpg"
 
 export default async function HomePage() {
-  const [blocks, products, categories] = await Promise.all([getContent("home"), getProductCards(), getCategories()])
+  const [blocks, products, categories, nav] = await Promise.all([getContent("home"), getProductCards(), getCategories(), getSiteNavigation()])
+  // The admin can make the website open on Play instead (Website → Menu & footer).
+  if (nav.experience?.home === "play") redirect("/play")
   const of = (section: string) => blocks.filter((b) => b.section === section)
   const hero = of("hero")[0]
   const featured = of("featured_collection")[0]

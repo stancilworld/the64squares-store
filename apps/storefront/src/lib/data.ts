@@ -227,6 +227,7 @@ export async function getDeliveryText(): Promise<string> {
 export type NavLink = { label: string; href: string }
 export type FooterLink = NavLink & { same_line?: boolean }
 export type SiteNavigation = {
+  experience: { home: "shop" | "play"; show_switch: boolean }
   menu: {
     categories_label: string
     all_label: string
@@ -256,6 +257,7 @@ export type SiteNavigation = {
 
 // Same as what the designs show; used if the admin can't be reached.
 export const FALLBACK_NAVIGATION: SiteNavigation = {
+  experience: { home: "shop", show_switch: true },
   menu: {
     categories_label: "Shop",
     all_label: "All products",

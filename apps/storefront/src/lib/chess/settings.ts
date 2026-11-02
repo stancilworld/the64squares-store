@@ -5,15 +5,16 @@ import { useSyncExternalStore } from "react"
 // How the board looks and sounds, remembered per browser.
 
 export const BOARD_THEMES = {
-  velvet: { label: "Velvet", light: "#ecdfc4", dark: "#3e6b52" },
   walnut: { label: "Walnut", light: "#ecd9b6", dark: "#8b5a3c" },
+  maple: { label: "Maple", light: "#f2e3c6", dark: "#b88a5a" },
+  velvet: { label: "Velvet", light: "#ecdfc4", dark: "#3e6b52" },
   slate: { label: "Slate", light: "#dfe3e6", dark: "#6f8796" },
-  sand: { label: "Sand", light: "#f0d9b5", dark: "#b58863" },
   marble: { label: "Marble", light: "#e9e6df", dark: "#9c958a" },
 } as const
 export const PIECE_SETS = {
+  wood3d: { label: "3D Wood", ext: "webp" },
+  ivory: { label: "Ivory", ext: "svg" },
   glossy: { label: "Glossy", ext: "svg" },
-  wood: { label: "3D Wood", ext: "webp" },
   modern: { label: "Flat", ext: "svg" },
   classic: { label: "Classic", ext: "svg" },
   playful: { label: "Playful", ext: "svg" },
@@ -30,9 +31,9 @@ export type BoardSettings = {
   animation: "off" | "fast" | "normal"
 }
 
-const DEFAULTS: BoardSettings = { theme: "velvet", pieces: "glossy", sound: true, legalMoves: true, animation: "normal" }
-// v2: new defaults (velvet board, glossy pieces) for everyone.
-const KEY = "t64:board:v2"
+const DEFAULTS: BoardSettings = { theme: "walnut", pieces: "wood3d", sound: true, legalMoves: true, animation: "normal" }
+// v4: new defaults (walnut board, 3D wood pieces) for everyone.
+const KEY = "t64:board:v4"
 const listeners = new Set<() => void>()
 let current: BoardSettings | null = null
 

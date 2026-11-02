@@ -8,6 +8,7 @@ import { useStoreUrl } from "../../../lib/site"
 
 type NavLink = { label: string; href: string; same_line?: boolean }
 type Nav = {
+  experience: { home: "shop" | "play"; show_switch: boolean }
   menu: {
     categories_label: string
     all_label: string
@@ -326,6 +327,33 @@ const NavigationPage = () => {
             </div>
           </div>
         )}
+      </Section>
+
+      <Section title="Shop or Play first" hint="What visitors see when they open the website, and the switch between the shop and the chess game.">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Field label="The home page opens" htmlFor="x-home">
+            <Select
+              value={nav.experience?.home ?? "shop"}
+              onValueChange={(v) => setNav({ ...nav, experience: { ...(nav.experience ?? d.experience), home: v as "shop" | "play" } })}
+            >
+              <Select.Trigger id="x-home">
+                <Select.Value />
+              </Select.Trigger>
+              <Select.Content>
+                <Select.Item value="shop">The shop (homepage with products)</Select.Item>
+                <Select.Item value="play">Play (the chess game)</Select.Item>
+              </Select.Content>
+            </Select>
+          </Field>
+          <div className="flex items-center gap-x-2 pt-6">
+            <Switch
+              id="x-switch"
+              checked={nav.experience?.show_switch ?? true}
+              onCheckedChange={(v) => setNav({ ...nav, experience: { ...(nav.experience ?? d.experience), show_switch: v } })}
+            />
+            <Label htmlFor="x-switch">Show the Shop / Play switch at the top</Label>
+          </div>
+        </div>
       </Section>
 
       <Section

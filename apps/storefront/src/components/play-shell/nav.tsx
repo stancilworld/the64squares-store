@@ -3,6 +3,8 @@
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { GearIcon, openBoardSettings } from "@/components/chess/board-settings"
+import { ExperienceSwitch } from "@/components/experience-switch"
 import { GIcon } from "./icons"
 
 export const PLAY_NAV = [
@@ -28,13 +30,14 @@ const titleFor = (path: string) => {
 }
 
 // Desktop: a side menu, like a game's main menu.
-export function SideNav({ account }: { account: React.ReactNode }) {
+export function SideNav({ account, showSwitch = true }: { account: React.ReactNode; showSwitch?: boolean }) {
   const path = usePathname()
   return (
     <aside className="sticky top-0 hidden h-dvh w-[212px] shrink-0 flex-col border-r border-[var(--g-line)] bg-[var(--g-side)] lg:flex">
-      <Link href="/play" className="flex items-center px-5 pb-4 pt-5">
+      <Link href="/play" className="flex items-center px-5 pb-3 pt-5">
         <Image src="/brand/logo-footer.webp" alt="The 64 Squares" width={388} height={160} className="h-[44px] w-auto" priority />
       </Link>
+      {showSwitch && <ExperienceSwitch active="play" dark className="mx-4 mb-3" />}
       <nav className="flex flex-col gap-1 px-3">
         {PLAY_NAV.map((n) => {
           const on = isActive(path, n.href)
@@ -53,6 +56,14 @@ export function SideNav({ account }: { account: React.ReactNode }) {
         })}
       </nav>
       <div className="mt-auto flex flex-col gap-1 border-t border-[var(--g-line)] p-3">
+        <button
+          type="button"
+          onClick={openBoardSettings}
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[14px] font-medium text-[var(--g-muted)] hover:bg-[var(--g-panel)] hover:text-white"
+        >
+          <GearIcon />
+          Board settings
+        </button>
         {account}
         <Link href="/shop" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-medium text-[var(--g-muted)] hover:bg-[var(--g-panel)] hover:text-white">
           <GIcon name="shop" size={20} />
@@ -64,25 +75,29 @@ export function SideNav({ account }: { account: React.ReactNode }) {
 }
 
 // Phones: a slim top bar with a back arrow, and tabs at the bottom.
-export function MobileBar() {
+export function MobileBar({ showSwitch = true }: { showSwitch?: boolean }) {
   const path = usePathname()
   const home = path === "/play"
   return (
     <header className="sticky top-0 z-30 flex h-[52px] items-center gap-2 border-b border-[var(--g-line)] bg-[var(--g-side)] px-2 lg:hidden">
       {home ? (
-        <Link href="/shop" aria-label="Back to the shop" className="flex h-10 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-[var(--g-muted)]">
-          <GIcon name="back" size={20} />
-          Shop
-        </Link>
+        showSwitch ? (
+          <ExperienceSwitch active="play" dark />
+        ) : (
+          <Link href="/shop" aria-label="Back to the shop" className="flex h-10 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-[var(--g-muted)]">
+            <GIcon name="back" size={20} />
+            Shop
+          </Link>
+        )
       ) : (
         <Link href="/play" aria-label="Back to Play" className="flex h-10 w-10 items-center justify-center rounded-lg text-white">
           <GIcon name="back" />
         </Link>
       )}
-      <p className="flex-1 truncate text-center text-[16px] font-bold">{titleFor(path)}</p>
-      <Link href="/play" className="flex h-10 items-center pr-1">
-        <Image src="/brand/logo-footer.webp" alt="The 64 Squares" width={388} height={160} className="h-[30px] w-auto" />
-      </Link>
+      <p className={`flex-1 truncate text-center text-[16px] font-bold ${home && showSwitch ? "invisible" : ""}`}>{titleFor(path)}</p>
+      <button type="button" aria-label="Board settings" onClick={openBoardSettings} className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--g-muted)]">
+        <GearIcon size={22} />
+      </button>
     </header>
   )
 }
