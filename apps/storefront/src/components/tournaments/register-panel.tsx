@@ -34,9 +34,17 @@ export function RegisterPanel({ t, me, ticket }: { t: Tournament; me: Me; ticket
         <p className="mt-2 text-[15px]">
           Ticket <span className="font-mono font-medium">{ticket.ticket_code}</span>
         </p>
-        <Link href={`/account/tickets/${ticket.ticket_code}`} className="btn btn-solid mt-5 w-full">
+        {t.mode === "online" && t.format === "arena" && (
+          <Link href={`/tournaments/${t.handle}/arena`} className="btn btn-solid mt-5 w-full">
+            Open the arena
+          </Link>
+        )}
+        <Link href={`/account/tickets/${ticket.ticket_code}`} className={`btn mt-3 w-full ${t.mode === "online" && t.format === "arena" ? "btn-outline" : "btn-solid mt-5"}`}>
           Show my ticket
         </Link>
+        {t.mode === "online" && t.format === "arena" && (
+          <p className="mt-3 text-[13px] text-muted">The arena opens at the start time. Keep its page open to be paired.</p>
+        )}
       </div>
     )
   }
@@ -46,6 +54,11 @@ export function RegisterPanel({ t, me, ticket }: { t: Tournament; me: Me; ticket
       <div className="rounded-md border border-rule bg-linen p-6">
         <p className="font-display h-sub">{t.status === "cancelled" ? "Cancelled" : "Registration closed"}</p>
         <p className="mt-2 text-[15px] text-muted">{t.registration_note}</p>
+        {t.mode === "online" && t.format === "arena" && t.status !== "cancelled" && (
+          <Link href={`/tournaments/${t.handle}/arena`} className="btn btn-solid mt-5 w-full">
+            {t.status === "completed" ? "Final standings" : "Watch the arena"}
+          </Link>
+        )}
         <Link href="/tournaments" className="btn btn-outline mt-5 w-full">
           See other tournaments
         </Link>

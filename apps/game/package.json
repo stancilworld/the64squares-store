@@ -1,0 +1,30 @@
+{
+  "name": "@dtc/game",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The 64 Squares game server: live games with server-side clocks, and Arena tournaments.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "test": "tsx --test src/*.test.ts",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "socket.io-client": "^4.8.4",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "chess.js": "^1.4.0",
+    "jose": "^6.2.15",
+    "pg": "^8.23.1",
+    "socket.io": "^4.8.4"
+  }
+}

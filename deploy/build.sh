@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds and (re)starts The 64 Squares backend and storefront. Run as root.
+# Builds and (re)starts The 64 Squares backend, game server and storefront. Run as root.
 # Called by setup-vps.sh, update.sh and go-live.sh.
 #
 # This server also runs another store (Stancil). Builds run inside a generous memory limit
@@ -12,6 +12,7 @@ APP_USER=the64squares
 DB_NAME=the64squares
 BACKEND_PORT=9100
 STORE_PORT=8100
+GAME_PORT=9200
 STORE_DOMAIN="${STORE_DOMAIN:-staging.the64squares.in}"
 API_DOMAIN="${API_DOMAIN:-api-staging.the64squares.in}"
 SERVER="$APP/apps/backend/.medusa/server"
@@ -74,6 +75,48 @@ curl -sf "http://localhost:$BACKEND_PORT/health" >/dev/null || {
   exit 1
 }
 
+echo "-> Building and starting the game server"
+# One random secret shared by the storefront (signs play passes) and the game server (checks them).
+PLAY_FILE="$BASE/play.secret"
+if [ ! -s "$PLAY_FILE" ]; then
+  (umask 077 && openssl rand -hex 32 > "$PLAY_FILE")
+fi
+PLAY_SECRET=$(tr -d '[:space:]' < "$PLAY_FILE")
+backend_env() { grep -m1 "^$1=" "$APP/apps/backend/.env" | cut -d= -f2-; }
+(
+  umask 077
+  printf 'DATABASE_URL=%s\nSTORE_CORS=%s\nPLAY_TOKEN_SECRET=%s\n' \
+    "$(backend_env DATABASE_URL)" "$(backend_env STORE_CORS)" "$PLAY_SECRET" > "$BASE/game.env"
+)
+(cd "$APP/apps/game" && as_app npm run build)
+# Older installs: add the service and the web server route the first time.
+if ! cmp -s "$APP/deploy/systemd/the64squares-game.service" /etc/systemd/system/the64squares-game.service; then
+  install -m 644 "$APP/deploy/systemd/the64squares-game.service" /etc/systemd/system/
+  systemctl daemon-reload
+  systemctl enable the64squares-game >/dev/null
+fi
+NGINX_CONF=/etc/nginx/sites-available/the64squares.conf
+if [ -f "$NGINX_CONF" ] && ! grep -q 'location /game/' "$NGINX_CONF"; then
+  cp "$NGINX_CONF" "$NGINX_CONF.before-game"
+  # Goes into every block that serves the API (the ones holding the uploads route).
+  awk -v route="$APP/deploy/nginx/game-route.conf" '
+    /location \/static\/ \{/ { while ((getline line < route) > 0) print line; close(route) }
+    { print }' "$NGINX_CONF.before-game" > "$NGINX_CONF"
+  if nginx -t 2>/dev/null; then
+    systemctl reload nginx
+  else
+    mv "$NGINX_CONF.before-game" "$NGINX_CONF"
+    echo "Warning: the web server rejected the play route, so it was left as it was. Online play won't connect."
+  fi
+fi
+systemctl restart the64squares-game
+for _ in $(seq 1 20); do
+  curl -sf "http://localhost:$GAME_PORT/game/health" >/dev/null && break
+  sleep 1
+done
+curl -sf "http://localhost:$GAME_PORT/game/health" >/dev/null ||
+  echo "Warning: the game server did not start (the shop is unaffected). See: journalctl -u the64squares-game -n 100"
+
 echo "-> Building storefront"
 KEY=$(cd / && sudo -u postgres psql -d "$DB_NAME" -Atc \
   "select token from api_key where type = 'publishable' and title = 'The 64 Squares Storefront' and deleted_at is null order by created_at limit 1")
@@ -82,6 +125,8 @@ cat > "$APP/apps/storefront/.env.local" <<EOF
 MEDUSA_BACKEND_URL=http://localhost:$BACKEND_PORT
 NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=$KEY
 T64_PREVIEW_SECRET=$PREVIEW_SECRET
+PLAY_TOKEN_SECRET=$PLAY_SECRET
+NEXT_PUBLIC_GAME_URL=https://$API_DOMAIN
 EOF
 chown "$APP_USER:$APP_USER" "$APP/apps/storefront/.env.local"
 chmod 600 "$APP/apps/storefront/.env.local"
@@ -102,4 +147,4 @@ for _ in $(seq 1 30); do
   curl -sf -o /dev/null "http://localhost:$STORE_PORT/" && break
   sleep 2
 done
-echo "-> Done. Store on :$STORE_PORT, API on :$BACKEND_PORT (https://$API_DOMAIN)"
+echo "-> Done. Store on :$STORE_PORT, API on :$BACKEND_PORT (https://$API_DOMAIN), play on :$GAME_PORT"

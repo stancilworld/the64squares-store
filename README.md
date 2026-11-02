@@ -6,6 +6,7 @@ The 64 Squares' ecommerce website: a **Medusa v2** commerce engine with a Shopif
 apps/
   backend/      Medusa server + admin (http://localhost:9000, admin at /app)
   storefront/   Next.js website (http://localhost:8000)
+  game/         Online play server: live games and arena tournaments (Socket.IO, http://localhost:9200)
 ```
 
 ## What is built so far
@@ -18,7 +19,9 @@ apps/
 | Checkout | Razorpay + Cash on Delivery, pincode check (Delhivery when its token is set), order emails via Resend, GST invoices, customer accounts (email code, password, Google) |
 | Admin | Staff roles (Admin / Moderator), activity log, scheduled publishing, mailbox, chat bot |
 | Keys | Razorpay, Resend, Google and Delhivery keys: the main admin (OWNER_EMAIL) enters them in Settings → Payments & delivery → Keys, or on the server with deploy/set-keys.sh |
-| Next | The 64 Squares design for the storefront, real products, then tournaments |
+| Tournaments | Online and over-the-board events, free registration with a QR ticket (T64-XXXXXX), admin check-in and CSV export. Online events are always free to enter (Online Gaming Act 2025); paid entry is for offline events, paid at the venue |
+| Online play | Play a friend by link (/play) and live Arena tournaments (/tournaments/<handle>/arena): clocks, draw offers, PGN download, standings with streak bonus |
+| Next | Real products, then the Android and iOS apps |
 
 ## Run it locally
 
@@ -40,6 +43,11 @@ cd apps/storefront
 # .env.local needs MEDUSA_BACKEND_URL=http://localhost:9000 and the publishable key from
 # Admin > Settings > Publishable API Keys
 npm run dev                                           # http://localhost:8000
+
+# Online play (new terminal; uses the same database)
+cd apps/game
+DATABASE_URL=postgres://... STORE_CORS=http://localhost:8000 npm run dev   # http://localhost:9200
+# Two scripted players: npx tsx scripts/smoke.ts
 ```
 
 ## Deploying to the VPS
@@ -49,8 +57,8 @@ The store runs on the same Hostinger VPS as Stancil (KVM 2: 2 CPU, 8 GB), fully 
 | | Stancil | The 64 Squares |
 | --- | --- | --- |
 | Folder and Linux user | `/opt/stancil`, `stancil` | `/opt/the64squares`, `the64squares` |
-| Services | backend + worker + storefront | `the64squares-backend`, `the64squares-worker`, `the64squares-storefront` |
-| Ports | 9000, 9001, 8000 | 9100, 9101, 8100 |
+| Services | backend + worker + storefront | `the64squares-backend`, `the64squares-worker`, `the64squares-storefront`, `the64squares-game` |
+| Ports | 9000, 9001, 8000 | 9100, 9101, 8100, 9200 (play, served at https://api…/game/) |
 | Database | PostgreSQL `stancil` | PostgreSQL `the64squares` |
 | Redis | database 0 | database 1 |
 | Web server file | `stancil.conf` | `the64squares.conf` |
@@ -69,7 +77,7 @@ It runs first on staging addresses (https://staging.the64squares.in, admin at ht
 - Go live on the64squares.in: `bash /opt/the64squares/app/deploy/go-live.sh`
 - Update after pushing to GitHub: `bash /opt/the64squares/app/deploy/update.sh`
 - Keys: `bash /opt/the64squares/app/deploy/set-keys.sh`
-- Logs: `journalctl -u the64squares-backend -f` (same for the worker and storefront)
+- Logs: `journalctl -u the64squares-backend -f` (same for the worker, storefront and game)
 - Uploaded images: `/opt/the64squares/uploads`
 - Backups (nightly, 14 days): `/opt/the64squares/backups`
 - Secrets: `/opt/the64squares/secrets.env` (root only)

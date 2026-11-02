@@ -105,6 +105,19 @@ server {
   server_name $LIVE_API $OLD_API;
   client_max_body_size 100m;
 
+  # Online play: games and arenas (deploy/systemd/the64squares-game.service).
+  location /game/ {
+    proxy_pass http://127.0.0.1:9200;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_read_timeout 3600s;
+  }
+
   location /static/ {
     alias $BASE/uploads/;
     expires 30d;

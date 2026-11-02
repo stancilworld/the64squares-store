@@ -1,0 +1,19 @@
+[Unit]
+Description=The 64 Squares online play (game server)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=the64squares
+WorkingDirectory=/opt/the64squares/app/apps/game
+# Written by deploy/build.sh: DATABASE_URL, PLAY_TOKEN_SECRET, STORE_CORS.
+EnvironmentFile=/opt/the64squares/game.env
+Environment=NODE_ENV=production
+Environment=PORT=9200
+ExecStart=/usr/bin/node /opt/the64squares/app/apps/game/dist/index.js
+Restart=always
+RestartSec=3
+MemoryMax=400M
+
+[Install]
+WantedBy=multi-user.target

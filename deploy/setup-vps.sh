@@ -153,7 +153,7 @@ chown "$APP_USER:$APP_USER" "$APP/apps/backend/.env"
 say "Services"
 install -m 644 "$APP"/deploy/systemd/the64squares-*.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable the64squares-backend the64squares-worker the64squares-storefront >/dev/null
+systemctl enable the64squares-backend the64squares-worker the64squares-storefront the64squares-game >/dev/null
 
 say "Building the store (5-10 minutes; the other store stays up)"
 STORE_DOMAIN="$STORE_DOMAIN" API_DOMAIN="$API_DOMAIN" bash "$APP/deploy/build.sh"

@@ -2,10 +2,10 @@ import { cacheLife, cacheTag } from "next/cache"
 import { sdk } from "./medusa"
 import type { Tournament } from "./tournament-types"
 
-// Public tournament pages. Kept fresh for seconds, since places fill up.
+// Public tournament pages. Refreshed every 30 seconds (and at once on each registration), since places fill up.
 export async function getTournaments(): Promise<{ upcoming: Tournament[]; past: Tournament[] }> {
   "use cache"
-  cacheLife("seconds")
+  cacheLife({ stale: 30, revalidate: 30, expire: 3600 })
   cacheTag("tournaments")
   try {
     return await sdk.client.fetch<{ upcoming: Tournament[]; past: Tournament[] }>("/store/tournaments")
@@ -16,7 +16,7 @@ export async function getTournaments(): Promise<{ upcoming: Tournament[]; past: 
 
 export async function getTournament(handle: string): Promise<Tournament | null> {
   "use cache"
-  cacheLife("seconds")
+  cacheLife({ stale: 30, revalidate: 30, expire: 3600 })
   cacheTag("tournaments")
   try {
     const { tournament } = await sdk.client.fetch<{ tournament: Tournament }>(`/store/tournaments/${encodeURIComponent(handle)}`)
