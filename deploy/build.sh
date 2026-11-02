@@ -133,6 +133,9 @@ chmod 600 "$APP/apps/storefront/.env.local"
 # Build into .next-new first; the running store keeps using .next until this succeeds.
 SF="$APP/apps/storefront"
 rm -rf "$SF/.next-new"
+# Type files left by the previous build describe the old pages and would fail the type check;
+# the running site doesn't use them.
+rm -rf "$SF/.next/types" "$SF/.next/dev" "$SF/.next-old/types"
 if ! (cd "$SF" && as_app env NEXT_DIST_DIR=.next-new npx next build); then
   rm -rf "$SF/.next-new"
   echo "Storefront build failed. The website was left as it was (nothing changed for customers)."
