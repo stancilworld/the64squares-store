@@ -7,6 +7,7 @@ import { type Color, type Game, isGuest, type Player } from "./game.js"
 import { speedOf, type Speed } from "./glicko.js"
 import { GameManager } from "./manager.js"
 import { arenaStandings, online, registerArena, startArenas } from "./arena.js"
+import { migrateFriends, registerFriends } from "./friends.js"
 import { xpForGame } from "./levels.js"
 import { addXp, ensureProfile, getProfile, getProfiles, migrateProfiles, publicProfile, readAvatar, removeAvatar, searchProfiles, setAvatar, updateProfile } from "./profiles.js"
 import { registerSeek, SEEK_TIME_CONTROLS, seekCounts, startSeeking } from "./seek.js"
@@ -367,11 +368,13 @@ io.on("connection", (socket) => {
 
   registerArena(io, socket, manager, me, limited)
   registerSeek(io, socket, manager, me, limited)
+  registerFriends(io, socket, manager, me, limited)
 })
 
 const main = async () => {
   await migrate()
   await migrateProfiles()
+  await migrateFriends()
   // Experience for both players when a game against a person ends.
   manager.whenGameEnds(async (g) => {
     if (g.r.status !== "finished" || !g.r.result) return

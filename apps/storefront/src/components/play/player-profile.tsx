@@ -1,17 +1,26 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useState } from "react"
+import { liveCall } from "@/components/play-shell/live"
 import { PanelHeader } from "@/components/play-shell/nav"
 import { GAME_URL, SPEED_LABEL } from "@/lib/game-types"
 import type { FullProfile } from "@/lib/profile-types"
 import { Avatar, LevelBadge, XpBar } from "./avatar"
+import { openChallenge } from "./challenge-dialog"
 import { HistoryList } from "./history-list"
 
 const when = (iso: string) => new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(iso))
 
 // A player's public page: picture, level, ratings, results and recent games.
-export function PlayerProfile({ username, actions }: { username: string; actions?: (p: FullProfile) => React.ReactNode }) {
+export function PlayerProfile({ username, meId }: { username: string; meId: string | null }) {
   const [p, setP] = useState<FullProfile | null | "missing">(null)
+  const [relation, setRelation] = useState<string | null>(null)
+  const pid = p && p !== "missing" ? p.player_id : null
+  useEffect(() => {
+    if (!pid || !meId) return
+    liveCall<{ ok: boolean; relation?: string }>("friends:relation", pid).then((r) => r.ok && setRelation(r.relation ?? null))
+  }, [pid, meId])
 
   useEffect(() => {
     let live = true
@@ -50,7 +59,37 @@ export function PlayerProfile({ username, actions }: { username: string; actions
               <span className={`text-[12px] font-semibold ${p.online ? "text-[#5fd07a]" : "g-muted"}`}>{p.online ? "● Online" : "Offline"}</span>
             </div>
           </div>
-          {actions && <div className="flex gap-2">{actions(p)}</div>}
+          <div className="flex flex-wrap gap-2">
+            {!meId ? (
+              <Link href="/account?next=/play/friends" className="g-btn text-[14px]">
+                Sign in to add friends
+              </Link>
+            ) : relation === "self" ? (
+              <Link href="/play/profile" className="g-btn text-[14px]">
+                Edit profile
+              </Link>
+            ) : relation === "friends" ? (
+              <>
+                <button type="button" disabled={!p.online} className="g-btn g-btn-primary text-[14px]" onClick={() => openChallenge(p)}>
+                  Challenge
+                </button>
+                <span className="g-btn g-btn-ghost pointer-events-none text-[14px]">Friends ✓</span>
+              </>
+            ) : relation === "requested" ? (
+              <span className="g-btn g-btn-ghost pointer-events-none text-[14px]">Request sent</span>
+            ) : relation ? (
+              <button
+                type="button"
+                className="g-btn g-btn-primary text-[14px]"
+                onClick={async () => {
+                  const r = await liveCall<{ ok: boolean; relation?: string }>("friends:request", p.player_id)
+                  if (r.ok) setRelation(r.relation ?? "requested")
+                }}
+              >
+                {relation === "incoming" ? "Accept friend request" : "Add friend"}
+              </button>
+            ) : null}
+          </div>
         </div>
         {p.bio && <p className="border-t border-[var(--g-line)] px-6 py-4 text-[15px]">{p.bio}</p>}
       </div>

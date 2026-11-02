@@ -2,6 +2,9 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { Suspense } from "react"
 import { BoardSettingsModal } from "@/components/chess/board-settings"
+import { ChallengeDialog } from "@/components/play/challenge-dialog"
+import { PlayLive } from "@/components/play-shell/live"
+import { getPlayPass } from "@/lib/play"
 import { GIcon } from "@/components/play-shell/icons"
 import { MobileBar, MobileTabs, SideNav } from "@/components/play-shell/nav"
 import { getCustomer } from "@/lib/auth"
@@ -36,6 +39,10 @@ async function Side() {
   )
 }
 
+async function Live() {
+  return <PlayLive pass={await getPlayPass()} />
+}
+
 async function Top() {
   const nav = await getSiteNavigation()
   return <MobileBar showSwitch={nav.experience?.show_switch !== false} />
@@ -59,6 +66,10 @@ export default function PlayLayout({ children }: { children: React.ReactNode }) 
           <MobileTabs />
         </Suspense>
         <BoardSettingsModal />
+        <ChallengeDialog />
+        <Suspense fallback={null}>
+          <Live />
+        </Suspense>
       </div>
     </div>
   )

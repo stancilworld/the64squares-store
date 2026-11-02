@@ -11,16 +11,19 @@ export const PLAY_NAV = [
   { href: "/play", label: "Play", icon: "home" },
   { href: "/play/online", label: "Online", icon: "bolt" },
   { href: "/play/computer", label: "Computer", icon: "cpu" },
-  { href: "/play/friend", label: "Friend", icon: "friend" },
+  { href: "/play/friend", label: "Invite link", icon: "link" },
+  { href: "/play/friends", label: "Friends", icon: "friend" },
   { href: "/play/tournaments", label: "Tournaments", icon: "trophy" },
   { href: "/play/history", label: "History", icon: "history" },
   { href: "/play/leaderboard", label: "Leaderboard", icon: "chart" },
   { href: "/play/profile", label: "Profile", icon: "user" },
 ]
-const MOBILE_TABS = ["/play", "/play/online", "/play/computer", "/play/tournaments", "/play/history"]
+const MOBILE_TABS = ["/play", "/play/online", "/play/friends", "/play/history", "/play/profile"]
 
 const isActive = (path: string, href: string) =>
-  href === "/play" ? path === "/play" : path === href || path.startsWith(`${href}/`) || (href === "/play/tournaments" && path.startsWith("/play/arena"))
+  href === "/play"
+    ? path === "/play"
+    : path === href || path.startsWith(`${href}/`) || (href === "/play/tournaments" && path.startsWith("/play/arena")) || (href === "/play/friends" && path.startsWith("/play/player/"))
 
 // Which screen we're on, for the top bar on phones.
 const titleFor = (path: string) => {
