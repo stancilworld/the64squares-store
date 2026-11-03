@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url"
 // run under Node. It runs at low priority so it never slows down live games.
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const bundled = path.resolve(here, "../engine/stockfish-19-lite-single.js")
+const bundled = path.resolve(here, "../engine/stockfish-19-lite-single.cjs")
 
 const command = (): [string, string[]] => {
   const native = process.env.STOCKFISH_PATH || "/usr/games/stockfish"
