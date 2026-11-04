@@ -3,9 +3,10 @@
 import { Chess, type Square } from "chess.js"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { io, type Socket } from "socket.io-client"
-import { Board, type Colour } from "@/components/chess/board"
+import { Board, type Colour, type Premove } from "@/components/chess/board"
+import { type Fighter, MatchIntro, type Outcome, ResultBurst } from "@/components/chess/match-overlays"
 import { material } from "@/components/chess/material"
 import { MovePanel } from "@/components/chess/move-panel"
 import { PlayerBar } from "@/components/chess/player-bar"
@@ -59,13 +60,74 @@ export function GameView({ id, initialPass }: Props) {
   const link = useSyncExternalStore(noSubscribe, () => window.location.href, () => "")
   const [profiles, setProfiles] = useState<Record<string, PublicProfile>>({})
 
-  const apply = useCallback((g: GameState) => {
-    const t = performance.now()
-    setGame(g)
-    setReceivedAt(t)
-    setNow(t)
-    setPending(null)
+  // A move queued while the opponent thinks; played as soon as it's our turn, if still legal.
+  const [premove, setPremoveState] = useState<Premove | null>(null)
+  const premoveRef = useRef<Premove | null>(null)
+  const meRef = useRef(meId)
+  useEffect(() => {
+    meRef.current = meId
+  }, [meId])
+  const setPremove = useCallback((p: Premove | null) => {
+    premoveRef.current = p
+    setPremoveState(p)
   }, [])
+
+  const sendMove = useCallback((g: GameState, m: Pending) => {
+    setPending(m)
+    setViewPly(null)
+    socket.current?.emit("game:move", { id: g.id, uci: `${m.from}${m.to}${m.promotion ?? ""}`, ply: g.moves.length }, (res: { ok: boolean; error?: string }) => {
+      if (!res.ok) {
+        setPending(null)
+        if (res.error === "illegal") setNotice("That move isn't allowed.")
+      }
+    })
+  }, [])
+
+  // The VS card when a game starts and the result animation when it ends: only for changes
+  // seen live (not when opening a game that already started or finished).
+  const [intro, setIntro] = useState(false)
+  const [burst, setBurst] = useState(false)
+  const lastStatus = useRef<string | null>(null)
+
+  const apply = useCallback(
+    (g: GameState) => {
+      const t = performance.now()
+      const before = lastStatus.current
+      lastStatus.current = g.status
+      if (g.status === "active" && before !== "active" && (before === "waiting" || g.moves.length < 2)) {
+        let seen = false
+        try {
+          seen = window.sessionStorage.getItem(`t64:intro:${g.id}`) === "1"
+          window.sessionStorage.setItem(`t64:intro:${g.id}`, "1")
+        } catch {}
+        if (!seen) setIntro(true)
+      }
+      if (before === "active" && g.status === "finished") {
+        setIntro(false)
+        setBurst(true)
+      }
+      setGame(g)
+      setReceivedAt(t)
+      setNow(t)
+      setPending(null)
+      const pm = premoveRef.current
+      if (!pm) return
+      const mine = g.white?.id === meRef.current ? "w" : g.black?.id === meRef.current ? "b" : null
+      if (g.status !== "active" || !mine) return setPremove(null)
+      if (g.turn !== mine) return
+      setPremove(null)
+      try {
+        const c = new Chess(g.fen)
+        const piece = c.get(pm.from)
+        const promotion = piece?.type === "p" && (pm.to[1] === "8" || pm.to[1] === "1") ? "q" : undefined
+        c.move({ from: pm.from, to: pm.to, promotion })
+        sendMove(g, { ...pm, promotion })
+      } catch {
+        // No longer legal: the premove is simply dropped.
+      }
+    },
+    [sendMove, setPremove]
+  )
 
   useEffect(() => {
     const s = io(GAME_URL, { path: "/game/socket.io", auth: token ? { token } : {}, transports: ["websocket", "polling"] })
@@ -126,6 +188,30 @@ export function GameView({ id, initialPass }: Props) {
       live = false
     }
   }, [ids])
+
+  // Measure our own round trip every few seconds while playing; the server shares it with the
+  // opponent as signal bars.
+  const [mySignal, setMySignal] = useState<number | null>(null)
+  const pinging = active && !!meId && (game?.white?.id === meId || game?.black?.id === meId)
+  useEffect(() => {
+    if (!pinging) return
+    let rtt: number | null = null
+    const ping = () => {
+      const s = socket.current
+      if (!s?.connected) return setMySignal(0)
+      const sent = performance.now()
+      let answered = false
+      s.emit("game:ping", { id, rtt }, () => {
+        answered = true
+        rtt = Math.round(performance.now() - sent)
+        setMySignal(rtt < 150 ? 4 : rtt < 300 ? 3 : rtt < 600 ? 2 : 1)
+      })
+      setTimeout(() => !answered && setMySignal(1), 2500)
+    }
+    ping()
+    const t = setInterval(ping, 4000)
+    return () => clearInterval(t)
+  }, [pinging, id])
 
   const myColour: Colour | null = game && meId ? (game.white?.id === meId ? "w" : game.black?.id === meId ? "b" : null) : null
 
@@ -220,14 +306,8 @@ export function GameView({ id, initialPass }: Props) {
 
   const onMove = (from: Square, to: Square, promotion?: "q" | "r" | "b" | "n") => {
     if (!game) return false
-    setPending({ from, to, promotion })
-    setViewPly(null)
-    void emit<{ ok: boolean; error?: string }>("game:move", { id, uci: `${from}${to}${promotion ?? ""}`, ply: game.moves.length }).then((res) => {
-      if (!res.ok) {
-        setPending(null)
-        if (res.error === "illegal") setNotice("That move isn't allowed.")
-      }
-    })
+    setPremove(null)
+    sendMove(game, { from, to, promotion })
     return true
   }
 
@@ -343,6 +423,7 @@ export function GameView({ id, initialPass }: Props) {
         avatarUrl={p ? profiles[p.id]?.avatar_url : null}
         level={p ? profiles[p.id]?.level : null}
         href={p && profiles[p.id] ? `/play/player/${profiles[p.id].username}` : null}
+        signal={active && presence && p?.id !== "computer" ? (c === myColour ? mySignal ?? presence[c].signal ?? 4 : presence[c].signal ?? (presence[c].online ? 4 : 0)) : null}
         taken={mat.taken[c]}
         lead={c === "w" ? mat.lead : -mat.lead}
         clock={hasClock ? { ms: clockOf(c), running: game.clock_running === c } : null}
@@ -495,6 +576,22 @@ export function GameView({ id, initialPass }: Props) {
     </div>
   )
 
+  const fighter = (c: Colour): Fighter => {
+    const p = c === "w" ? game.white : game.black
+    const prof = p ? profiles[p.id] : undefined
+    return { name: p?.name ?? "…", colour: c, avatarUrl: prof?.avatar_url, rating: p?.rating, level: prof?.level, record: prof?.record, isBot: p?.id === "computer" }
+  }
+  let overlay: ReactNode = null
+  if (intro && active) {
+    const label = `${game.rated ? "Rated" : "Casual"} · ${SPEED_LABEL[speed]} ${tcText(game.initial_ms, game.increment_ms)}${game.mode === "arena" ? " · Arena" : ""}`
+    overlay = <MatchIntro a={fighter(bottom)} b={fighter(top)} label={label} onDone={() => setIntro(false)} />
+  } else if (burst && game.status === "finished" && game.result) {
+    const winner: Colour | null = game.result === "1-0" ? "w" : game.result === "0-1" ? "b" : null
+    const outcome: Outcome = !winner ? "draw" : myColour ? (winner === myColour ? "win" : "loss") : "neutral"
+    const title = outcome === "win" ? "Victory" : outcome === "loss" ? "Defeat" : outcome === "draw" ? "Draw" : `${(winner === "w" ? game.white : game.black)?.name ?? "Winner"} wins`
+    overlay = <ResultBurst outcome={outcome === "neutral" ? "win" : outcome} king={outcome === "loss" ? myColour ?? undefined : winner ?? undefined} title={title} detail={resultText(game)} onDone={() => setBurst(false)} />
+  }
+
   return (
     <PlayLayout
       top={bar(top)}
@@ -507,6 +604,10 @@ export function GameView({ id, initialPass }: Props) {
           movable={following && myTurn && !pending ? myColour : null}
           lastMove={lastMove}
           onMove={onMove}
+          overlay={overlay}
+          premoveFor={following && active && myColour && (!myTurn || pending) ? myColour : null}
+          premove={active ? premove : null}
+          onPremove={setPremove}
         />
       }
       panel={

@@ -41,10 +41,30 @@ type Props = {
   avatarUrl?: string | null
   level?: Level | null
   href?: string | null
+  // Connection bars 1–4, 0 when offline; undefined hides them.
+  signal?: number | null
+}
+
+const SIGNAL_TEXT = ["Offline", "Weak connection", "Fair connection", "Good connection", "Excellent connection"]
+const SIGNAL_COLOUR = ["#8a8379", "#ff6b5e", "#f0b545", "#9bd36a", "#5fd07a"]
+
+export function SignalBars({ level }: { level: number }) {
+  const l = Math.max(0, Math.min(4, Math.round(level)))
+  return (
+    <span className="inline-flex h-[13px] shrink-0 items-end gap-[2px] self-center" role="img" aria-label={SIGNAL_TEXT[l]} title={SIGNAL_TEXT[l]}>
+      {[1, 2, 3, 4].map((b) => (
+        <span
+          key={b}
+          className="w-[3px] rounded-[1px] transition-colors"
+          style={{ height: 3 + b * 2.5, background: b <= l ? SIGNAL_COLOUR[l] : "rgba(255,255,255,0.16)" }}
+        />
+      ))}
+    </span>
+  )
 }
 
 // The strip above or below the board: who it is, what they've taken, and their clock.
-export function PlayerBar({ name, colour, rating, provisional, diff, taken = [], lead = 0, clock, note, isBot, avatarUrl, level, href }: Props) {
+export function PlayerBar({ name, colour, rating, provisional, diff, taken = [], lead = 0, clock, note, isBot, avatarUrl, level, href, signal }: Props) {
   const { pieces } = useBoardSettings()
   const other = colour === "w" ? "b" : "w"
   return (
@@ -71,6 +91,7 @@ export function PlayerBar({ name, colour, rating, provisional, diff, taken = [],
             ) : (
               <span className="truncate">{name}</span>
             )}
+            {signal != null && <SignalBars level={signal} />}
             {level && <LevelBadge level={level} compact />}
             {rating != null && (
               <span className="shrink-0 font-normal text-[var(--g-muted)]">

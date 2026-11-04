@@ -5,7 +5,8 @@ import Link from "next/link"
 import { PanelHeader } from "@/components/play-shell/nav"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { io } from "socket.io-client"
-import { Board, type BoardArrow, type Colour } from "@/components/chess/board"
+import { Board, type BoardArrow, type Colour, type Premove } from "@/components/chess/board"
+import { MatchIntro, ResultBurst } from "@/components/chess/match-overlays"
 import { material } from "@/components/chess/material"
 import { MovePanel } from "@/components/chess/move-panel"
 import { PlayerBar } from "@/components/chess/player-bar"
@@ -84,6 +85,15 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
 
   useEffect(() => () => engine.current?.terminate(), [])
   const inflight = useRef<string | null>(null)
+  const [intro, setIntro] = useState(false)
+  const [burst, setBurst] = useState(false)
+  // A move queued while the computer thinks.
+  const [premove, setPremoveState] = useState<Premove | null>(null)
+  const premoveRef = useRef<Premove | null>(null)
+  const setPremove = useCallback((p: Premove | null) => {
+    premoveRef.current = p
+    setPremoveState(p)
+  }, [])
 
   const update = useCallback((next: Saved | null) => {
     rev.current++
@@ -120,18 +130,31 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
       if (wait > 0) await new Promise((r) => setTimeout(r, wait))
       if (inflight.current !== key || !uci) return
       inflight.current = null
-      setGame((prev) => {
-        const g = prev === undefined ? restored : prev
-        if (!g) return g
-        const moves = [...g.moves, uci!]
-        const { chess: after } = build(moves)
+      const queued = premoveRef.current
+      {
+        const g = game
+        let moves = [...g.moves, uci!]
+        let { chess: after } = build(moves)
+        // Play the queued premove straight away if it's still legal.
+        const pm = premoveRef.current
+        if (pm && !outcome(after, g.colour)) {
+          try {
+            const piece = after.get(pm.from)
+            const promo = piece?.type === "p" && (pm.to[1] === "8" || pm.to[1] === "1") ? "q" : ""
+            after.move({ from: pm.from, to: pm.to, promotion: promo || undefined })
+            moves = [...moves, `${pm.from}${pm.to}${promo}`]
+            after = build(moves).chess
+          } catch {}
+        }
         const next = { ...g, moves, result: outcome(after, g.colour) }
         keep(next)
         rev.current++
-        return next
-      })
+        setGame(next)
+        if (next.result) setBurst(true)
+      }
+      if (queued) setPremove(null)
     })()
-  }, [game, thinking, chess, level, restored])
+  }, [game, thinking, chess, level, setPremove])
 
   // Finished games go into the player's history (when signed in).
   useEffect(() => {
@@ -177,7 +200,10 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
     setViewPly(null)
     setFlipped(false)
     setSaveNote(null)
+    setPremove(null)
     update({ level: lvl, colour: c, moves: [], result: null, savedId: null })
+    setBurst(false)
+    setIntro(true)
     playSound("start")
   }
 
@@ -185,7 +211,9 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
     if (!game || !myTurn) return false
     const moves = [...game.moves, `${from}${to}${promotion ?? ""}`]
     const { chess: after } = build(moves)
-    update({ ...game, moves, result: outcome(after, game.colour) })
+    const result = outcome(after, game.colour)
+    update({ ...game, moves, result })
+    if (result) setBurst(true)
     setViewPly(null)
     return true
   }
@@ -194,6 +222,7 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
     if (!game || game.savedId) return
     engine.current?.stop()
     inflight.current = null
+    setPremove(null)
     const moves = [...game.moves]
     // Back to the player's own turn, undoing their last move.
     do moves.pop()
@@ -334,7 +363,10 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
             <button
               type="button"
               className={`${btn}`}
-              onClick={() => update({ ...game, result: { score: game.colour === "w" ? "0-1" : "1-0", text: "You resigned" } })}
+              onClick={() => {
+                update({ ...game, result: { score: game.colour === "w" ? "0-1" : "1-0", text: "You resigned" } })
+                setBurst(true)
+              }}
             >
               ⚑ Resign
             </button>
@@ -359,6 +391,27 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
           lastMove={shownPly >= 0 ? plies[shownPly] : null}
           arrows={arrows}
           onMove={onMove}
+          overlay={
+            intro && game && !over ? (
+              <MatchIntro
+                a={{ name: myName ?? "You", colour: game.colour }}
+                b={{ name: `Computer`, colour: game.colour === "w" ? "b" : "w", isBot: true, level: null, rating: null }}
+                label={`Level ${level.level} · ${level.name}`}
+                onDone={() => setIntro(false)}
+              />
+            ) : burst && game?.result ? (
+              <ResultBurst
+                outcome={game.result.score === "1/2-1/2" ? "draw" : (game.result.score === "1-0") === (game.colour === "w") ? "win" : "loss"}
+                king={game.result.score === "1/2-1/2" ? undefined : game.colour}
+                title={game.result.score === "1/2-1/2" ? "Draw" : (game.result.score === "1-0") === (game.colour === "w") ? "Victory" : "Defeat"}
+                detail={game.result.text}
+                onDone={() => setBurst(false)}
+              />
+            ) : null
+          }
+          premoveFor={following && thinking ? game!.colour : null}
+          premove={thinking ? premove : null}
+          onPremove={setPremove}
         />
       }
       panel={panel}

@@ -29,9 +29,10 @@ export type BoardSettings = {
   sound: boolean
   legalMoves: boolean
   animation: "off" | "fast" | "normal"
+  premove: boolean
 }
 
-const DEFAULTS: BoardSettings = { theme: "walnut", pieces: "wood3d", sound: true, legalMoves: true, animation: "normal" }
+const DEFAULTS: BoardSettings = { theme: "walnut", pieces: "wood3d", sound: true, legalMoves: true, animation: "normal", premove: true }
 // v4: new defaults (walnut board, 3D wood pieces) for everyone.
 const KEY = "t64:board:v4"
 const listeners = new Set<() => void>()

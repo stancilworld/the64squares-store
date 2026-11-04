@@ -245,3 +245,42 @@ body {
   border-color: var(--g-gold);
   background: var(--g-panel-3);
 }
+
+/* ---- Match intro (VS card) and result burst on the board ---- */
+.vs-intro { animation: vs-life 2.3s ease forwards; cursor: pointer; }
+.vs-flash { background: radial-gradient(ellipse at center, rgba(20, 16, 10, 0.72) 0%, rgba(10, 8, 6, 0.9) 70%); backdrop-filter: blur(2px); }
+.vs-left { animation: vs-in-left 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.15) both; }
+.vs-right { animation: vs-in-right 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.15) both; }
+.vs-mark {
+  color: var(--g-gold);
+  text-shadow: 0 0 24px rgba(230, 197, 127, 0.65), 0 3px 0 #6d5320;
+  animation: vs-slam 0.55s 0.3s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.vs-label { animation: vs-fade 0.4s 0.55s both; }
+@keyframes vs-life { 0%, 82% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+@keyframes vs-in-left { from { transform: translateX(-70%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes vs-in-right { from { transform: translateX(70%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes vs-slam { from { transform: scale(2.6) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes vs-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.rb { animation: rb-life 3.4s ease forwards; cursor: pointer; }
+.rb-win { background: radial-gradient(ellipse at center, rgba(70, 52, 14, 0.78) 0%, rgba(14, 11, 6, 0.86) 75%); }
+.rb-loss { background: radial-gradient(ellipse at center, rgba(40, 18, 16, 0.78) 0%, rgba(10, 8, 7, 0.88) 75%); }
+.rb-draw, .rb-neutral { background: radial-gradient(ellipse at center, rgba(34, 32, 28, 0.78) 0%, rgba(10, 9, 8, 0.86) 75%); }
+.rb-icon { filter: drop-shadow(0 6px 10px rgba(0,0,0,0.5)); }
+.rb-card { animation: rb-pop 0.6s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+.rb-win .rb-title, .rb-win .rb-icon { color: var(--g-gold); text-shadow: 0 0 28px rgba(230, 197, 127, 0.7), 0 3px 0 #6d5320; }
+.rb-win img.rb-icon { animation: rb-glow 1.4s ease-in-out infinite alternate; }
+.rb-loss .rb-title, .rb-loss .rb-icon { color: #e8d8d2; text-shadow: 0 2px 0 #3a1d1a; }
+.rb-loss .rb-icon { animation: rb-topple 0.9s 0.2s ease-in both; transform-origin: 50% 90%; }
+.rb-draw .rb-title, .rb-draw .rb-icon, .rb-neutral .rb-title, .rb-neutral .rb-icon { color: #f3ead8; }
+.rb-confetti { position: absolute; top: -16px; border-radius: 2px; animation-name: rb-fall; animation-timing-function: linear; animation-fill-mode: both; }
+@keyframes rb-life { 0%, 85% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+@keyframes rb-pop { from { transform: scale(0.4); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes rb-glow { from { transform: scale(1); filter: drop-shadow(0 0 0 transparent); } to { transform: scale(1.08); filter: drop-shadow(0 0 14px rgba(230, 197, 127, 0.8)); } }
+@keyframes rb-topple { 0% { transform: rotate(0); } 60% { transform: rotate(-24deg); } 100% { transform: rotate(-18deg) translateY(4px); opacity: 0.8; } }
+@keyframes rb-fall { from { transform: translateY(0) rotate(0); opacity: 1; } to { transform: translateY(120vh) rotate(540deg); opacity: 0.9; } }
+@media (prefers-reduced-motion: reduce) {
+  .vs-left, .vs-right, .vs-mark, .vs-label, .rb-card, .rb-icon, .rb-confetti { animation: none !important; }
+  .rb-confetti { display: none; }
+}

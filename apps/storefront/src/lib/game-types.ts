@@ -56,8 +56,9 @@ const REASONS: Record<string, string> = {
 
 export type Presence = {
   id: string
-  w: { online: boolean; gone_ms: number | null }
-  b: { online: boolean; gone_ms: number | null }
+  // signal: connection bars 0–4 (0 when offline).
+  w: { online: boolean; gone_ms: number | null; signal?: number }
+  b: { online: boolean; gone_ms: number | null; signal?: number }
   claim_after_ms: number
 }
 

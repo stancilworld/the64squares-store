@@ -1,8 +1,9 @@
 "use client"
 
 import { Chess, type Square } from "chess.js"
-import { useMemo, useState } from "react"
+import { type ReactNode, useMemo, useState } from "react"
 import { Chessboard, type PieceRenderObject } from "react-chessboard"
+import { premoveTargets } from "@/lib/chess/premove"
 import { playSound } from "@/lib/chess/sounds"
 import { animationMs, BOARD_THEMES, PIECE_SETS, pieceSrc, useBoardSettings } from "@/lib/chess/settings"
 
@@ -16,6 +17,8 @@ const LAST_MOVE = "rgba(232, 196, 92, 0.5)"
 const SELECTED = "rgba(232, 196, 92, 0.68)"
 const DOT = "radial-gradient(circle, rgba(10,20,14,0.28) 22%, transparent 23%)"
 const RING = "radial-gradient(circle, transparent 60%, rgba(10,20,14,0.28) 61%)"
+const PREMOVE = "rgba(206, 74, 58, 0.55)"
+const PREMOVE_DOT = "radial-gradient(circle, rgba(206,74,58,0.5) 20%, transparent 21%)"
 const CHECK = "radial-gradient(ellipse at center, rgba(255,0,0,0.95) 0%, rgba(231,0,0,0.8) 25%, rgba(169,0,0,0) 80%)"
 
 type Props = {
@@ -28,7 +31,15 @@ type Props = {
   arrows?: BoardArrow[]
   // Return false when the move isn't accepted (the piece goes back).
   onMove?: (from: Square, to: Square, promotion?: "q" | "r" | "b" | "n") => boolean | void
+  // Premoves: the player's colour while the opponent is thinking, the queued move, and a setter.
+  premoveFor?: Colour | null
+  premove?: Premove | null
+  onPremove?: (p: Premove | null) => void
+  // Drawn over the board (match intro, result).
+  overlay?: ReactNode
 }
+
+export type Premove = { from: Square; to: Square }
 
 const pieceImages = (set: keyof typeof PIECE_SETS): PieceRenderObject =>
   Object.fromEntries(
@@ -55,7 +66,7 @@ const pieceImages = (set: keyof typeof PIECE_SETS): PieceRenderObject =>
 
 // The chessboard everywhere on the site: legal-move dots, highlights, drag or click to move,
 // a piece picker for promotions, and the person's chosen board and pieces.
-export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove }: Props) {
+export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove, premoveFor, premove, onPremove, overlay }: Props) {
   const settings = useBoardSettings()
   const theme = BOARD_THEMES[settings.theme]
   const [picked, setSelected] = useState<Square | null>(null)
@@ -76,11 +87,17 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove 
     setPromotion(null)
   }
   const canMove = !!movable && chess.turn() === movable
-  const selected = canMove ? picked : null
+  const canPremove = !canMove && !!premoveFor && !!onPremove && settings.premove && chess.turn() !== premoveFor
+  const selected = canMove || canPremove ? picked : null
   const targets = useMemo(
     () => (selected && canMove ? chess.moves({ square: selected, verbose: true }) : []),
     [chess, selected, canMove]
   )
+  const preTargets = useMemo(() => {
+    if (!selected || !canPremove) return []
+    const p = chess.get(selected)
+    return p && p.color === premoveFor ? premoveTargets(selected, p.type, p.color) : []
+  }, [chess, selected, canPremove, premoveFor])
 
   const attempt = (from: Square, to: Square): boolean => {
     if (!canMove || !onMove) return false
@@ -95,6 +112,16 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove 
 
   const clickSquare = (square: Square) => {
     if (promotion) return setPromotion(null)
+    if (canPremove) {
+      const piece = chess.get(square)
+      if (selected && preTargets.includes(square)) {
+        onPremove?.({ from: selected, to: square })
+        return setSelected(null)
+      }
+      if (piece && piece.color === premoveFor) return setSelected(selected === square ? null : square)
+      onPremove?.(null)
+      return setSelected(null)
+    }
     if (!canMove) return
     const piece = chess.get(square)
     if (selected && selected !== square) {
@@ -122,14 +149,22 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove 
         .find((p) => p && p.type === "k" && p.color === chess.turn())
       if (king) add(king.square, { backgroundImage: CHECK })
     }
-    if (selected) {
+    if (premove) {
+      add(premove.from, { backgroundColor: PREMOVE })
+      add(premove.to, { backgroundColor: PREMOVE })
+    }
+    if (selected && canPremove) {
+      add(selected, { backgroundColor: PREMOVE })
+      for (const t of preTargets) add(t, { backgroundImage: PREMOVE_DOT, cursor: "pointer" })
+    }
+    if (selected && !canPremove) {
       add(selected, { backgroundColor: SELECTED })
       if (settings.legalMoves) {
         for (const m of targets) add(m.to, { backgroundImage: chess.get(m.to as Square) ? RING : DOT, cursor: "pointer" })
       }
     }
     return st
-  }, [lastMove, chess, selected, targets, settings.legalMoves])
+  }, [lastMove, chess, selected, targets, settings.legalMoves, premove, canPremove, preTargets])
 
   const pieces = useMemo(() => pieceImages(settings.pieces), [settings.pieces])
 
@@ -150,11 +185,19 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove 
           position: fen,
           boardOrientation: orientation,
           pieces,
-          allowDragging: canMove,
-          canDragPiece: ({ piece }) => canMove && piece.pieceType[0] === movable,
+          allowDragging: canMove || canPremove,
+          canDragPiece: ({ piece }) => (canMove && piece.pieceType[0] === movable) || (canPremove && piece.pieceType[0] === premoveFor),
           onPieceDrag: ({ square }) => square && setSelected(square as Square),
           onPieceDrop: ({ sourceSquare, targetSquare }) => {
             if (!targetSquare || targetSquare === sourceSquare) return false
+            if (canPremove) {
+              const p = chess.get(sourceSquare as Square)
+              if (p && premoveTargets(sourceSquare as Square, p.type, p.color).includes(targetSquare as Square)) {
+                onPremove?.({ from: sourceSquare as Square, to: targetSquare as Square })
+              }
+              setSelected(null)
+              return false
+            }
             const ok = attempt(sourceSquare as Square, targetSquare as Square)
             if (ok) setSelected(null)
             return ok
@@ -207,6 +250,7 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove 
           </div>
         </>
       )}
+      {overlay}
     </div>
   )
 }

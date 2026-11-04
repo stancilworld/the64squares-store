@@ -86,7 +86,9 @@ const server = http.createServer(async (req, res) => {
     if (path === "/profiles" && req.method === "GET") {
       const ids = (url.searchParams.get("ids") ?? "").split(",").filter((x) => /^(cus|guest)_[A-Za-z0-9]{6,40}$/.test(x)).slice(0, 50)
       const rows = await getProfiles(ids)
-      return json(res, 200, { profiles: rows.map((p) => ({ ...publicProfile(p), online: online.has(p.player_id) })) }, origin)
+      // For a game's two players, their record against people too (shown in the match intro).
+      const records = ids.length <= 2 ? await Promise.all(rows.map((p) => playerStats(p.player_id).then((s) => s.people))) : []
+      return json(res, 200, { profiles: rows.map((p, i) => ({ ...publicProfile(p), online: online.has(p.player_id), record: records[i] })) }, origin)
     }
     if (path === "/health") return send(res, 200, JSON.stringify({ ok: true, live_games: manager.liveCount() }), "application/json", origin)
     let m = /^\/games\/([A-Za-z0-9]{6,20})\.pgn$/.exec(path)
@@ -155,9 +157,13 @@ const rematches = new Map<string, string>()
 
 // Who of the two players has the game open. When one leaves and doesn't come back, the
 // other may claim the win (or a draw) after a short wait.
-type Seat = { sockets: Set<string>; goneAt: number | null }
+// rtt: the player's last measured round trip to the server (ms), for the signal bars.
+type Seat = { sockets: Set<string>; goneAt: number | null; rtt: number | null }
 const presence = new Map<string, { w: Seat; b: Seat }>()
 const claimAfterMs = (g: Game) => (["bullet", "blitz"].includes(speedOf(g.r.initial_ms, g.r.increment_ms)) ? 30_000 : 60_000)
+
+// Connection quality as 1–4 bars from the round-trip time (unknown counts as good).
+const signalOf = (rtt: number | null) => (rtt == null ? 4 : rtt < 150 ? 4 : rtt < 300 ? 3 : rtt < 600 ? 2 : 1)
 
 const presenceView = (g: Game, now = Date.now()) => {
   const p = presence.get(g.r.id)
@@ -165,7 +171,7 @@ const presenceView = (g: Game, now = Date.now()) => {
     const s = p?.[c]
     const online = !!s && s.sockets.size > 0
     const since = s?.goneAt ?? g.r.started_at ?? now
-    return { online, gone_ms: online ? null : Math.max(0, now - since) }
+    return { online, gone_ms: online ? null : Math.max(0, now - since), signal: online ? signalOf(s?.rtt ?? null) : 0 }
   }
   return { id: g.r.id, w: seat("w"), b: seat("b"), claim_after_ms: claimAfterMs(g) }
 }
@@ -177,7 +183,7 @@ const sendPresence = (g: Game) => {
 const seatFor = (id: string, c: Color) => {
   let p = presence.get(id)
   if (!p) {
-    p = { w: { sockets: new Set(), goneAt: null }, b: { sockets: new Set(), goneAt: null } }
+    p = { w: { sockets: new Set(), goneAt: null, rtt: null }, b: { sockets: new Set(), goneAt: null, rtt: null } }
     presence.set(id, p)
   }
   return p[c]
@@ -244,6 +250,24 @@ io.on("connection", (socket) => {
       sendPresence(g)
     }
     ack({ ok: true, game: g.view(Date.now()), you: player?.id ?? null, presence: g.r.status === "active" ? presenceView(g) : null })
+  })
+
+  // Players ping every few seconds; the answer measures their round trip, which they report
+  // with the next ping. Opponents see the result as signal bars.
+  socket.on("game:ping", async (input: { id?: unknown; rtt?: unknown }, ack: unknown) => {
+    if (!guard(ack)) return
+    ack({ ok: true })
+    const player = me()
+    if (!player || !isId(input?.id) || typeof input.rtt !== "number" || !Number.isFinite(input.rtt)) return
+    const g = await manager.get(input.id)
+    const colour = g ? g.colorOf(player.id) : null
+    const seat = colour ? presence.get(input.id)?.[colour] : null
+    if (!g || !seat || g.r.status !== "active") return
+    const rtt = Math.max(0, Math.min(input.rtt, 30_000))
+    const before = signalOf(seat.rtt)
+    // Smooth it a little so one slow answer doesn't flicker the bars.
+    seat.rtt = seat.rtt == null ? rtt : Math.round(seat.rtt * 0.5 + rtt * 0.5)
+    if (signalOf(seat.rtt) !== before) sendPresence(g)
   })
 
   socket.on("game:claim", async (input: { id?: unknown; outcome?: unknown }, ack: unknown) => {

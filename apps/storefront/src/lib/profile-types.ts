@@ -11,6 +11,8 @@ export type PublicProfile = {
   level: Level
   joined: string
   online: boolean
+  // Only on a game's two players: their record against people.
+  record?: Results
 }
 
 export type Results = { games: number; wins: number; draws: number; losses: number }
