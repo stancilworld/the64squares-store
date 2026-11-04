@@ -131,6 +131,15 @@ export const CheckoutSettingsBody = z.object({
 })
 export type CheckoutSettingsBodyType = z.infer<typeof CheckoutSettingsBody>
 
+// Settings → SEO & analytics (lib/seo-settings.ts).
+export const SeoSettingsBody = z.object({
+  ga4_id: z.union([z.string().trim().regex(/^G-[A-Z0-9]{4,16}$/i, "A Google Analytics id looks like G-ABC123XYZ9"), z.literal("")]).optional(),
+  meta_pixel_id: z.union([z.string().trim().regex(/^\d{6,20}$/, "A Meta Pixel id is only digits"), z.literal("")]).optional(),
+  google_verification: z.union([z.string().trim().regex(/^[\w-]{10,100}$/, "Paste only the code inside content=\"…\""), z.literal("")]).optional(),
+  default_description: z.string().trim().max(300).optional(),
+})
+export type SeoSettingsBodyType = z.infer<typeof SeoSettingsBody>
+
 // The simple product form (lib/product-form.ts).
 const BadgeBody = z.object({
   kind: z.enum(["auto", "none", "new", "bestseller", "sale", "custom"]),
@@ -147,6 +156,14 @@ export const ProductFormBody = z.object({
   material_text: z.string().max(200).nullable().optional(),
   age: z.string().max(60).nullable().optional(),
   assembly: z.string().max(200).nullable().optional(),
+  care: z.string().max(1500).nullable().optional(),
+  lead_time: z.string().max(80).nullable().optional(),
+  engraving: z
+    .object({ enabled: z.boolean(), label: z.string().trim().max(60), max: z.number().int().min(1).max(200), required: z.boolean() })
+    .nullable()
+    .optional(),
+  seo_title: z.string().max(120).nullable().optional(),
+  seo_description: z.string().max(320).nullable().optional(),
   badge: BadgeBody.nullable().optional(),
   length: size,
   width: size,

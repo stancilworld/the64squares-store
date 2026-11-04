@@ -11,6 +11,7 @@ import { notifyVariantSelected } from "@/lib/product-events"
 import { useList } from "@/lib/list"
 import { useSwatch } from "./colours-provider"
 import { formatPrice } from "@/lib/format"
+import { trackAddToCart } from "@/lib/track"
 
 type Variant = HttpTypes.StoreProductVariant
 
@@ -20,7 +21,17 @@ const valueOf = (v: Variant, title: string) =>
 const inStock = (v?: Variant) =>
   !!v && (!v.manage_inventory || !!v.allow_backorder || (v.inventory_quantity ?? 0) > 0)
 
+type Engraving = { enabled: boolean; label: string; max: number; required: boolean }
+const engravingOf = (meta: Record<string, unknown> | null | undefined): Engraving | null => {
+  const e = meta?.engraving as Partial<Engraving> | null | undefined
+  if (!e?.enabled) return null
+  return { enabled: true, label: e.label || "Engraving text", max: Math.min(200, Math.max(1, Number(e.max) || 30)), required: !!e.required }
+}
+
 export function ProductOptions({ product }: { product: HttpTypes.StoreProduct }) {
+  const engraving = engravingOf(product.metadata)
+  const leadTime = typeof product.metadata?.lead_time === "string" ? product.metadata.lead_time : ""
+  const [text, setText] = useState("")
   const swatch = useSwatch()
   const variants = useMemo(() => product.variants ?? [], [product.variants])
   const optionTitles = useMemo(
@@ -59,11 +70,17 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
     if (!selected) {
       return
     }
+    if (engraving?.required && !text.trim()) {
+      setError(`Please fill in “${engraving.label}”.`)
+      document.getElementById("engraving-text")?.focus()
+      return
+    }
     setError("")
     start(async () => {
       try {
-        await addToCart(selected.id, 1)
+        await addToCart(selected.id, 1, engraving ? text : null)
         notifyCartChanged()
+        trackAddToCart({ id: product.id, name: product.title, price: selected.calculated_price?.calculated_amount ?? null })
         if (thenOpenBackpack) {
           router.push("/cart")
         } else {
@@ -90,6 +107,15 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
         {formatPrice(selected?.calculated_price?.calculated_amount ?? null)}
       </p>
       <p className="text-[13px] text-muted">Inclusive of all taxes</p>
+      {leadTime && (
+        <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-linen px-3 py-1 text-[13px] font-medium">
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+          {leadTime}
+        </p>
+      )}
 
       {optionTitles.map((title) => (
         <fieldset key={title} className="mt-7">
@@ -130,6 +156,32 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
           </div>
         </fieldset>
       ))}
+
+      {engraving && (
+        <div className="mt-7">
+          <label htmlFor="engraving-text" className="flex justify-between text-[14px] font-medium">
+            <span>
+              {engraving.label}
+              {!engraving.required && <span className="font-normal text-muted"> (optional)</span>}
+            </span>
+            <span className="font-normal text-muted">
+              {text.length}/{engraving.max}
+            </span>
+          </label>
+          <input
+            id="engraving-text"
+            value={text}
+            maxLength={engraving.max}
+            onChange={(e) => {
+              setText(e.target.value)
+              setAdded(false)
+            }}
+            placeholder="Type exactly as it should appear"
+            className="mt-2 h-[48px] w-full rounded-md border border-rule bg-white px-4 text-[15px] outline-none focus:border-black"
+          />
+          <p className="mt-1.5 text-[13px] text-muted">Check the spelling: personalised items can&apos;t be returned.</p>
+        </div>
+      )}
 
       <div className="mt-8 flex flex-wrap items-center gap-3">
         <button

@@ -67,6 +67,7 @@ export function OrderDetails({ order }: { order: AccountOrder }) {
                 {i.variant_title && i.variant_title !== "Default" && (
                   <p className="mt-[2px] text-[13px] text-black/60 lg:text-[15px]">{i.variant_title}</p>
                 )}
+                {i.engraving && <p className="mt-[2px] text-[13px] text-black/60 lg:text-[15px]">Personalisation: “{i.engraving}”</p>}
                 <p className="mt-[2px] text-[12px] italic lg:text-[14px]">Quantity: {i.quantity}</p>
                 <p className="mt-2 text-[15px] lg:text-[17px]">{formatPrice(i.total)}</p>
               </div>

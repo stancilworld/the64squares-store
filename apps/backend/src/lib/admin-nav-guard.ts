@@ -24,6 +24,7 @@ const NAV: Record<string, string | string[]> = {
   "/app/fair-play": ["fairplay.review"],
   "/app/website/chatbot": ["content.chatbot", "messages.view"],
   "/app/messages": ["messages.view", "mailbox.view"],
+  "/app/reviews": "reviews.manage",
   "/app/website": [
     "content.homepage",
     "content.about",
@@ -41,6 +42,7 @@ const NAV: Record<string, string | string[]> = {
   "/app/website/blog": "content.blog",
   "/app/website/help-pages": "content.help",
   "/app/settings/branding": "settings.branding",
+  "/app/settings/seo": "settings.branding",
   "/app/settings/store": "settings.store",
   "/app/settings/payments": "settings.store",
   "/app/settings/invoices": "settings.store",

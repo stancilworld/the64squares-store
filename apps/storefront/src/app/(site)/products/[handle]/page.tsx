@@ -1,10 +1,33 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { ProductGallery } from "@/components/product-gallery"
 import { ProductOptions } from "@/components/product-options"
 import { BADGE_CLASSES, badgeOf } from "@/lib/badges"
-import { getDeliveryText, getProduct, isOnSale } from "@/lib/data"
+import { getDeliveryText, getProduct, getProductReviews, isOnSale } from "@/lib/data"
+import { ProductReviews } from "@/components/product-reviews"
+import { Stars } from "@/components/stars"
+import { SITE_URL } from "@/lib/site"
+
+export async function generateMetadata({ params }: PageProps<"/products/[handle]">): Promise<Metadata> {
+  const { handle } = await params
+  const product = await getProduct(handle)
+  if (!product) return { title: "Product not found" }
+  const meta = (product.metadata ?? {}) as Record<string, unknown>
+  const title = (typeof meta.seo_title === "string" && meta.seo_title.trim()) || product.title
+  const plain = (product.description ?? "").replace(/\s+/g, " ").trim()
+  const description =
+    (typeof meta.seo_description === "string" && meta.seo_description.trim()) || (plain.length > 160 ? `${plain.slice(0, 157)}…` : plain) || undefined
+  const image = product.thumbnail ?? product.images?.[0]?.url
+  return {
+    title: { absolute: typeof meta.seo_title === "string" && meta.seo_title.trim() ? title : `${title} | The 64 Squares` },
+    description,
+    alternates: { canonical: `/products/${product.handle}` },
+    openGraph: { title, description, type: "website", url: `/products/${product.handle}`, images: image ? [{ url: image }] : undefined },
+    twitter: { card: "summary_large_image", title, description, images: image ? [image] : undefined },
+  }
+}
 
 async function Product({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params
@@ -12,6 +35,7 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
   if (!product) {
     notFound()
   }
+  const { summary, reviews } = await getProductReviews(product.id)
   const images = product.images ?? []
   const badge = badgeOf(product.metadata, isOnSale(product))
   const meta = (product.metadata ?? {}) as Record<string, string>
@@ -24,6 +48,46 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
     ["Assembly", meta.assembly],
     ["Age", meta.age],
   ].filter((d): d is [string, string] => !!d[1])
+  const care = typeof meta.care === "string" ? meta.care.trim() : ""
+
+  // For Google: the product, its price and stock, and its star rating.
+  const prices = (product.variants ?? []).map((v) => v.calculated_price?.calculated_amount).filter((n): n is number => typeof n === "number")
+  const inStock = (product.variants ?? []).some((v) => !v.manage_inventory || v.allow_backorder || (v.inventory_quantity ?? 0) > 0)
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.title,
+    description: product.description ?? undefined,
+    image: images.map((i) => i.url),
+    sku: product.variants?.[0]?.sku ?? undefined,
+    brand: { "@type": "Brand", name: "The 64 Squares" },
+    url: `${SITE_URL}/products/${product.handle}`,
+    ...(prices.length
+      ? {
+          offers: {
+            "@type": "AggregateOffer",
+            priceCurrency: "INR",
+            lowPrice: Math.min(...prices),
+            highPrice: Math.max(...prices),
+            offerCount: prices.length,
+            availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+          },
+        }
+      : {}),
+    ...(summary.count
+      ? {
+          aggregateRating: { "@type": "AggregateRating", ratingValue: summary.average, reviewCount: summary.count, bestRating: 5, worstRating: 1 },
+          review: reviews.slice(0, 10).map((rv) => ({
+            "@type": "Review",
+            reviewRating: { "@type": "Rating", ratingValue: rv.rating, bestRating: 5 },
+            author: { "@type": "Person", name: rv.name },
+            datePublished: rv.date.slice(0, 10),
+            reviewBody: rv.body,
+            ...(rv.title ? { name: rv.title } : {}),
+          })),
+        }
+      : {}),
+  }
 
   return (
     <div className="mx-auto max-w-[1440px] px-6 pb-20 pt-6 lg:px-10 lg:pb-28 lg:pt-8">
@@ -54,6 +118,12 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
             </span>
           )}
           <h1 className="font-display h-page">{product.title}</h1>
+          {summary.count > 0 && (
+            <a href="#reviews" className="mt-2 inline-flex items-center gap-2 text-[14px] text-muted hover:underline">
+              <Stars value={summary.average} size={16} />
+              {summary.average.toFixed(1)} · {summary.count} review{summary.count === 1 ? "" : "s"}
+            </a>
+          )}
           <ProductOptions product={product} />
           <div className="mt-8 rounded-md border border-rule bg-linen px-5 py-4 text-[15px]">
             <p className="font-medium">{delivery}</p>
@@ -72,8 +142,16 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
           {product.description && (
             <p className="mt-8 max-w-[60ch] text-[16px] leading-[1.7]">{product.description}</p>
           )}
+          {care && (
+            <details className="mt-8 border-y border-rule py-4 text-[15px]">
+              <summary className="cursor-pointer font-medium">Care instructions</summary>
+              <p className="mt-3 whitespace-pre-line leading-[1.7] text-muted">{care}</p>
+            </details>
+          )}
         </div>
       </div>
+      <ProductReviews productId={product.id} summary={summary} reviews={reviews} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
     </div>
   )
 }

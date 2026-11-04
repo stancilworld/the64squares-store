@@ -18,6 +18,7 @@ import {
   StaffUpdateBody,
   StaffDefaultsBody,
   CheckoutSettingsBody,
+  SeoSettingsBody,
   ProductFormBody,
   InvoiceSettingsBody,
   SiteNavigationBody,
@@ -189,6 +190,11 @@ export default defineMiddlewares({
     },
     {
       method: ["POST"],
+      matcher: "/admin/seo-settings",
+      middlewares: [validateAndTransformBody(SeoSettingsBody)],
+    },
+    {
+      method: ["POST"],
       matcher: "/admin/checkout-settings",
       middlewares: [validateAndTransformBody(CheckoutSettingsBody)],
     },
@@ -206,6 +212,10 @@ export default defineMiddlewares({
     },
     {
       matcher: "/store/account/password",
+      middlewares: [authenticate("customer", ["bearer", "session"])],
+    },
+    {
+      matcher: "/store/account/reviews*",
       middlewares: [authenticate("customer", ["bearer", "session"])],
     },
     {

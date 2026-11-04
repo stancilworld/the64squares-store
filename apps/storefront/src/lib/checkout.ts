@@ -12,7 +12,7 @@ import { sdk } from "./medusa"
 const CHECKOUT = "t64_checkout"
 const CART = "t64_cart"
 const FIELDS =
-  "id,email,currency_code,total,subtotal,tax_total,shipping_total,item_total,discount_total,completed_at,customer_id,*items,+items.total,+items.compare_at_unit_price,*items.variant,*shipping_address,*shipping_methods,*payment_collection,*payment_collection.payment_sessions"
+  "id,email,currency_code,total,subtotal,tax_total,shipping_total,item_total,discount_total,completed_at,customer_id,*items,+items.metadata,+items.total,+items.compare_at_unit_price,*items.variant,*shipping_address,*shipping_methods,*payment_collection,*payment_collection.payment_sessions"
 
 export type CheckoutConfig = {
   online: boolean
@@ -53,6 +53,17 @@ const fail = (e: unknown, fallback = "Something went wrong. Please try again."):
   return { ok: false, error: msg && !/fetch failed|ECONN/i.test(msg) ? msg : fallback }
 }
 
+// Lines are the same item when the variant and the personalisation text match.
+const engravingOf = (line: { metadata?: Record<string, unknown> | null }) => {
+  const e = line.metadata?.engraving
+  return typeof e === "string" && e ? e : null
+}
+const keyOf = (variant: string, engraving: string | null) => `${variant}\u0000${engraving ?? ""}`
+const fromKey = (key: string) => {
+  const [variant, engraving] = key.split("\u0000")
+  return { variant, engraving: engraving || null }
+}
+
 const isSelected = (line: HttpTypes.StoreCartLineItem) => !(line.metadata as { unselected?: boolean } | null)?.unselected
 
 const auth = async (): Promise<Record<string, string>> => {
@@ -91,7 +102,8 @@ export async function prepareCheckout(): Promise<{ cart: HttpTypes.StoreCart | n
   const wanted = new Map<string, number>()
   for (const line of backpack?.items ?? []) {
     if (isSelected(line) && line.variant_id) {
-      wanted.set(line.variant_id, (wanted.get(line.variant_id) ?? 0) + line.quantity)
+      const key = keyOf(line.variant_id, engravingOf(line))
+      wanted.set(key, (wanted.get(key) ?? 0) + line.quantity)
     }
   }
   if (!wanted.size) {
@@ -119,17 +131,18 @@ export async function prepareCheckout(): Promise<{ cart: HttpTypes.StoreCart | n
       // ignore
     }
   }
-  const have = new Map((cart.items ?? []).map((i) => [i.variant_id!, i]))
-  for (const [variant, qty] of wanted) {
-    const line = have.get(variant)
+  const have = new Map((cart.items ?? []).map((i) => [keyOf(i.variant_id!, engravingOf(i)), i]))
+  for (const [key, qty] of wanted) {
+    const line = have.get(key)
     if (!line) {
-      await sdk.store.cart.createLineItem(cart.id, { variant_id: variant, quantity: qty }, {}, headers)
+      const { variant, engraving } = fromKey(key)
+      await sdk.store.cart.createLineItem(cart.id, { variant_id: variant, quantity: qty, ...(engraving ? { metadata: { engraving } } : {}) }, {}, headers)
     } else if (line.quantity !== qty) {
       await sdk.store.cart.updateLineItem(cart.id, line.id, { quantity: qty }, {}, headers)
     }
   }
-  for (const [variant, line] of have) {
-    if (!wanted.has(variant)) {
+  for (const [key, line] of have) {
+    if (!wanted.has(key)) {
       await sdk.store.cart.deleteLineItem(cart.id, line.id, {}, headers)
     }
   }
@@ -259,13 +272,16 @@ export async function placeOrder(): Promise<Result<{ orderId: string }>> {
     const backpackId = jar.get(CART)?.value
     if (backpackId) {
       try {
-        const { cart: backpack } = await sdk.store.cart.retrieve(backpackId, { fields: "id,*items" }, headers)
+        const { cart: backpack } = await sdk.store.cart.retrieve(backpackId, { fields: "id,*items,+items.metadata" }, headers)
         const bought = new Map<string, number>()
         for (const i of order.items ?? []) {
-          if (i.variant_id) bought.set(i.variant_id, (bought.get(i.variant_id) ?? 0) + i.quantity)
+          if (i.variant_id) {
+            const key = keyOf(i.variant_id, engravingOf(i))
+            bought.set(key, (bought.get(key) ?? 0) + i.quantity)
+          }
         }
         for (const line of backpack.items ?? []) {
-          const qty = line.variant_id ? bought.get(line.variant_id) : undefined
+          const qty = line.variant_id ? bought.get(keyOf(line.variant_id, engravingOf(line))) : undefined
           if (!qty || !isSelected(line)) continue
           const left = line.quantity - qty
           if (left > 0) {

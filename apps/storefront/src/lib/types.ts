@@ -24,6 +24,8 @@ export type ProductCard = {
   categoryIds: string[]
   inStock: boolean
   badge: { text: string; colour: "black" | "red" | "yellow" | "blue" } | null
+  // Approved reviews (none: null).
+  rating?: { average: number; count: number } | null
 }
 
 export type PostSummary = {

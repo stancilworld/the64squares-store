@@ -45,7 +45,7 @@ export type EmailOrder = {
   shipping_total?: number
   tax_total?: number
   payment_method: string
-  items: { title: string; variant_title?: string | null; quantity: number; total: number; thumbnail?: string | null }[]
+  items: { title: string; variant_title?: string | null; engraving?: string | null; quantity: number; total: number; thumbnail?: string | null }[]
   shipping_address?: {
     first_name?: string | null
     last_name?: string | null
@@ -75,7 +75,7 @@ ${o.items
   .map(
     (i) => `<tr><td style="padding:10px 0;border-bottom:1px solid #eee">${
       i.thumbnail ? `<img src="${esc(i.thumbnail)}" width="56" height="56" alt="" style="border-radius:12px;object-fit:cover;vertical-align:middle;margin-right:12px">` : ""
-    }<strong>${esc(i.title)}</strong>${i.variant_title ? `<br><span style="color:#777;font-size:14px">${esc(i.variant_title)}</span>` : ""}<br><span style="color:#777;font-size:14px">Qty ${i.quantity}</span></td>
+    }<strong>${esc(i.title)}</strong>${i.variant_title ? `<br><span style="color:#777;font-size:14px">${esc(i.variant_title)}</span>` : ""}${i.engraving ? `<br><span style="color:#777;font-size:14px">Personalisation: “${esc(i.engraving)}”</span>` : ""}<br><span style="color:#777;font-size:14px">Qty ${i.quantity}</span></td>
 <td align="right" style="padding:10px 0;border-bottom:1px solid #eee;white-space:nowrap">${money(i.total, o.currency_code)}</td></tr>`
   )
   .join("")}
@@ -85,7 +85,7 @@ ${o.items
 </table>`
 
 const itemsText = (o: EmailOrder) =>
-  o.items.map((i) => `- ${i.title}${i.variant_title ? ` (${i.variant_title})` : ""} x${i.quantity}: ${money(i.total, o.currency_code)}`).join("\n") +
+  o.items.map((i) => `- ${i.title}${i.variant_title ? ` (${i.variant_title})` : ""}${i.engraving ? ` [Personalisation: "${i.engraving}"]` : ""} x${i.quantity}: ${money(i.total, o.currency_code)}`).join("\n") +
   `\nDelivery: ${o.shipping_total ? money(o.shipping_total, o.currency_code) : "Free"}\nTotal: ${money(o.total, o.currency_code)}`
 
 export const orderPlacedEmail = (o: EmailOrder, invoiceUrl?: string | null): Email => {

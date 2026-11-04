@@ -3,6 +3,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { OrderDetails, orderDate } from "@/components/order-details"
+import { TrackPurchase } from "@/components/track-purchase"
 import { getCustomer, getOrderStatus } from "@/lib/auth"
 
 export const metadata: Metadata = { title: "Your order", robots: { index: false } }
@@ -16,6 +17,7 @@ async function OrderPage({ params, searchParams }: PageProps<"/order/[id]">) {
   const fresh = sp.new === "1"
   return (
     <>
+      {fresh && <TrackPurchase id={order.id} total={order.total} items={order.items} />}
       <div className="mx-auto max-w-[760px] text-center">
         <h1 className="font-display h-page">{fresh ? "Thank you!" : "Your order"}</h1>
         <p className="mt-4 text-[16px] lg:text-[20px]">

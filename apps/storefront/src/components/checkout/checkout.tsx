@@ -110,6 +110,9 @@ function Summary({ cart, config, children }: { cart: Cart; config: CheckoutConfi
               <span className="block text-black/60">
                 {l.variant_title && l.variant_title !== "Default" ? `${l.variant_title} · ` : ""}Qty {l.quantity}
               </span>
+              {typeof l.metadata?.engraving === "string" && l.metadata.engraving && (
+                <span className="block truncate text-black/60">“{l.metadata.engraving}”</span>
+              )}
             </span>
             <span className="text-[13px] lg:text-[15px]">{formatPrice(l.total ?? l.unit_price * l.quantity)}</span>
           </li>

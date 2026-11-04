@@ -30,6 +30,11 @@ export type ProductFormValue = {
   material_text?: string | null
   age?: string | null
   assembly?: string | null
+  care?: string | null
+  lead_time?: string | null
+  engraving?: Engraving | null
+  seo_title?: string | null
+  seo_description?: string | null
   badge?: BadgeValue | null
   length?: number | null
   width?: number | null
@@ -43,6 +48,10 @@ export type ProductFormValue = {
   images: string[]
   colour_images: Record<string, string[]>
 }
+type Engraving = { enabled: boolean; label: string; max: number; required: boolean }
+const ENGRAVING_OFF: Engraving = { enabled: false, label: "Name to engrave", max: 30, required: false }
+const LEAD_TIMES = ["Ready to ship", "Ships in 2-3 days", "Made to order: ships in 7-10 days", "Made to order: ships in 2-3 weeks"]
+
 type Lookups = {
   collections: { id: string; title: string }[]
   categories: { id: string; name: string }[]
@@ -58,6 +67,11 @@ const EMPTY: ProductFormValue = {
   material_text: "",
   age: "",
   assembly: "",
+  care: "",
+  lead_time: "",
+  engraving: null,
+  seo_title: "",
+  seo_description: "",
   badge: { kind: "auto" },
   length: null,
   width: null,
@@ -544,6 +558,69 @@ export function ProductFormPage({ id }: { id?: string }) {
               />
             ))}
           </div>
+        </Field>
+      </Section>
+
+      <Section title="Made to order and personalisation" hint="For boards, trophies and gifts that are made or engraved after the order.">
+        <Field label="Dispatch time" htmlFor="pf-lead" hint="Shown next to the price, e.g. “Made to order: ships in 7-10 days”. Leave empty for normal stock.">
+          <Input id="pf-lead" list="pf-leads" value={form.lead_time ?? ""} placeholder="e.g. Made to order: ships in 7-10 days" onChange={(e) => set("lead_time", e.target.value)} />
+          <datalist id="pf-leads">
+            {LEAD_TIMES.map((a) => (
+              <option key={a} value={a} />
+            ))}
+          </datalist>
+        </Field>
+        <Field label="Personalisation box" hint="Shoppers type the text (a name, club, date) before adding to cart. It shows on the order, the invoice and the order emails.">
+          <div className="flex h-8 items-center gap-x-2">
+            <Switch
+              checked={!!form.engraving?.enabled}
+              onCheckedChange={(on) => set("engraving", on ? { ...(form.engraving ?? ENGRAVING_OFF), enabled: true } : null)}
+              aria-label="Personalisation box"
+            />
+            <Text size="small">{form.engraving?.enabled ? "On" : "Off"}</Text>
+          </div>
+        </Field>
+        {form.engraving?.enabled && (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Field label="Box label" htmlFor="pf-eng-label" hint="What shoppers are asked for.">
+              <Input
+                id="pf-eng-label"
+                value={form.engraving.label}
+                placeholder="Name to engrave"
+                onChange={(e) => set("engraving", { ...form.engraving!, label: e.target.value })}
+              />
+            </Field>
+            <Field label="Most letters" htmlFor="pf-eng-max">
+              <Input
+                id="pf-eng-max"
+                inputMode="numeric"
+                value={form.engraving.max}
+                onChange={(e) => set("engraving", { ...form.engraving!, max: Math.min(200, Math.max(1, Number(e.target.value.replace(/\D/g, "")) || 1)) })}
+              />
+            </Field>
+            <Field label="Must be filled in">
+              <div className="flex h-8 items-center gap-x-2">
+                <Switch
+                  checked={form.engraving.required}
+                  onCheckedChange={(on) => set("engraving", { ...form.engraving!, required: on })}
+                  aria-label="Must be filled in"
+                />
+                <Text size="small">{form.engraving.required ? "Required" : "Optional"}</Text>
+              </div>
+            </Field>
+          </div>
+        )}
+        <Field label="Care instructions" htmlFor="pf-care" hint="Shown on the product page, e.g. “Wipe with a dry cloth. Keep away from direct sunlight.”">
+          <Textarea id="pf-care" rows={3} value={form.care ?? ""} onChange={(e) => set("care", e.target.value)} />
+        </Field>
+      </Section>
+
+      <Section title="Search engines (SEO)" hint="How this product looks in Google results and when the link is shared. Leave empty to use the name and description.">
+        <Field label="Search title" htmlFor="pf-seo-title" hint={`${(form.seo_title ?? "").length}/60 letters is ideal.`}>
+          <Input id="pf-seo-title" value={form.seo_title ?? ""} placeholder={form.title} onChange={(e) => set("seo_title", e.target.value)} />
+        </Field>
+        <Field label="Search description" htmlFor="pf-seo-desc" hint={`${(form.seo_description ?? "").length}/155 letters is ideal.`}>
+          <Textarea id="pf-seo-desc" rows={2} value={form.seo_description ?? ""} onChange={(e) => set("seo_description", e.target.value)} />
         </Field>
       </Section>
 

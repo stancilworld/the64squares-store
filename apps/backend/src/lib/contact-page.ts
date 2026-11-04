@@ -90,7 +90,7 @@ export const DEFAULT_CONTACT_PAGE: ContactPage = {
     field("f_phone", "phone", "Phone / WhatsApp", { placeholder: "+91 98765 43210", width: "half" }),
     field("f_topic", "select", "What's it about?", {
       required: true,
-      options: ["An order I placed", "Delivery", "Returns & warranty", "Choosing a chess set", "Tournaments", "Bulk, club or school order", "Something else"],
+      options: ["An order I placed", "Delivery", "Returns & warranty", "Choosing a chess set", "Custom or engraved order", "Bulk, club or school order", "Tournaments", "Something else"],
     }),
     field("f_message", "textarea", "Message", { required: true, placeholder: "Tell us a little more…" }),
   ],

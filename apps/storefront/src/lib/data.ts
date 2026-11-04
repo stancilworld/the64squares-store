@@ -82,7 +82,7 @@ export async function getProductCards(): Promise<ProductCard[]> {
   "use cache"
   cacheLife("minutes")
   cacheTag("products")
-  const region = await getRegion()
+  const [region, ratings] = await Promise.all([getRegion(), getReviewSummaries()])
 
   const { products } = await sdk.store.product.list({
     region_id: region?.id,
@@ -113,6 +113,7 @@ export async function getProductCards(): Promise<ProductCard[]> {
           (v.inventory_quantity ?? 0) > 0
       ),
       badge: badgeOf(p.metadata, isOnSale(p)),
+      rating: ratings[p.id] ?? null,
     }
   })
 }
@@ -308,5 +309,58 @@ export async function getSiteNavigation(): Promise<SiteNavigation> {
     return navigation ?? FALLBACK_NAVIGATION
   } catch {
     return FALLBACK_NAVIGATION
+  }
+}
+
+export type SiteConfig = { ga4_id: string; meta_pixel_id: string; google_verification: string; default_description: string }
+const NO_CONFIG: SiteConfig = { ga4_id: "", meta_pixel_id: "", google_verification: "", default_description: "" }
+
+// Analytics ids and search-engine settings (admin → Settings → SEO & analytics).
+export async function getSiteConfig(): Promise<SiteConfig> {
+  "use cache"
+  cacheLife("minutes")
+  cacheTag("site-config")
+  try {
+    return { ...NO_CONFIG, ...(await sdk.client.fetch<Partial<SiteConfig>>("/store/site-config")) }
+  } catch {
+    return NO_CONFIG
+  }
+}
+
+export type ReviewSummary = { count: number; average: number; stars: [number, number, number, number, number] }
+export type PublicReview = {
+  id: string
+  rating: number
+  title: string | null
+  body: string
+  name: string
+  city: string | null
+  verified: boolean
+  source: "website" | "admin" | "etsy"
+  reply: string | null
+  date: string
+}
+
+// Star summaries for the shop's product cards: { [product id]: { average, count } }.
+export async function getReviewSummaries(): Promise<Record<string, { average: number; count: number }>> {
+  "use cache"
+  cacheLife("minutes")
+  cacheTag("reviews")
+  try {
+    return (await sdk.client.fetch<{ summaries: Record<string, { average: number; count: number }> }>("/store/reviews/summary")).summaries
+  } catch {
+    return {}
+  }
+}
+
+// A product's approved reviews, newest first.
+export async function getProductReviews(productId: string): Promise<{ summary: ReviewSummary; reviews: PublicReview[] }> {
+  "use cache"
+  cacheLife("minutes")
+  cacheTag("reviews")
+  try {
+    return await sdk.client.fetch(`/store/reviews?product_id=${encodeURIComponent(productId)}`)
+  } catch {
+    return { summary: { count: 0, average: 0, stars: [0, 0, 0, 0, 0] }, reviews: [] }
   }
 }

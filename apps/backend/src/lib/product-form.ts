@@ -36,6 +36,12 @@ export type ProductForm = {
   material_text?: string | null
   age?: string | null
   assembly?: string | null
+  // Extra details kept in product metadata.
+  care?: string | null
+  lead_time?: string | null
+  engraving?: Engraving | null
+  seo_title?: string | null
+  seo_description?: string | null
   badge?: Badge | null
   length?: number | null
   width?: number | null
@@ -51,6 +57,20 @@ export type ProductForm = {
 }
 
 type Row = Record<string, any>
+
+// Personalisation: a text box on the product page (a name on a board, a line on a trophy).
+export type Engraving = { enabled: boolean; label: string; max: number; required: boolean }
+export const readEngraving = (meta: Record<string, unknown>): Engraving | null => {
+  const e = meta.engraving as Partial<Engraving> | null | undefined
+  if (!e || typeof e !== "object" || !e.enabled) return null
+  return {
+    enabled: true,
+    label: typeof e.label === "string" && e.label.trim() ? e.label.trim() : "Engraving text",
+    max: Math.min(200, Math.max(1, Number(e.max) || 30)),
+    required: !!e.required,
+  }
+}
+const str = (v: unknown) => (typeof v === "string" ? v : "")
 
 const slug = (s: string) =>
   s
@@ -231,6 +251,11 @@ export const loadForm = async (container: MedusaContainer, id: string): Promise<
     material_text: p.material ?? "",
     age: (meta.age as string) ?? "",
     assembly: (meta.assembly as string) ?? "",
+    care: str(meta.care),
+    lead_time: str(meta.lead_time),
+    engraving: readEngraving(meta),
+    seo_title: str(meta.seo_title),
+    seo_description: str(meta.seo_description),
     badge: readBadge(meta),
     length: p.length ?? null,
     width: p.width ?? null,
@@ -437,7 +462,13 @@ export const saveForm = async (
     weight: f.weight ?? null,
     collection_id: f.collection_id || null,
     categories: f.category_ids.map((cid) => ({ id: cid })),
-    metadata: { ...((existing?.metadata ?? {}) as Record<string, unknown>), age: f.age?.trim() || null, assembly: f.assembly?.trim() || null, ...(f.badge !== undefined ? { badge: badgeForMetadata(f.badge) } : {}) },
+    metadata: { ...((existing?.metadata ?? {}) as Record<string, unknown>), age: f.age?.trim() || null, assembly: f.assembly?.trim() || null,
+      ...(f.care !== undefined ? { care: f.care?.trim() || null } : {}),
+      ...(f.lead_time !== undefined ? { lead_time: f.lead_time?.trim() || null } : {}),
+      ...(f.engraving !== undefined ? { engraving: f.engraving?.enabled ? f.engraving : null } : {}),
+      ...(f.seo_title !== undefined ? { seo_title: f.seo_title?.trim() || null } : {}),
+      ...(f.seo_description !== undefined ? { seo_description: f.seo_description?.trim() || null } : {}),
+      ...(f.badge !== undefined ? { badge: badgeForMetadata(f.badge) } : {}) },
     images,
     thumbnail: f.images[0] ?? allImages[0] ?? null,
   }

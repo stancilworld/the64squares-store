@@ -120,6 +120,7 @@ const loadOrder = async (container: MedusaContainer, id: string) => {
       "items.product_title",
       "items.title",
       "items.variant_title",
+      "items.metadata",
       "items.quantity",
       "items.unit_price",
       "items.total",
@@ -244,7 +245,11 @@ export const computeLines = (order: Row, inv: FrozenInvoice, intraState: boolean
     const tax = r2(total - taxable)
     const half = r2(tax / 2)
     return {
-      description: [i.product_title ?? i.title, i.variant_title && i.variant_title !== "Default" ? i.variant_title : ""]
+      description: [
+        i.product_title ?? i.title,
+        i.variant_title && i.variant_title !== "Default" ? i.variant_title : "",
+        typeof i.metadata?.engraving === "string" && i.metadata.engraving ? `Personalisation: "${i.metadata.engraving}"` : "",
+      ]
         .filter(Boolean)
         .join(" — "),
       hsn: i.product?.hs_code || inv.seller.default_hsn,

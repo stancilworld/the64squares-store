@@ -45,6 +45,7 @@ export const PERMISSIONS: Permission[] = [
   { key: "promotions.manage", group: "Customers & marketing", label: "Discounts & promotions", description: "See, create and change discount codes, promotions and campaigns.", default: false },
   { key: "messages.view", group: "Customers & marketing", label: "Read contact messages", description: "See messages sent with the Contact page form and mark them as answered.", default: true },
   { key: "mailbox.view", group: "Customers & marketing", label: "Read & answer the email inbox", description: "See every email sent to the shop's mailbox (e.g. info@the64squares.in) and reply from it.", default: false },
+  { key: "reviews.manage", group: "Customers & marketing", label: "Product reviews", description: "Approve or hide shoppers' reviews, answer them, and add reviews received elsewhere.", default: true },
   { key: "subscribers.view", group: "Customers & marketing", label: "View newsletter subscribers", description: "See the newsletter sign-up list.", default: false },
 
   // Website
@@ -63,7 +64,7 @@ export const PERMISSIONS: Permission[] = [
   { key: "tournaments.checkin", group: "Tournaments", label: "Players & check-in", description: "See who registered (names, emails, phones), download the list, check players in at the door, cancel a place.", default: true },
 
   // Settings
-  { key: "settings.branding", group: "Settings", label: "Branding & upload limits", description: "The admin sign-in logo and the file size limits.", default: false },
+  { key: "settings.branding", group: "Settings", label: "Branding, SEO & upload limits", description: "The admin sign-in logo, SEO & analytics, and the file size limits.", default: false },
   { key: "settings.shipping", group: "Settings", label: "Shipping & locations", description: "Shipping options and profiles, stock locations, delivery areas.", default: false },
   { key: "settings.store", group: "Settings", label: "Store, payments & tax", description: "Store details, Payments & delivery (Cash on Delivery, online payment), regions, currencies, tax, sales channels, return and refund reasons.", default: false },
 ]
@@ -141,6 +142,7 @@ const RULES: Rule[] = [
   r("write", /^\/site-navigation(\/|$)/, "content.footer"),
   r("write", /^\/contact-page(\/|$)/, "content.contact"),
   r("any", /^\/contact-messages(\/|$)/, "messages.view"),
+  r("any", /^\/reviews(\/|$)/, "reviews.manage"),
   r("any", /^\/mailbox(\/|$)/, "mailbox.view"),
   // Past chats hold what shoppers typed: the same people who read contact messages.
   r("any", /^\/chatbot\/chats(\/|$)/, "messages.view"),
@@ -148,6 +150,7 @@ const RULES: Rule[] = [
   r("write", /^\/pages(\/|$)/, "content.help"),
   r("write", /^\/posts(\/|$)/, "content.blog"),
   r("write", /^\/upload-limits(\/|$)/, "settings.branding"),
+  r("write", /^\/seo-settings(\/|$)/, "settings.branding"),
   r("write", /^\/checkout-settings(\/|$)/, "settings.store"),
   r("write", /^\/invoice-settings(\/|$)/, "settings.store"),
   r("write", /^\/invoices(\/|$)/, "orders.edit"),

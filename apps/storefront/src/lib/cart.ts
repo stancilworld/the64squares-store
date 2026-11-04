@@ -53,9 +53,11 @@ export async function getCartCount(): Promise<number> {
   }
 }
 
-export async function addToCart(variantId: string, quantity = 1) {
+export async function addToCart(variantId: string, quantity = 1, engraving?: string | null) {
   const id = await ensureCart()
-  await sdk.store.cart.createLineItem(id, { variant_id: variantId, quantity })
+  // Personalisation text: one line, printable characters only.
+  const text = (engraving ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 200)
+  await sdk.store.cart.createLineItem(id, { variant_id: variantId, quantity, ...(text ? { metadata: { engraving: text } } : {}) })
   return { ok: true }
 }
 

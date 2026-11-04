@@ -90,6 +90,7 @@ module.exports = defineConfig({
     { resolve: "./src/modules/blog" },
     { resolve: "./src/modules/tournament" },
     { resolve: "./src/modules/activity" },
+    { resolve: "./src/modules/review" },
     {
       // Uploaded images are stored on the server and served from <backend>/static.
       resolve: "@medusajs/medusa/file",

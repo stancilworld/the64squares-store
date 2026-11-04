@@ -21,6 +21,7 @@ export const ORDER_FIELDS = [
   "items.title",
   "items.product_title",
   "items.variant_title",
+  "items.metadata",
   "items.product_handle",
   "items.thumbnail",
   "items.quantity",
@@ -86,6 +87,8 @@ export const orderView = (o: Row) => {
       id: i.id,
       title: i.product_title ?? i.title,
       variant_title: i.variant_title,
+      // Personalisation text the shopper typed (a name to engrave), if any.
+      engraving: typeof i.metadata?.engraving === "string" && i.metadata.engraving ? (i.metadata.engraving as string) : null,
       handle: i.product_handle,
       thumbnail: i.thumbnail,
       quantity: Number(i.quantity),

@@ -3,6 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useSwatch } from "./colours-provider"
+import { Stars } from "./stars"
 import { BADGE_CLASSES } from "@/lib/badges"
 import { formatPrice } from "@/lib/format"
 import type { ProductCard as Card } from "@/lib/types"
@@ -47,6 +48,14 @@ export function ProductCard({ product }: { product: Card; size?: "lg" | "md" }) 
         {from && "From "}
         {formatPrice(product.price)}
       </p>
+      {product.rating && product.rating.count > 0 && (
+        <p className="mt-1 flex items-center gap-1.5 text-[13px] text-muted">
+          <Stars value={product.rating.average} size={13} />
+          <span>
+            {product.rating.average.toFixed(1)} ({product.rating.count})
+          </span>
+        </p>
+      )}
       {product.colours.length > 1 && (
         <ul aria-label="Finishes" className="mt-2.5 flex flex-wrap gap-1.5">
           {product.colours.slice(0, 5).map((c) => (
