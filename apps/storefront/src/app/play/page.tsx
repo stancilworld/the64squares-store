@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 async function Hub() {
   const pass = await getPlayPass()
-  return <PlayHub meId={pass?.me.id ?? null} myName={pass?.me.name ?? null} signedIn={!!pass} />
+  return <PlayHub meId={pass?.me.id ?? null} myName={pass?.me.name ?? null} signedIn={!!pass} token={pass?.token ?? null} />
 }
 
 export default function PlayPage() {

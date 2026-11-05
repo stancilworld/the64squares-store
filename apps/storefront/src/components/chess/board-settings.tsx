@@ -136,6 +136,7 @@ export function BoardSettingsModal() {
           {toggle("Sounds", s.sound, () => setBoardSettings({ sound: !s.sound }))}
           {toggle("Show legal moves", s.legalMoves, () => setBoardSettings({ legalMoves: !s.legalMoves }))}
           {toggle("Premoves (move while your opponent thinks)", s.premove, () => setBoardSettings({ premove: !s.premove }))}
+          {toggle("Chat during games", s.chat, () => setBoardSettings({ chat: !s.chat }))}
           <div className="flex items-center justify-between py-2 text-[15px]">
             Piece animation
             <div className="flex gap-1">

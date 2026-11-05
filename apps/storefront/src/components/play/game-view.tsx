@@ -16,6 +16,8 @@ import { playSound, soundForSan } from "@/lib/chess/sounds"
 import type { PlayPass } from "@/lib/play"
 import type { PublicProfile } from "@/lib/profile-types"
 import { usePlayPass } from "./use-play-pass"
+import { type ChatMsg, GameChat } from "./game-chat"
+import { useBoardSettings } from "@/lib/chess/settings"
 import { GAME_URL, type GameState, LIVE_KEY, type Presence, resultText, SPEED_LABEL, speedOf, tcText } from "@/lib/game-types"
 
 type Props = { id: string; initialPass: PlayPass | null }
@@ -59,6 +61,10 @@ export function GameView({ id, initialPass }: Props) {
   const [nextIn, setNextIn] = useState(3)
   const link = useSyncExternalStore(noSubscribe, () => window.location.href, () => "")
   const [profiles, setProfiles] = useState<Record<string, PublicProfile>>({})
+  // Chat: messages with the time this page received them (for the bubbles by the names).
+  const [chat, setChat] = useState<(ChatMsg & { seen: number })[]>([])
+  const [muted, setMuted] = useState(false)
+  const settings = useBoardSettings()
 
   // A move queued while the opponent thinks; played as soon as it's our turn, if still legal.
   const [premove, setPremoveState] = useState<Premove | null>(null)
@@ -133,15 +139,20 @@ export function GameView({ id, initialPass }: Props) {
     const s = io(GAME_URL, { path: "/game/socket.io", auth: token ? { token } : {}, transports: ["websocket", "polling"] })
     socket.current = s
     const watch = () =>
-      s.emit("game:watch", id, (res: { ok: boolean; game?: GameState; presence?: Presence | null; error?: string }) => {
+      s.emit("game:watch", id, (res: { ok: boolean; game?: GameState; presence?: Presence | null; chat?: ChatMsg[]; error?: string }) => {
         if (res.ok && res.game) {
           apply(res.game)
+          setChat((res.chat ?? []).map((m) => ({ ...m, seen: 0 })))
           setPresence(res.presence ? { ...res.presence, at: performance.now() } : null)
           setNotice(null)
         } else setError(res.error === "not-found" ? "This game doesn't exist." : "Couldn't load the game.")
       })
     s.on("connect", watch)
     s.on("game:state", (g: GameState) => g.id === id && apply(g))
+    s.on("game:chat", (m: ChatMsg & { game: string }) => {
+      if (m.game !== id) return
+      setChat((list) => [...list.filter((x) => x.id !== m.id), { ...m, seen: performance.now() }].slice(-30))
+    })
     s.on("game:presence", (p: Presence) => p.id === id && setPresence({ ...p, at: performance.now() }))
     s.on("game:rematch", (r: { id: string; by?: string | null; game_id?: string; declined?: boolean }) => {
       if (r.id !== id) return
@@ -410,6 +421,20 @@ export function GameView({ id, initialPass }: Props) {
   const hasClock = game.initial_ms > 0
   const speed = speedOf(game.initial_ms, game.increment_ms)
 
+  // The other side's latest chat message, by their name for a few seconds.
+  const bubble = (c: Colour) => {
+    if (!settings.chat || (muted && c !== myColour)) return null
+    const m = [...chat].reverse().find((x) => x.from === c)
+    return m && m.seen && now - m.seen < 4000 ? m.text : null
+  }
+  const canChat = settings.chat && !!myColour && (game.status === "active" || game.status === "finished") && game.mode !== "computer"
+  const opponentId = myColour ? (myColour === "w" ? game.black?.id : game.white?.id) : null
+  const canType = game.mode === "friend" && !!meId && !meId.startsWith("guest_") && !!opponentId && !opponentId.startsWith("guest_")
+  const sendChat = (kind: ChatMsg["kind"], text: string) =>
+    emit<{ ok: boolean; error?: string }>("game:chat", { id, kind, text }).then((r) =>
+      r.ok ? null : r.error === "slow-down" ? "Slow down a little." : r.error === "quick-only" ? "Typing is for games with friends." : "Couldn't send."
+    )
+
   const bar = (c: Colour) => {
     const p = c === "w" ? game.white : game.black
     const gone = active && presence && !presence[c].online && c !== myColour
@@ -427,7 +452,15 @@ export function GameView({ id, initialPass }: Props) {
         taken={mat.taken[c]}
         lead={c === "w" ? mat.lead : -mat.lead}
         clock={hasClock ? { ms: clockOf(c), running: game.clock_running === c } : null}
-        note={gone && claimIn != null ? "Left the game" : game.draw_offer === c && active ? <span className="text-[var(--g-gold)]">Offers a draw</span> : null}
+        note={
+          gone && claimIn != null ? (
+            "Left the game"
+          ) : game.draw_offer === c && active ? (
+            <span className="text-[var(--g-gold)]">Offers a draw</span>
+          ) : bubble(c) ? (
+            <span className="menu-rise inline-block rounded-full bg-[var(--g-panel-3)] px-2 text-[12px] font-semibold text-[var(--g-text)]">{bubble(c)}</span>
+          ) : null
+        }
       />
     )
   }
@@ -632,6 +665,7 @@ export function GameView({ id, initialPass }: Props) {
             )}
           </p>
           {statusCard}
+          {canChat && <GameChat messages={chat} me={myColour} canType={canType} onSend={sendChat} muted={muted} onMute={() => setMuted((m) => !m)} />}
           <MovePanel moves={game.moves} ply={shownPly} onGo={goTo} onFlip={() => setFlipped((f) => !f)} className="order-first lg:order-none" />
         </>
       }

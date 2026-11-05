@@ -6,6 +6,7 @@ import { Avatar, LevelBadge } from "@/components/play/avatar"
 import { GIcon } from "@/components/play-shell/icons"
 import { GAME_URL, tcText } from "@/lib/game-types"
 import { TITLE_COLOURS } from "@/lib/profile-types"
+import { DailyMissions } from "./menu/missions"
 import { ART, useLobby, useMyProfile } from "./menu/screen"
 
 type Live = { id: string; white_name: string | null; black_name: string | null; initial_ms: number; increment_ms: number }
@@ -47,7 +48,7 @@ const greeting = () => {
 }
 
 // The Play home screen: a big Play button, the player's level and ratings, and the ways to play.
-export function PlayHub({ meId, myName, signedIn }: { meId: string | null; myName: string | null; signedIn: boolean }) {
+export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null; myName: string | null; signedIn: boolean; token: string | null }) {
   const [live, setLive] = useState<Live | null>(null)
   const [hello, setHello] = useState("Welcome back")
   const profile = useMyProfile(signedIn ? meId : null)
@@ -247,6 +248,12 @@ export function PlayHub({ meId, myName, signedIn }: { meId: string | null; myNam
           </Link>
         ))}
       </nav>
+
+      {signedIn && (
+        <div className="order-3 lg:order-none lg:col-span-2">
+          <DailyMissions token={token} signedIn={signedIn} />
+        </div>
+      )}
 
       <div className="menu-rise order-4 grid grid-cols-2 gap-2 [animation-delay:380ms] sm:grid-cols-4 sm:gap-3 lg:order-none lg:col-span-2">
         {LINKS.map((l) => (

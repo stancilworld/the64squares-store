@@ -2,6 +2,8 @@ import http from "node:http"
 import { Server, type Socket } from "socket.io"
 import { playerFromToken } from "./auth.js"
 import { migratePuzzles, puzzleRoute } from "./puzzles.js"
+import { chatHistory, dropChat, registerChat } from "./chat.js"
+import { migrateMissions, missionRoute } from "./missions.js"
 import { config } from "./config.js"
 import { gamePgn, leaderboard, liveGamesFor, migrate, playerStats, pool, ratingsFor, recentGamesFor } from "./db.js"
 import { type Color, type Game, isGuest, type Player } from "./game.js"
@@ -100,6 +102,10 @@ const server = http.createServer(async (req, res) => {
       }
     })
     if (puzzles) return json(res, puzzles.status, puzzles.body, origin)
+    if (path.startsWith("/missions")) {
+      const r = await missionRoute(req.method ?? "GET", path, await playerFromToken(bearer(req)))
+      if (r) return json(res, r.status, r.body, origin)
+    }
     if (path === "/health") return send(res, 200, JSON.stringify({ ok: true, live_games: manager.liveCount() }), "application/json", origin)
     let m = /^\/games\/([A-Za-z0-9]{6,20})\.pgn$/.exec(path)
     if (m && req.method === "GET") {
@@ -172,7 +178,10 @@ const io = new Server(server, {
 const room = (id: string) => `game:${id}`
 const manager = new GameManager((view) => {
   io.to(room(view.id)).emit("game:state", view)
-  if (view.status === "finished" || view.status === "aborted") presence.delete(view.id)
+  if (view.status === "finished" || view.status === "aborted") {
+    presence.delete(view.id)
+    setTimeout(() => dropChat(view.id), 15 * 60_000).unref()
+  }
 })
 
 // Rematch offers on finished games: game id → the player who offered.
@@ -272,7 +281,7 @@ io.on("connection", (socket) => {
       ;(socket.data.seats ??= []).push([id, colour])
       sendPresence(g)
     }
-    ack({ ok: true, game: g.view(Date.now()), you: player?.id ?? null, presence: g.r.status === "active" ? presenceView(g) : null })
+    ack({ ok: true, game: g.view(Date.now()), you: player?.id ?? null, presence: g.r.status === "active" ? presenceView(g) : null, chat: chatHistory(id) })
   })
 
   // Players ping every few seconds; the answer measures their round trip, which they report
@@ -420,6 +429,7 @@ io.on("connection", (socket) => {
   registerArena(io, socket, manager, me, limited)
   registerSeek(io, socket, manager, me, limited)
   registerFriends(io, socket, manager, me, limited)
+  registerChat(io, socket, manager, me)
   registerFairPlay(io, socket, manager, me)
 })
 
@@ -429,6 +439,7 @@ const main = async () => {
   await migrateFriends()
   await migrateFairPlay()
   await migratePuzzles()
+  await migrateMissions()
   startFairPlay(manager)
   // Experience for both players when a game against a person ends.
   manager.whenGameEnds(async (g) => {
