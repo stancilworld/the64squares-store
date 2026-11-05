@@ -159,11 +159,18 @@ def wood(name, light, dark, scale=2.2):
     ramp = n.new("ShaderNodeValToRGB")
     ramp.color_ramp.elements[0].color = (*light, 1); ramp.color_ramp.elements[1].color = (*dark, 1)
     ramp.color_ramp.elements[0].position = 0.25; ramp.color_ramp.elements[1].position = 0.95
+    # A gentle grain: the two colours are close, so the rings read as subtle variation, not stripes.
     l.new(tc.outputs["Object"], mp.inputs["Vector"]); l.new(mp.outputs["Vector"], wave.inputs["Vector"])
     l.new(wave.outputs["Fac"], ramp.inputs["Fac"]); l.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
-    bsdf.inputs["Roughness"].default_value = 0.42
-    bsdf.inputs["Coat Weight"].default_value = 0.35
-    bsdf.inputs["Coat Roughness"].default_value = 0.12
+    # Satin-finished wood: a dielectric (no metal), rough enough that highlights are broad and
+    # soft, a lowered specular level, and only a trace of a matte clear coat. (It was roughness
+    # 0.42 with a 0.35, 0.12-rough clear coat: mirror-like hot spots that read as gold/chrome.)
+    bsdf.inputs["Metallic"].default_value = 0.0
+    bsdf.inputs["Roughness"].default_value = ROUGHNESS[name]
+    bsdf.inputs["Specular IOR Level"].default_value = 0.38
+    bsdf.inputs["Coat Weight"].default_value = 0.03
+    bsdf.inputs["Coat Roughness"].default_value = 0.8
+    bsdf.inputs["Emission Strength"].default_value = 0.0
     return m
 
 def srgb(h):
@@ -172,11 +179,13 @@ def srgb(h):
 
 def scene():
     sc = bpy.context.scene
-    sc.render.engine = "CYCLES"; sc.cycles.samples = 96; sc.cycles.use_denoising = True; sc.cycles.device = "CPU"
+    sc.render.engine = "CYCLES"; sc.cycles.samples = int(os.environ.get("SAMPLES", 96)); sc.cycles.use_denoising = True; sc.cycles.device = "CPU"
     sc.render.film_transparent = True; sc.render.resolution_x = RES; sc.render.resolution_y = int(RES * TALL) if STYLE == "tabletop" else RES
     sc.view_settings.view_transform = "Standard"; sc.view_settings.look = "None"
     world = bpy.data.worlds.new("w"); sc.world = world; world.use_nodes = True
-    world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.9, 0.9, 0.9, 1); world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.4
+    # Soft, slightly warm surroundings. (Neutral grey at 0.4 washed the dark pieces out to grey.)
+    world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.92, 0.88, 0.82, 1)
+    world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.4 if STYLE != "tabletop" else 0.26
     cam = bpy.data.cameras.new("cam"); cam.type = "ORTHO"; cam.ortho_scale = 1.78
     co = bpy.data.objects.new("cam", cam); sc.collection.objects.link(co); sc.camera = co
     if STYLE == "tabletop":
@@ -196,9 +205,12 @@ def scene():
             ld = bpy.data.lights.new(kind, "AREA"); ld.energy = energy; ld.size = size
             lo = bpy.data.objects.new(kind, ld); lo.location = loc; lo.rotation_euler = rot; sc.collection.objects.link(lo)
         # Key light high and in front-left: a short, soft shadow falls behind the piece.
-        light("key", (-1.0, -1.6, 6.0), 560, 3.0, (math.radians(15), 0, math.radians(-30)))
-        light("fill", (3.5, -3.5, 2.5), 110, 4, (math.radians(62), 0, math.radians(45)))
-        light("rim", (1, 4, 4), 380, 2.5, (math.radians(-45), 0, math.radians(170)))
+        # Same lights and directions as before, about 40% dimmer and broader, so a piece's lit
+        # mid-tones land on its own colour instead of blowing out (the lights had been set
+        # for the old darker, orange wood).
+        light("key", (-1.0, -1.6, 6.0), 340, 3.6, (math.radians(15), 0, math.radians(-30)))
+        light("fill", (3.5, -3.5, 2.5), 80, 4.5, (math.radians(62), 0, math.radians(45)))
+        light("rim", (1, 4, 4), 170, 3.0, (math.radians(-45), 0, math.radians(170)))
         return
     el = math.radians(16)
     d = 10
@@ -206,12 +218,17 @@ def scene():
     def light(kind, loc, energy, size, rot):
         ld = bpy.data.lights.new(kind, "AREA"); ld.energy = energy; ld.size = size
         lo = bpy.data.objects.new(kind, ld); lo.location = loc; lo.rotation_euler = rot; sc.collection.objects.link(lo)
-    light("key", (-3, -4, 5), 620, 3.5, (math.radians(45), 0, math.radians(-35)))
-    light("fill", (4, -3, 2), 170, 4, (math.radians(70), 0, math.radians(50)))
-    light("rim", (1, 4, 4), 800, 2.5, (math.radians(-45), 0, math.radians(170)))
+    # Same rig, dimmed and softened to match the tabletop pictures' satin look.
+    light("key", (-3, -4, 5), 380, 4.0, (math.radians(45), 0, math.radians(-35)))
+    light("fill", (4, -3, 2), 120, 4.5, (math.radians(70), 0, math.radians(50)))
+    light("rim", (1, 4, 4), 360, 3.0, (math.radians(-45), 0, math.radians(170)))
 
 BUILD = {"P": pawn, "R": rook, "N": knight, "B": bishop, "Q": queen, "K": king}
-MATS = {"w": ("#e3ac68", "#c98a4b"), "b": ("#3d2213", "#1e0f06")}
+# Piece colours (sRGB hex, converted to linear for Blender by srgb()): warm ivory / champagne
+# wood around #CBB18C and walnut / espresso around #493428, each a light and a dark tone for
+# the grain. (They were #e3ac68/#c98a4b: saturated orange that rendered as gold.)
+MATS = {"w": ("#d4be9c", "#bea580"), "b": ("#503a2d", "#382a23")}
+ROUGHNESS = {"w": 0.70, "b": 0.68}
 
 for colour in ("w", "b"):
     for code, fn in BUILD.items():
