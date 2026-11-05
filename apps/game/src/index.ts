@@ -1,6 +1,7 @@
 import http from "node:http"
 import { Server, type Socket } from "socket.io"
 import { playerFromToken } from "./auth.js"
+import { migratePuzzles, puzzleRoute } from "./puzzles.js"
 import { config } from "./config.js"
 import { gamePgn, leaderboard, liveGamesFor, migrate, playerStats, ratingsFor, recentGamesFor } from "./db.js"
 import { type Color, type Game, isGuest, type Player } from "./game.js"
@@ -90,6 +91,15 @@ const server = http.createServer(async (req, res) => {
       const records = ids.length <= 2 ? await Promise.all(rows.map((p) => playerStats(p.player_id).then((s) => s.people))) : []
       return json(res, 200, { profiles: rows.map((p, i) => ({ ...publicProfile(p), online: online.has(p.player_id), record: records[i] })) }, origin)
     }
+    const puzzles = await puzzleRoute(req.method ?? "GET", path, url.searchParams, path.startsWith("/puzzles") ? await playerFromToken(bearer(req)) : null, async () => {
+      const raw = await readBody(req, 10_000)
+      try {
+        return raw?.length ? (JSON.parse(raw.toString("utf8")) as Record<string, unknown>) : null
+      } catch {
+        return null
+      }
+    })
+    if (puzzles) return json(res, puzzles.status, puzzles.body, origin)
     if (path === "/health") return send(res, 200, JSON.stringify({ ok: true, live_games: manager.liveCount() }), "application/json", origin)
     let m = /^\/games\/([A-Za-z0-9]{6,20})\.pgn$/.exec(path)
     if (m && req.method === "GET") {
@@ -405,6 +415,7 @@ const main = async () => {
   await migrateProfiles()
   await migrateFriends()
   await migrateFairPlay()
+  await migratePuzzles()
   startFairPlay(manager)
   // Experience for both players when a game against a person ends.
   manager.whenGameEnds(async (g) => {

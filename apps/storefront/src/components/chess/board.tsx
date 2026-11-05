@@ -37,6 +37,10 @@ type Props = {
   onPremove?: (p: Premove | null) => void
   // Drawn over the board (match intro, result).
   overlay?: ReactNode
+  // Extra square colours (puzzle hints, right/wrong moves).
+  marks?: Record<string, string>
+  // Small preview: no coordinates.
+  compact?: boolean
 }
 
 export type Premove = { from: Square; to: Square }
@@ -66,7 +70,7 @@ const pieceImages = (set: keyof typeof PIECE_SETS): PieceRenderObject =>
 
 // The chessboard everywhere on the site: legal-move dots, highlights, drag or click to move,
 // a piece picker for promotions, and the person's chosen board and pieces.
-export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove, premoveFor, premove, onPremove, overlay }: Props) {
+export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove, premoveFor, premove, onPremove, overlay, marks, compact }: Props) {
   const settings = useBoardSettings()
   const theme = BOARD_THEMES[settings.theme]
   const [picked, setSelected] = useState<Square | null>(null)
@@ -163,8 +167,9 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
         for (const m of targets) add(m.to, { backgroundImage: chess.get(m.to as Square) ? RING : DOT, cursor: "pointer" })
       }
     }
+    for (const [sq, colour] of Object.entries(marks ?? {})) add(sq, { backgroundColor: colour })
     return st
-  }, [lastMove, chess, selected, targets, settings.legalMoves, premove, canPremove, preTargets])
+  }, [lastMove, chess, selected, targets, settings.legalMoves, premove, canPremove, preTargets, marks])
 
   const pieces = useMemo(() => pieceImages(settings.pieces), [settings.pieces])
 
@@ -186,6 +191,7 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
           boardOrientation: orientation,
           pieces,
           allowDragging: canMove || canPremove,
+          showNotation: !compact,
           canDragPiece: ({ piece }) => (canMove && piece.pieceType[0] === movable) || (canPremove && piece.pieceType[0] === premoveFor),
           onPieceDrag: ({ square }) => square && setSelected(square as Square),
           onPieceDrop: ({ sourceSquare, targetSquare }) => {

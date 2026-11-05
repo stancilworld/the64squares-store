@@ -19,6 +19,7 @@ const QUICK = [
 const MODES = [
   { href: "/play/online", art: ART.online, title: "Play Online", text: "Rated games against a player of your level", glow: "rgba(230,197,127,0.22)" },
   { href: "/play/computer", art: ART.computer, title: "Vs Computer", text: "Eight bots, beginner to master", glow: "rgba(120,190,255,0.16)" },
+  { href: "/play/puzzles", art: ART.heroDark, title: "Puzzles", text: "Daily puzzle, trainer and Puzzle Rush", glow: "rgba(255,140,90,0.18)" },
   { href: "/play/friend", art: ART.friend, title: "Play a Friend", text: "Send a link on WhatsApp", glow: "rgba(110,215,150,0.16)" },
   { href: "/play/tournaments", art: ART.tournaments, title: "Tournaments", text: "Free online arenas", glow: "rgba(200,140,230,0.18)" },
 ]
@@ -228,12 +229,12 @@ export function PlayHub({ meId, myName, signedIn }: { meId: string | null; myNam
         </section>
 
       {/* Modes */}
-      <nav aria-label="Ways to play" className="order-2 grid grid-cols-2 gap-3 sm:gap-4 lg:order-none lg:col-span-2 lg:grid-cols-4">
+      <nav aria-label="Ways to play" className="order-2 grid grid-cols-2 gap-3 sm:gap-4 lg:order-none lg:col-span-2 lg:grid-cols-5">
         {MODES.map((m, i) => (
           <Link
             key={m.href}
             href={m.href}
-            className="menu-tile menu-rise flex min-h-[150px] flex-col p-4 sm:min-h-[190px] sm:p-5"
+            className={`menu-tile menu-rise flex min-h-[150px] flex-col p-4 sm:min-h-[190px] sm:p-5 ${i === 2 ? "col-span-2 lg:col-span-1" : ""}`}
             style={{ animationDelay: `${120 + i * 60}ms`, ["--tile-glow" as string]: m.glow }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}

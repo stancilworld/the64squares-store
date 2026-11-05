@@ -11,6 +11,7 @@ export const PLAY_NAV = [
   { href: "/play", label: "Play", icon: "home" },
   { href: "/play/online", label: "Online", icon: "bolt" },
   { href: "/play/computer", label: "Computer", icon: "cpu" },
+  { href: "/play/puzzles", label: "Puzzles", icon: "puzzle" },
   { href: "/play/friend", label: "Invite link", icon: "link" },
   { href: "/play/friends", label: "Friends", icon: "friend" },
   { href: "/play/tournaments", label: "Tournaments", icon: "trophy" },
@@ -18,7 +19,7 @@ export const PLAY_NAV = [
   { href: "/play/leaderboard", label: "Leaderboard", icon: "chart" },
   { href: "/play/profile", label: "Profile", icon: "user" },
 ]
-const MOBILE_TABS = ["/play", "/play/online", "/play/friends", "/play/history", "/play/profile"]
+const MOBILE_TABS = ["/play", "/play/online", "/play/puzzles", "/play/friends", "/play/profile"]
 
 const isActive = (path: string, href: string) =>
   href === "/play"
@@ -109,7 +110,7 @@ export function MobileBar({ showSwitch = true }: { showSwitch?: boolean }) {
 export function MobileTabs() {
   const path = usePathname()
   // While playing, the board and its buttons get the whole screen.
-  if (/^\/play\/[A-Za-z0-9]{10}$/.test(path) || path === "/play/computer") return null
+  if (/^\/play\/[A-Za-z0-9]{10}$/.test(path) || path === "/play/computer" || /^\/play\/puzzles\/.+/.test(path)) return null
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 grid h-[62px] grid-cols-5 border-t border-[var(--g-line)] bg-[var(--g-side)] pb-[env(safe-area-inset-bottom)] lg:hidden">
       {MOBILE_TABS.map((href) => {

@@ -114,6 +114,18 @@ if [ -f "$NGINX_CONF" ] && ! grep -q 'location /game/' "$NGINX_CONF"; then
     echo "Warning: the web server rejected the play route, so it was left as it was. Online play won't connect."
   fi
 fi
+# Puzzles: the first time, download the Lichess puzzle database (free, CC0) and keep about
+# 100,000 well-rated puzzles. Takes a few minutes; later updates skip it.
+if [ ! -f "$BASE/puzzles-imported" ]; then
+  echo "-> Importing chess puzzles (one time, a few minutes)"
+  command -v zstd >/dev/null || DEBIAN_FRONTEND=noninteractive apt-get install -y -qq zstd >/dev/null 2>&1
+  if curl -fsSL https://database.lichess.org/lichess_db_puzzle.csv.zst | zstd -dc |
+    (cd "$APP/apps/game" && set -a && . "$BASE/game.env" && set +a && node dist/import-puzzles.js); then
+    touch "$BASE/puzzles-imported"
+  else
+    echo "Warning: the puzzles couldn't be imported this time; the next update tries again."
+  fi
+fi
 systemctl restart the64squares-game
 for _ in $(seq 1 20); do
   curl -sf "http://localhost:$GAME_PORT/game/health" >/dev/null && break
