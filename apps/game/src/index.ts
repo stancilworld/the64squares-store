@@ -129,7 +129,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, JSON.stringify({ speed, players: await leaderboard(speed) }), "application/json", origin)
     }
     if (path === "/lobby" && req.method === "GET") {
-      return send(res, 200, JSON.stringify({ playing: manager.liveCount(), seeking: seekCounts(), time_controls: SEEK_TIME_CONTROLS }), "application/json", origin)
+      return send(res, 200, JSON.stringify({ playing: manager.liveCount(), online: online.size, seeking: seekCounts(), time_controls: SEEK_TIME_CONTROLS }), "application/json", origin)
     }
     send(res, 404, JSON.stringify({ error: "not-found" }), "application/json", origin)
   } catch (e) {

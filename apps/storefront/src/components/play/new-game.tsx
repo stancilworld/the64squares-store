@@ -1,20 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { PanelHeader } from "@/components/play-shell/nav"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { io } from "socket.io-client"
-import { GAME_URL } from "@/lib/game-types"
+import { GAME_URL, TIME_CONTROLS } from "@/lib/game-types"
 import type { PlayPass } from "@/lib/play"
-import { TimeControlPicker } from "./time-control-picker"
+import { ColourPick, ScreenHeader } from "./menu/screen"
+import { TimeCards } from "./menu/time-cards"
 import { usePlayPass } from "./use-play-pass"
-
-const COLOURS = [
-  ["w", "White"],
-  ["random", "Random"],
-  ["b", "Black"],
-] as const
 
 // Play a friend: pick a time control and colour, then share the game's link.
 export function NewGame({ initialPass }: { initialPass: PlayPass | null }) {
@@ -22,7 +16,7 @@ export function NewGame({ initialPass }: { initialPass: PlayPass | null }) {
   const token = pass?.token ?? null
   const router = useRouter()
   const [tc, setTc] = useState("10+0")
-  const [colour, setColour] = useState<(typeof COLOURS)[number][0]>("random")
+  const [colour, setColour] = useState<"w" | "random" | "b">("random")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -45,41 +39,34 @@ export function NewGame({ initialPass }: { initialPass: PlayPass | null }) {
     })
   }
 
+  const label = TIME_CONTROLS.find((t) => t.tc === tc)?.detail ?? tc
   return (
-    <div className="flex min-h-0 flex-1 flex-col g-panel p-5 lg:overflow-y-auto">
-      <PanelHeader title="Play a friend" />
-      <p className="mt-2 text-[14px] g-muted">Create a game and send the link. It starts when your friend accepts.</p>
-      <div className="mt-4">
-        <TimeControlPicker value={tc} onChange={setTc} />
-      </div>
-      <p className="mt-4 text-[13px] font-medium">I play</p>
-      <div className="mt-2 grid grid-cols-3 gap-2">
-        {COLOURS.map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={colour === value}
-            onClick={() => setColour(value)}
-            className="g-choice h-[42px] text-[14px] font-semibold"
-          >
-            {label}
+    <div className="menu-stage mx-auto flex max-w-[980px] flex-col gap-6 pb-24 lg:pb-4">
+      <ScreenHeader title="Play a Friend" subtitle="Create a game and send the link. It starts when your friend opens it. Friendly games don't change ratings." />
+      <TimeCards value={tc} onChange={setTc} />
+      <section className="menu-rise [animation-delay:280ms]">
+        <h2 className="mb-2 text-[13px] font-bold uppercase tracking-[0.14em] text-[var(--g-gold)]">I play</h2>
+        <div className="max-w-[420px]">
+          <ColourPick value={colour} onChange={setColour} />
+        </div>
+      </section>
+      <div className="fixed inset-x-0 bottom-[62px] z-20 bg-gradient-to-t from-[var(--g-bg)] via-[var(--g-bg)]/95 to-transparent px-3 pb-3 pt-6 lg:static lg:bg-none lg:p-0">
+        <div className="mx-auto flex max-w-[980px] flex-col items-center gap-3 sm:flex-row">
+          <button type="button" disabled={busy || !token} onClick={create} className="menu-play flex h-[60px] w-full items-center justify-center sm:w-[320px]">
+            <span className="relative text-[19px] font-black uppercase tracking-wide">{busy ? "Creating…" : `Create ${label} game`}</span>
           </button>
-        ))}
+          {pass?.me.guest && (
+            <p className="g-muted text-center text-[13px] sm:text-left">
+              Playing as {pass.me.name}.{" "}
+              <Link href="/account?next=/play/friend" className="text-[var(--g-gold)] underline underline-offset-2">
+                Sign in
+              </Link>{" "}
+              to use your own name.
+            </p>
+          )}
+        </div>
+        {error && <p className="mt-3 text-center text-[14px] text-[#ff8a7d] sm:text-left">{error}</p>}
       </div>
-        <button type="button" disabled={busy || !token} onClick={create} className="g-btn g-btn-primary sticky bottom-[76px] z-10 mt-5 lg:static h-[48px] w-full text-[16px] disabled:opacity-60">
-          {busy ? "Creating…" : "Create game link"}
-        </button>
-      {pass?.me.guest && (
-        <p className="g-muted mt-3 text-[13px]">
-          Playing as {pass.me.name}.{" "}
-          <Link href="/account?next=/play/friend" className="text-[var(--g-gold)] underline underline-offset-2">
-            Sign in
-          </Link>{" "}
-          to use your own name.
-        </p>
-      )}
-      {error && <p className="mt-3 text-[14px] text-[#ff8a7d]">{error}</p>}
-      <p className="mt-3 text-[12px] g-muted">Games with friends are casual: they don&apos;t change your rating.</p>
     </div>
   )
 }

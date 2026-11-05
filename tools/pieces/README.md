@@ -10,3 +10,6 @@ and renders them with a stylized wood finish. The pieces are original to The 64 
 Then scale them into their squares (king 96% of the height, queen 92, bishop 88, knight 86,
 rook 80, pawn 76; 2.5% bottom margin) and save as 240 px WebP into
 `apps/storefront/public/pieces/wood3d/`. Change `MATS` for other finishes.
+
+The Play menu art in `apps/storefront/public/play-art/` (wK, bK, wN, wR, wP, bQ) comes from
+the same script with `RES = 800`, cropped to the piece and saved as 520 px WebP.

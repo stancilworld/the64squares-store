@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 import { NewGame } from "@/components/play/new-game"
-import { PreviewLayout } from "@/components/play/preview-board"
 import { getPlayPass } from "@/lib/play"
 import { Loading } from "../loading-text"
 
@@ -9,7 +8,7 @@ export const metadata: Metadata = { title: "Play a friend", description: "Create
 
 async function Friend() {
   const pass = await getPlayPass()
-  return <PreviewLayout myName={pass?.me.name} panel={<NewGame initialPass={pass} />} />
+  return <NewGame initialPass={pass} />
 }
 
 export default function FriendPage() {

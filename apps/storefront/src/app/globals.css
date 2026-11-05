@@ -284,3 +284,150 @@ body {
   .vs-left, .vs-right, .vs-mark, .vs-label, .rb-card, .rb-icon, .rb-confetti { animation: none !important; }
   .rb-confetti { display: none; }
 }
+
+/* ---- Play menus: home screen, mode tiles, setup screens ---- */
+.menu-stage {
+  position: relative;
+  isolation: isolate;
+}
+.menu-stage::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1100px 600px at 75% -10%, rgba(214, 176, 106, 0.13), transparent 60%),
+    radial-gradient(900px 700px at -10% 110%, rgba(60, 140, 100, 0.12), transparent 60%),
+    repeating-conic-gradient(rgba(255, 255, 255, 0.018) 0 25%, transparent 0 50%) 0 0 / 88px 88px;
+  mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, 0.55));
+}
+.menu-rise { animation: menu-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes menu-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+.menu-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  background:
+    radial-gradient(520px 340px at 82% 40%, rgba(230, 197, 127, 0.28), transparent 65%),
+    linear-gradient(135deg, #1d3328 0%, #142219 55%, #0f1a14 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+.menu-hero::after {
+  /* the edge of a board, receding */
+  content: "";
+  position: absolute;
+  right: -8%;
+  bottom: -38%;
+  width: 70%;
+  aspect-ratio: 1;
+  background: repeating-conic-gradient(#6b4a2b 0 25%, #c9a36b 0 50%) 0 0 / 25% 25%;
+  transform: perspective(700px) rotateX(62deg) rotateZ(-18deg);
+  opacity: 0.33;
+  mask-image: radial-gradient(closest-side, black 40%, transparent);
+  pointer-events: none;
+}
+.menu-hero-art {
+  filter: drop-shadow(0 26px 30px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 40px rgba(230, 197, 127, 0.25));
+  animation: menu-float 6s ease-in-out infinite;
+}
+@keyframes menu-float { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(1deg); } }
+
+.menu-play {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  background: linear-gradient(#f0d28c, #c99a4c);
+  color: #1d1408;
+  box-shadow: 0 6px 0 #8b6530, 0 14px 28px rgba(201, 154, 76, 0.28);
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.15s;
+}
+.menu-play::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.55) 45%, transparent 60%);
+  transform: translateX(-120%);
+  animation: menu-shine 3.6s 1s ease-in-out infinite;
+}
+.menu-play:hover { filter: brightness(1.05); }
+.menu-play:active { transform: translateY(4px); box-shadow: 0 2px 0 #8b6530; }
+@keyframes menu-shine { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+
+.menu-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  background: linear-gradient(160deg, var(--g-panel-2), var(--g-panel) 70%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 0 rgba(0, 0, 0, 0.35), 0 12px 26px rgba(0, 0, 0, 0.22);
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.18s;
+}
+.menu-tile:hover { transform: translateY(-4px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 8px 0 rgba(0, 0, 0, 0.3), 0 22px 36px rgba(0, 0, 0, 0.3); }
+.menu-tile:active { transform: translateY(1px); }
+.menu-tile-art {
+  position: absolute;
+  right: -6%;
+  bottom: -10%;
+  width: 58%;
+  max-width: 190px;
+  filter: drop-shadow(0 14px 16px rgba(0, 0, 0, 0.5));
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+}
+.menu-tile:hover .menu-tile-art { transform: translateY(-8px) rotate(-4deg) scale(1.04); }
+.menu-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(260px 200px at 90% 100%, var(--tile-glow, rgba(214, 176, 106, 0.18)), transparent 70%);
+  pointer-events: none;
+}
+
+.menu-card {
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--g-panel), #15231b);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+.menu-xp { background: rgba(255, 255, 255, 0.08); }
+.menu-xp > span { background: linear-gradient(90deg, #c99a4c, #f0d28c); box-shadow: 0 0 12px rgba(240, 210, 140, 0.5); }
+
+/* Big choice cards (time controls, opponents, colours). */
+.menu-pick {
+  position: relative;
+  border-radius: 14px;
+  background: var(--g-panel-2);
+  border: 2px solid transparent;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+  transition: transform 0.12s, border-color 0.15s, background-color 0.15s;
+}
+.menu-pick:hover { background: var(--g-panel-3); transform: translateY(-2px); }
+.menu-pick[aria-pressed="true"] {
+  border-color: var(--g-gold);
+  background: linear-gradient(180deg, #33503f, var(--g-panel-3));
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 0 0 4px rgba(214, 176, 106, 0.14), 0 10px 24px rgba(214, 176, 106, 0.12);
+}
+
+/* Matchmaking. */
+.mm-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid rgba(214, 176, 106, 0.55);
+  animation: mm-ping 2.4s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+@keyframes mm-ping { from { transform: scale(0.7); opacity: 0.9; } to { transform: scale(1.75); opacity: 0; } }
+.mm-sweep {
+  position: absolute;
+  inset: -40%;
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg, transparent 0 75%, rgba(214, 176, 106, 0.28) 100%);
+  animation: mm-spin 2.2s linear infinite;
+}
+@keyframes mm-spin { to { transform: rotate(360deg); } }
+.mm-cycle { animation: mm-cycle 1.2s steps(1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-rise, .menu-hero-art, .menu-play::before, .mm-ring, .mm-sweep { animation: none !important; }
+  .menu-tile, .menu-tile-art { transition: none; }
+}

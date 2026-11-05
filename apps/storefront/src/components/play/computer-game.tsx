@@ -2,11 +2,11 @@
 
 import { Chess, type Square } from "chess.js"
 import Link from "next/link"
-import { PanelHeader } from "@/components/play-shell/nav"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { io } from "socket.io-client"
 import { Board, type BoardArrow, type Colour, type Premove } from "@/components/chess/board"
 import { MatchIntro, ResultBurst } from "@/components/chess/match-overlays"
+import { ComputerSetup } from "./menu/computer-setup"
 import { material } from "@/components/chess/material"
 import { MovePanel } from "@/components/chess/move-panel"
 import { PlayerBar } from "@/components/chess/player-bar"
@@ -262,59 +262,11 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
 
   const btn = "g-btn flex-1 px-3 text-[14px]"
 
-  const panel = !game ? (
-    <div className="flex min-h-0 flex-1 flex-col g-panel p-5 lg:overflow-y-auto">
-      <PanelHeader title="Play the computer" />
-      <p className="mt-2 text-[14px] g-muted">Pick a level. You can take moves back and ask for a hint.</p>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        {LEVELS.map((l) => (
-          <button
-            key={l.level}
-            type="button"
-            aria-pressed={setup.level === l.level}
-            onClick={() => setSetup((s) => ({ ...s, level: l.level }))}
-            className="g-choice px-3 py-2 text-left"
-          >
-            <span className="block text-[14px] font-semibold">
-              {l.level}. {l.name}
-            </span>
-            <span className="block text-[12px] g-muted">Rating {l.elo}</span>
-          </button>
-        ))}
-      </div>
-      <p className="mt-4 text-[13px] font-medium">I play</p>
-      <div className="mt-2 grid grid-cols-3 gap-2">
-        {(
-          [
-            ["w", "White"],
-            ["random", "Random"],
-            ["b", "Black"],
-          ] as const
-        ).map(([c, label]) => (
-          <button
-            key={c}
-            type="button"
-            aria-pressed={setup.colour === c}
-            onClick={() => setSetup((s) => ({ ...s, colour: c }))}
-            className="g-choice py-2 text-[14px] font-semibold"
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <button type="button" className="g-btn g-btn-primary sticky bottom-3 z-10 mt-5 lg:static h-[48px] w-full text-[16px]" onClick={() => start(setup.colour, setup.level)}>
-        Play
-      </button>
-      {!token && (
-        <p className="mt-3 text-[13px] g-muted">
-          <Link href="/account?next=/play/computer" className="underline underline-offset-2">
-            Sign in
-          </Link>{" "}
-          to keep your games in your history.
-        </p>
-      )}
-    </div>
-  ) : (
+  if (!game) {
+    return <ComputerSetup setup={setup} onChange={setSetup} onStart={() => start(setup.colour, setup.level)} signedIn={!!token} />
+  }
+
+  const panel = (
     <>
       <p className="hidden items-center gap-2 text-[13px] g-muted lg:flex">
         <Link href={"/play"} aria-label="Back" className="g-btn g-btn-ghost !min-h-[34px] !px-2 !text-[13px]">
@@ -379,7 +331,7 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
 
   return (
     <PlayLayout
-      boardOnPhones={!!game}
+      boardOnPhones
       top={bar(top)}
       bottom={bar(bottom)}
       board={
