@@ -3,7 +3,13 @@ from mathutils import Vector
 
 OUT = sys.argv[sys.argv.index("--") + 1]
 ONLY = sys.argv[sys.argv.index("--") + 2] if len(sys.argv) > sys.argv.index("--") + 2 else None
-RES = 400
+RES = int(os.environ.get("RES", 400))
+# "tabletop": seen from the player's side and above, standing on the board with a soft shadow
+# (tall images: the piece rises above its square). "upright": the old side view.
+STYLE = os.environ.get("STYLE", "tabletop")
+TALL = 1.5
+# World units across one square (the base is 0.81 across, about 65% of a square).
+SQUARE = 1.25
 
 def reset():
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -167,12 +173,33 @@ def srgb(h):
 def scene():
     sc = bpy.context.scene
     sc.render.engine = "CYCLES"; sc.cycles.samples = 96; sc.cycles.use_denoising = True; sc.cycles.device = "CPU"
-    sc.render.film_transparent = True; sc.render.resolution_x = RES; sc.render.resolution_y = RES
+    sc.render.film_transparent = True; sc.render.resolution_x = RES; sc.render.resolution_y = int(RES * TALL) if STYLE == "tabletop" else RES
     sc.view_settings.view_transform = "Standard"; sc.view_settings.look = "None"
     world = bpy.data.worlds.new("w"); sc.world = world; world.use_nodes = True
     world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.9, 0.9, 0.9, 1); world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.4
     cam = bpy.data.cameras.new("cam"); cam.type = "ORTHO"; cam.ortho_scale = 1.78
     co = bpy.data.objects.new("cam", cam); sc.collection.objects.link(co); sc.camera = co
+    if STYLE == "tabletop":
+        # One square (1 x 1) fills the image's width; the piece's centre sits 42% of a square
+        # above the image's bottom edge, so it stands in the lower part of its square.
+        from mathutils import Euler
+        el = math.radians(46)
+        cam.ortho_scale = TALL * SQUARE
+        co.rotation_euler = (math.radians(90) - el, 0, 0)
+        m = Euler(co.rotation_euler).to_matrix()
+        fwd = m @ Vector((0, 0, -1)); up = m @ Vector((0, 1, 0))
+        co.location = Vector((0, 0, 0)) - fwd * 10 + up * (TALL / 2 - 0.42) * SQUARE
+        # An invisible floor that only keeps the shadows.
+        bpy.ops.mesh.primitive_plane_add(size=6, location=(0, 0, 0))
+        bpy.context.active_object.is_shadow_catcher = True
+        def light(kind, loc, energy, size, rot):
+            ld = bpy.data.lights.new(kind, "AREA"); ld.energy = energy; ld.size = size
+            lo = bpy.data.objects.new(kind, ld); lo.location = loc; lo.rotation_euler = rot; sc.collection.objects.link(lo)
+        # Key light high and in front-left: a short, soft shadow falls behind the piece.
+        light("key", (-1.0, -1.6, 6.0), 560, 3.0, (math.radians(15), 0, math.radians(-30)))
+        light("fill", (3.5, -3.5, 2.5), 110, 4, (math.radians(62), 0, math.radians(45)))
+        light("rim", (1, 4, 4), 380, 2.5, (math.radians(-45), 0, math.radians(170)))
+        return
     el = math.radians(16)
     d = 10
     co.location = (0, -d * math.cos(el), 0.80 + d * math.sin(el)); co.rotation_euler = (math.radians(90) - el, 0, 0)
@@ -184,7 +211,7 @@ def scene():
     light("rim", (1, 4, 4), 800, 2.5, (math.radians(-45), 0, math.radians(170)))
 
 BUILD = {"P": pawn, "R": rook, "N": knight, "B": bishop, "Q": queen, "K": king}
-MATS = {"w": ("#e3ac68", "#c98a4b"), "b": ("#4f2d19", "#2c170b")}
+MATS = {"w": ("#e3ac68", "#c98a4b"), "b": ("#3d2213", "#1e0f06")}
 
 for colour in ("w", "b"):
     for code, fn in BUILD.items():

@@ -13,3 +13,9 @@ rook 80, pawn 76; 2.5% bottom margin) and save as 240 px WebP into
 
 The Play menu art in `apps/storefront/public/play-art/` (wK, bK, wN, wR, wP, bQ) comes from
 the same script with `RES = 800`, cropped to the piece and saved as 520 px WebP.
+
+The board uses a second render of the set, `STYLE=tabletop` (the default): seen from the
+player's side and above (46°), standing on an invisible floor that keeps a soft shadow, 400 x
+600 px with one square across the width. Resize to 240 x 360 WebP into
+`apps/storefront/public/pieces/wood3d-board/`; the board draws them 1.5 squares tall from the
+bottom of each square (`tall` in `lib/chess/settings.ts`). `STYLE=upright` gives the old icons.

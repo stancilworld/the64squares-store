@@ -5,7 +5,7 @@ import { type ReactNode, useMemo, useState } from "react"
 import { Chessboard, type PieceRenderObject } from "react-chessboard"
 import { premoveTargets } from "@/lib/chess/premove"
 import { playSound } from "@/lib/chess/sounds"
-import { animationMs, BOARD_THEMES, PIECE_SETS, pieceSrc, useBoardSettings } from "@/lib/chess/settings"
+import { animationMs, BOARD_THEMES, boardPiece, PIECE_SETS, pieceSrc, useBoardSettings } from "@/lib/chess/settings"
 
 export type Colour = "w" | "b"
 export type BoardArrow = { from: string; to: string; color?: string }
@@ -45,14 +45,32 @@ type Props = {
 
 export type Premove = { from: Square; to: Square }
 
-const pieceImages = (set: keyof typeof PIECE_SETS): PieceRenderObject =>
+const pieceImages = (set: keyof typeof PIECE_SETS, upright = false): PieceRenderObject =>
   Object.fromEntries(
-    PIECE_CODES.map((code) => [
+    PIECE_CODES.map((code) => {
+      const { src, tall } = upright ? { src: pieceSrc(set, code), tall: 1 } : boardPiece(set, code)
+      // Standing pieces: the picture starts at the square's bottom edge and rises above it.
+      if (tall > 1)
+        return [
+          code,
+          () => (
+            <div style={{ position: "relative", zIndex: 1, width: "100%", aspectRatio: "1 / 1", pointerEvents: "none" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={src}
+                alt=""
+                draggable={false}
+                style={{ position: "absolute", left: 0, bottom: 0, width: "100%", height: `${tall * 100}%`, maxWidth: "none", pointerEvents: "none", userSelect: "none" }}
+              />
+            </div>
+          ),
+        ]
+      return [
       code,
       () => (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={pieceSrc(set, code)}
+          src={src}
           alt=""
           draggable={false}
           style={{
@@ -65,7 +83,8 @@ const pieceImages = (set: keyof typeof PIECE_SETS): PieceRenderObject =>
           }}
         />
       ),
-    ])
+    ]
+    })
   )
 
 // The chessboard everywhere on the site: legal-move dots, highlights, drag or click to move,
@@ -171,7 +190,8 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
     return st
   }, [lastMove, chess, selected, targets, settings.legalMoves, premove, canPremove, preTargets, marks])
 
-  const pieces = useMemo(() => pieceImages(settings.pieces), [settings.pieces])
+  const pieces = useMemo(() => pieceImages(settings.pieces, !!compact), [settings.pieces, compact])
+  const standing = !compact && boardPiece(settings.pieces, "wK").tall > 1
 
   // Where the promotion picker goes: over the promotion square, towards the board's middle.
   const promoBox = (() => {
@@ -209,7 +229,11 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
             return ok
           },
           onSquareClick: ({ square }) => clickSquare(square as Square),
-          boardStyle: { borderRadius: 8, overflow: "hidden", boxShadow: "0 0 0 1px rgba(0,0,0,0.25), 0 14px 40px rgba(0,0,0,0.45)" },
+          // Standing pieces may rise above the top row, so that board isn't clipped; a thin wooden
+          // frame takes the place of the rounded corners.
+          boardStyle: standing
+            ? { borderRadius: 2, overflow: "visible", boxShadow: "0 0 0 4px #3b2516, 0 0 0 5px rgba(0,0,0,0.35), 0 16px 40px rgba(0,0,0,0.45)" }
+            : { borderRadius: 8, overflow: "hidden", boxShadow: "0 0 0 1px rgba(0,0,0,0.25), 0 14px 40px rgba(0,0,0,0.45)" },
           lightSquareStyle: { backgroundColor: theme.light },
           darkSquareStyle: { backgroundColor: theme.dark },
           lightSquareNotationStyle: { color: theme.dark, fontWeight: 600 },

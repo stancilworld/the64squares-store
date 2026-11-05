@@ -12,7 +12,9 @@ export const BOARD_THEMES = {
   marble: { label: "Marble", light: "#e9e6df", dark: "#9c958a" },
 } as const
 export const PIECE_SETS = {
-  wood3d: { label: "3D Wood", ext: "webp" },
+  // On the board, 3D Wood uses pictures taken from above and in front, standing on the square
+  // with a shadow and rising above it (`tall` squares high); the upright ones are for icons.
+  wood3d: { label: "3D Wood", ext: "webp", board: "wood3d-board", tall: 1.5 },
   ivory: { label: "Ivory", ext: "svg" },
   glossy: { label: "Glossy", ext: "svg" },
   modern: { label: "Flat", ext: "svg" },
@@ -22,6 +24,12 @@ export const PIECE_SETS = {
 
 // The picture for a piece, like "wK" (white king), in a piece set.
 export const pieceSrc = (set: keyof typeof PIECE_SETS, code: string) => `/pieces/${set}/${code}.${PIECE_SETS[set]?.ext ?? "svg"}`
+
+// The picture used on the board, and how many squares tall it is.
+export const boardPiece = (set: keyof typeof PIECE_SETS, code: string) => {
+  const s = PIECE_SETS[set] as { ext: string; board?: string; tall?: number } | undefined
+  return s?.board ? { src: `/pieces/${s.board}/${code}.${s.ext}`, tall: s.tall ?? 1 } : { src: pieceSrc(set, code), tall: 1 }
+}
 
 export type BoardSettings = {
   theme: keyof typeof BOARD_THEMES
