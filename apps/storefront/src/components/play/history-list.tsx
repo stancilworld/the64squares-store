@@ -93,6 +93,9 @@ export function HistoryList({ playerId }: { playerId: string }) {
               <th className="px-3 py-2.5 text-center font-medium">Result</th>
               <th className="hidden px-3 py-2.5 text-right font-medium sm:table-cell">Moves</th>
               <th className="hidden px-3 py-2.5 text-right font-medium md:table-cell">Date</th>
+              <th className="px-3 py-2.5 text-right font-medium">
+                <span className="sr-only">Review</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -139,6 +142,13 @@ export function HistoryList({ playerId }: { playerId: string }) {
                   </td>
                   <td className="hidden px-3 py-2.5 text-right sm:table-cell">{Math.ceil(g.plies / 2)}</td>
                   <td className="hidden px-3 py-2.5 text-right g-muted md:table-cell">{when(g.ended_at)}</td>
+                  <td className="px-2 py-2.5 text-right">
+                    {g.plies >= 2 && (
+                      <Link href={`/play/analysis/${g.id}`} className="g-btn !min-h-[32px] !px-2.5 !text-[12px]" aria-label="Game review">
+                        ★<span className="hidden sm:inline"> Review</span>
+                      </Link>
+                    )}
+                  </td>
                 </tr>
               )
             })}

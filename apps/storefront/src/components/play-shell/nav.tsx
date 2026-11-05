@@ -30,6 +30,7 @@ const isActive = (path: string, href: string) =>
 const titleFor = (path: string) => {
   const item = [...PLAY_NAV].reverse().find((n) => isActive(path, n.href))
   if (path.startsWith("/play/arena")) return "Arena"
+  if (path.startsWith("/play/analysis")) return "Game review"
   if (!item || item.href === "/play") return /^\/play\/[A-Za-z0-9]{10}$/.test(path) ? "Game" : "Play chess"
   return item.label
 }
@@ -110,7 +111,7 @@ export function MobileBar({ showSwitch = true }: { showSwitch?: boolean }) {
 export function MobileTabs() {
   const path = usePathname()
   // While playing, the board and its buttons get the whole screen.
-  if (/^\/play\/[A-Za-z0-9]{10}$/.test(path) || path === "/play/computer" || /^\/play\/puzzles\/.+/.test(path)) return null
+  if (/^\/play\/[A-Za-z0-9]{10}$/.test(path) || path === "/play/computer" || /^\/play\/(puzzles|analysis)\/.+/.test(path)) return null
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 grid h-[62px] grid-cols-5 border-t border-[var(--g-line)] bg-[var(--g-side)] pb-[env(safe-area-inset-bottom)] lg:hidden">
       {MOBILE_TABS.map((href) => {

@@ -3,7 +3,7 @@ import { Server, type Socket } from "socket.io"
 import { playerFromToken } from "./auth.js"
 import { migratePuzzles, puzzleRoute } from "./puzzles.js"
 import { config } from "./config.js"
-import { gamePgn, leaderboard, liveGamesFor, migrate, playerStats, ratingsFor, recentGamesFor } from "./db.js"
+import { gamePgn, leaderboard, liveGamesFor, migrate, playerStats, pool, ratingsFor, recentGamesFor } from "./db.js"
 import { type Color, type Game, isGuest, type Player } from "./game.js"
 import { speedOf, type Speed } from "./glicko.js"
 import { GameManager } from "./manager.js"
@@ -110,6 +110,19 @@ const server = http.createServer(async (req, res) => {
     if (m && req.method === "GET") {
       const a = await arenaStandings(m[1])
       return a ? send(res, 200, JSON.stringify({ arena: a }), "application/json", origin) : send(res, 404, JSON.stringify({ error: "not-found" }), "application/json", origin)
+    }
+    m = /^\/games\/([A-Za-z0-9]{6,20})\/review$/.exec(path)
+    if (m && req.method === "GET") {
+      // A finished game's moves for the analysis board (never a game still being played).
+      const { rows } = await pool.query(
+        `select id, mode, rated, status, result, reason, moves, white_id, white_name, white_rating, black_id, black_name, black_rating,
+                initial_ms, increment_ms, coalesce(ended_at, created_at) as played_at
+           from play.game where id = $1`,
+        [m[1]]
+      )
+      const g = rows[0]
+      if (!g || g.status !== "finished") return json(res, 404, { error: "not-found" }, origin)
+      return json(res, 200, { game: g }, origin)
     }
     m = /^\/games\/([A-Za-z0-9]{6,20})\/status$/.exec(path)
     if (m && req.method === "GET") {

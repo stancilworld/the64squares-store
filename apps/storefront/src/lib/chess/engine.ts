@@ -69,6 +69,41 @@ export class Engine {
     return next
   }
 
+  // Full-strength evaluation of a position, from the side to move's point of view.
+  analyse(fen: string, depth = 14): Promise<{ cp: number | null; mate: number | null; best: string | null; pv: string[] }> {
+    const run = async () => {
+      await this.ready
+      this.send("setoption name UCI_LimitStrength value false")
+      this.send("setoption name Skill Level value 20")
+      this.send(`position fen ${fen}`)
+      return new Promise<{ cp: number | null; mate: number | null; best: string | null; pv: string[] }>((resolve) => {
+        let cp: number | null = null
+        let mate: number | null = null
+        let pv: string[] = []
+        this.waiting = (line) => {
+          if (line.startsWith("info") && line.includes(" score ") && !line.includes(" lowerbound") && !line.includes(" upperbound")) {
+            const sc = / score (cp|mate) (-?\d+)/.exec(line)
+            if (sc) {
+              cp = sc[1] === "cp" ? Number(sc[2]) : null
+              mate = sc[1] === "mate" ? Number(sc[2]) : null
+            }
+            const p = / pv (.+)$/.exec(line)
+            if (p) pv = p[1].trim().split(/\s+/)
+            return
+          }
+          if (!line.startsWith("bestmove")) return
+          this.waiting = null
+          const m = line.split(" ")[1]
+          resolve({ cp, mate, best: m && m !== "(none)" ? m : null, pv })
+        }
+        this.send(`go depth ${depth}`)
+      })
+    }
+    const next = this.busy.then(run, run)
+    this.busy = next.catch(() => null)
+    return next
+  }
+
   stop() {
     this.send("stop")
   }

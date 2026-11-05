@@ -2,6 +2,7 @@
 
 import { Chess, type Square } from "chess.js"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { io } from "socket.io-client"
 import { Board, type BoardArrow, type Colour, type Premove } from "@/components/chess/board"
@@ -71,6 +72,7 @@ const noSubscribe = () => () => {}
 
 export function ComputerGame({ token, myName }: { token: string | null; myName: string | null }) {
   // Pick up an unfinished game from this browser (closing the tab never loses it).
+  const router = useRouter()
   const loaded = useSyncExternalStore(noSubscribe, () => true, () => false)
   const restored = useMemo(() => (loaded ? load() : null), [loaded])
   const [changed, setGame] = useState<Saved | null | undefined>(undefined)
@@ -300,6 +302,34 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
             <button type="button" className="g-btn" onClick={() => update(null)}>
               Change level
             </button>
+            {game.moves.length >= 2 &&
+              (game.savedId ? (
+                <Link href={`/play/analysis/${game.savedId}`} className="g-btn">
+                  ★ Game review
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className="g-btn"
+                  onClick={() => {
+                    try {
+                      window.sessionStorage.setItem(
+                        "t64:analyse",
+                        JSON.stringify({
+                          moves: game.moves,
+                          white: game.colour === "w" ? (myName ?? "You") : `Computer (level ${game.level})`,
+                          black: game.colour === "b" ? (myName ?? "You") : `Computer (level ${game.level})`,
+                          result: game.result?.score ?? null,
+                          me: game.colour,
+                        })
+                      )
+                    } catch {}
+                    router.push("/play/analysis/local")
+                  }}
+                >
+                  ★ Game review
+                </button>
+              ))}
           </div>
         </div>
       ) : (

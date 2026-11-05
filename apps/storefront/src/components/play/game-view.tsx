@@ -485,6 +485,11 @@ export function GameView({ id, initialPass }: Props) {
             New game
           </Link>
         )}
+        {game.status === "finished" && game.moves.length >= 2 && (
+          <Link href={`/play/analysis/${id}`} className="g-btn g-btn-primary h-[42px]">
+            ★ Game review
+          </Link>
+        )}
         {game.status === "finished" && (
           <a href={`${GAME_URL}/game/games/${id}.pgn`} className="g-btn" download>
             PGN
