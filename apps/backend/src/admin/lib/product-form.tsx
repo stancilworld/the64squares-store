@@ -4,6 +4,7 @@ import {
   ArrowUpRightOnBox,
   CloudArrowUp,
   PlusMini,
+  SquareDashedCursor,
   XMarkMini,
 } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Label, Select, Switch, Text, Textarea, toast } from "@medusajs/ui"
@@ -14,7 +15,8 @@ import { sdk } from "./sdk"
 import { useStoreUrl } from "./site"
 import { useMe } from "./staff"
 import { BadgePicker, type BadgeValue } from "./badge-picker"
-import { uploadImage } from "./upload"
+import { isConvertedPicture, PICTURE_ACCEPT, uploadImage } from "./upload"
+import { PhotoCropper } from "./photo-cropper"
 import { useUploadLimits } from "./upload-limits"
 
 // The simple The 64 Squares product form: everything about a product on one screen.
@@ -32,6 +34,7 @@ export type ProductFormValue = {
   assembly?: string | null
   care?: string | null
   lead_time?: string | null
+  make_days?: number | null
   engraving?: Engraving | null
   seo_title?: string | null
   seo_description?: string | null
@@ -48,8 +51,8 @@ export type ProductFormValue = {
   images: string[]
   colour_images: Record<string, string[]>
 }
-type Engraving = { enabled: boolean; label: string; max: number; required: boolean }
-const ENGRAVING_OFF: Engraving = { enabled: false, label: "Name to engrave", max: 30, required: false }
+type Engraving = { enabled: boolean; label: string; max: number; required: boolean; fee: number }
+const ENGRAVING_OFF: Engraving = { enabled: false, label: "Name to engrave", max: 30, required: false, fee: 0 }
 const LEAD_TIMES = ["Ready to ship", "Ships in 2-3 days", "Made to order: ships in 7-10 days", "Made to order: ships in 2-3 weeks"]
 
 type Lookups = {
@@ -69,6 +72,7 @@ const EMPTY: ProductFormValue = {
   assembly: "",
   care: "",
   lead_time: "",
+  make_days: null,
   engraving: null,
   seo_title: "",
   seo_description: "",
@@ -163,7 +167,8 @@ function Swatch({ hex, size = 18 }: { hex: string; size?: number }) {
   )
 }
 
-// Thumbnails with move-left/right and remove; drop files on the box to upload.
+// Thumbnails with move-left/right, crop and remove; drop files on the box to upload.
+// New photos open the square crop window first (GIFs, which may be animated, skip it).
 function PhotoStrip({
   urls,
   onChange,
@@ -177,9 +182,11 @@ function PhotoStrip({
 }) {
   const [busy, setBusy] = useState(0)
   const [over, setOver] = useState(false)
+  // Photos waiting in the crop window; replace: the position of an existing photo being re-cropped.
+  const [cropping, setCropping] = useState<{ files: File[]; replace?: number } | null>(null)
+  const [opening, setOpening] = useState<number | null>(null)
   const input = useRef<HTMLInputElement>(null)
-  const upload = async (files: FileList | File[]) => {
-    const list = [...files].filter((f) => f.type.startsWith("image/"))
+  const send = async (list: File[], replace?: number) => {
     if (!list.length) return
     setBusy(list.length)
     const added: string[] = []
@@ -191,7 +198,34 @@ function PhotoStrip({
       }
       setBusy((n) => n - 1)
     }
-    onChange([...urls, ...added])
+    if (replace !== undefined) {
+      if (added[0]) onChange(urls.map((u, i) => (i === replace ? added[0] : u)))
+    } else {
+      onChange([...urls, ...added])
+    }
+  }
+  const upload = (files: FileList | File[]) => {
+    const list = [...files].filter((f) => f.type.startsWith("image/") || isConvertedPicture(f))
+    if (!list.length) return
+    const toCrop = list.filter((f) => f.type !== "image/gif" && !/\.gif$/i.test(f.name) && !/svg/i.test(f.type))
+    const asIs = list.filter((f) => !toCrop.includes(f))
+    if (asIs.length) send(asIs)
+    if (toCrop.length) setCropping({ files: toCrop })
+  }
+  // Opens an uploaded photo in the crop window again.
+  const recrop = async (i: number) => {
+    setOpening(i)
+    try {
+      const res = await fetch(urls[i])
+      if (!res.ok) throw new Error(`The photo couldn't be loaded (${res.status}).`)
+      const blob = await res.blob()
+      const name = decodeURIComponent(urls[i].split("/").pop()?.split("?")[0] || "photo.webp")
+      setCropping({ files: [new File([blob], name, { type: blob.type })], replace: i })
+    } catch (e) {
+      toast.error("Couldn't open the photo", { description: (e as Error).message })
+    } finally {
+      setOpening(null)
+    }
   }
   const move = (i: number, d: -1 | 1) => {
     const next = [...urls]
@@ -225,6 +259,9 @@ function PhotoStrip({
             <button type="button" aria-label="Move left" onClick={() => move(i, -1)} disabled={i === 0} className="p-0.5 disabled:opacity-30">
               <ArrowLeftMini />
             </button>
+            <button type="button" aria-label="Crop photo" title="Crop" onClick={() => recrop(i)} disabled={opening !== null} className="p-0.5 disabled:opacity-30">
+              <SquareDashedCursor />
+            </button>
             <button type="button" aria-label="Remove photo" onClick={() => onChange(urls.filter((x) => x !== u))} className="p-0.5 text-ui-fg-error">
               <XMarkMini />
             </button>
@@ -250,7 +287,7 @@ function PhotoStrip({
       <input
         ref={input}
         type="file"
-        accept="image/*"
+        accept={PICTURE_ACCEPT}
         multiple
         hidden
         onChange={(e) => {
@@ -258,6 +295,17 @@ function PhotoStrip({
           e.target.value = ""
         }}
       />
+      {cropping && (
+        <PhotoCropper
+          files={cropping.files}
+          onCancel={() => setCropping(null)}
+          onDone={(out) => {
+            const replace = cropping.replace
+            setCropping(null)
+            send(out, replace)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -570,6 +618,23 @@ export function ProductFormPage({ id }: { id?: string }) {
             ))}
           </datalist>
         </Field>
+        <Field
+          label="Days to make"
+          htmlFor="pf-make-days"
+          hint="Working days before a made-to-order item is dispatched. Used for the “Arrives by” date; leave empty for stock items (Settings → Payments & delivery has the usual packing time)."
+        >
+          <Input
+            id="pf-make-days"
+            className="w-24"
+            inputMode="numeric"
+            placeholder="e.g. 7"
+            value={form.make_days ?? ""}
+            onChange={(e) => {
+              const v = e.target.value.replace(/\D/g, "")
+              set("make_days", v ? Math.min(120, Number(v)) : null)
+            }}
+          />
+        </Field>
         <Field label="Personalisation box" hint="Shoppers type the text (a name, club, date) before adding to cart. It shows on the order, the invoice and the order emails.">
           <div className="flex h-8 items-center gap-x-2">
             <Switch
@@ -581,7 +646,7 @@ export function ProductFormPage({ id }: { id?: string }) {
           </div>
         </Field>
         {form.engraving?.enabled && (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <Field label="Box label" htmlFor="pf-eng-label" hint="What shoppers are asked for.">
               <Input
                 id="pf-eng-label"
@@ -606,6 +671,17 @@ export function ProductFormPage({ id }: { id?: string }) {
                   aria-label="Must be filled in"
                 />
                 <Text size="small">{form.engraving.required ? "Required" : "Optional"}</Text>
+              </div>
+            </Field>
+            <Field label="Extra price" htmlFor="pf-eng-fee" hint="Added when a shopper personalises. 0 = free.">
+              <div className="flex items-center gap-x-2">
+                <Text size="small">₹</Text>
+                <Input
+                  id="pf-eng-fee"
+                  inputMode="numeric"
+                  value={form.engraving.fee ?? 0}
+                  onChange={(e) => set("engraving", { ...form.engraving!, fee: Math.min(100000, Number(e.target.value.replace(/\D/g, "")) || 0) })}
+                />
               </div>
             </Field>
           </div>
@@ -860,7 +936,7 @@ export function ProductFormPage({ id }: { id?: string }) {
 
       <Section
         title="Photos"
-        hint={`Square photos look best: 1500 × 1500 px, WebP or JPG, under 500 KB${photoLimit ? ` (largest allowed ${photoLimit.max_mb} MB)` : ""}. Drag files from your computer onto a box, or press Add.`}
+        hint={`Any photo works, including iPhone HEIC: you pick the square part, and it's shrunk and saved as WebP automatically${photoLimit ? ` (largest allowed after shrinking ${photoLimit.max_mb} MB)` : ""}. Drag files onto a box or press Add; the crop button on a photo crops it again.`}
       >
         <Field label="General photos" hint="Shown for every colour. The first one is the photo on the shop card.">
           <PhotoStrip

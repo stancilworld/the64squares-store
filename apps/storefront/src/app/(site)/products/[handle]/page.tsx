@@ -5,7 +5,8 @@ import { Suspense } from "react"
 import { ProductGallery } from "@/components/product-gallery"
 import { ProductOptions } from "@/components/product-options"
 import { BADGE_CLASSES, badgeOf } from "@/lib/badges"
-import { getDeliveryText, getProduct, getProductReviews, isOnSale } from "@/lib/data"
+import { getDeliveryInfo, getProduct, getProductExtras, getProductReviews, isOnSale, salePriceListOf } from "@/lib/data"
+import { WishlistHeart } from "@/components/wishlist-heart"
 import { ProductReviews } from "@/components/product-reviews"
 import { Stars } from "@/components/stars"
 import { SITE_URL } from "@/lib/site"
@@ -31,11 +32,18 @@ export async function generateMetadata({ params }: PageProps<"/products/[handle]
 
 async function Product({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params
-  const [product, delivery] = await Promise.all([getProduct(handle), getDeliveryText()])
+  const [product, deliveryInfo] = await Promise.all([getProduct(handle), getDeliveryInfo()])
   if (!product) {
     notFound()
   }
-  const { summary, reviews } = await getProductReviews(product.id)
+  const [{ summary, reviews }, extras] = await Promise.all([
+    getProductReviews(product.id),
+    getProductExtras(product.id, salePriceListOf(product)),
+  ])
+  const delivery = deliveryInfo.delivery_text
+  const firstInStock =
+    (product.variants ?? []).find((v) => !v.manage_inventory || v.allow_backorder || (v.inventory_quantity ?? 0) > 0) ??
+    product.variants?.[0]
   const images = product.images ?? []
   const badge = badgeOf(product.metadata, isOnSale(product))
   const meta = (product.metadata ?? {}) as Record<string, string>
@@ -110,6 +118,7 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
               ((v as { images?: { id: string }[] }).images ?? []).map((i) => i.id),
             ])
           )}
+          overlay={<WishlistHeart productId={product.id} initialVariantId={firstInStock?.id ?? null} />}
         />
         <div>
           {badge && (
@@ -124,7 +133,17 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
               {summary.average.toFixed(1)} · {summary.count} review{summary.count === 1 ? "" : "s"}
             </a>
           )}
-          <ProductOptions product={product} />
+          <ProductOptions
+            product={product}
+            info={{
+              dispatch_days: deliveryInfo.dispatch_days,
+              transit_days: deliveryInfo.transit_days,
+              dispatch_from: deliveryInfo.dispatch_from,
+              returns_text: deliveryInfo.returns_text,
+              in_carts: extras.in_carts,
+              sale_ends_at: extras.sale_ends_at,
+            }}
+          />
           <div className="mt-8 rounded-md border border-rule bg-linen px-5 py-4 text-[15px]">
             <p className="font-medium">{delivery}</p>
             <p className="mt-1 text-muted">Enter your pincode at checkout to confirm delivery to your area.</p>

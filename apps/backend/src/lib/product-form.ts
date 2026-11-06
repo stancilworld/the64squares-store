@@ -39,6 +39,8 @@ export type ProductForm = {
   // Extra details kept in product metadata.
   care?: string | null
   lead_time?: string | null
+  // Days to make before dispatch (made-to-order); used for the "Arrives by" date.
+  make_days?: number | null
   engraving?: Engraving | null
   seo_title?: string | null
   seo_description?: string | null
@@ -59,7 +61,8 @@ export type ProductForm = {
 type Row = Record<string, any>
 
 // Personalisation: a text box on the product page (a name on a board, a line on a trophy).
-export type Engraving = { enabled: boolean; label: string; max: number; required: boolean }
+// fee: rupees added to the item's price when the shopper adds personalisation (0 = free).
+export type Engraving = { enabled: boolean; label: string; max: number; required: boolean; fee: number }
 export const readEngraving = (meta: Record<string, unknown>): Engraving | null => {
   const e = meta.engraving as Partial<Engraving> | null | undefined
   if (!e || typeof e !== "object" || !e.enabled) return null
@@ -68,6 +71,7 @@ export const readEngraving = (meta: Record<string, unknown>): Engraving | null =
     label: typeof e.label === "string" && e.label.trim() ? e.label.trim() : "Engraving text",
     max: Math.min(200, Math.max(1, Number(e.max) || 30)),
     required: !!e.required,
+    fee: Math.min(100_000, Math.max(0, Math.round(Number(e.fee) || 0))),
   }
 }
 const str = (v: unknown) => (typeof v === "string" ? v : "")
@@ -253,6 +257,7 @@ export const loadForm = async (container: MedusaContainer, id: string): Promise<
     assembly: (meta.assembly as string) ?? "",
     care: str(meta.care),
     lead_time: str(meta.lead_time),
+    make_days: typeof meta.make_days === "number" ? meta.make_days : null,
     engraving: readEngraving(meta),
     seo_title: str(meta.seo_title),
     seo_description: str(meta.seo_description),
@@ -465,6 +470,7 @@ export const saveForm = async (
     metadata: { ...((existing?.metadata ?? {}) as Record<string, unknown>), age: f.age?.trim() || null, assembly: f.assembly?.trim() || null,
       ...(f.care !== undefined ? { care: f.care?.trim() || null } : {}),
       ...(f.lead_time !== undefined ? { lead_time: f.lead_time?.trim() || null } : {}),
+      ...(f.make_days !== undefined ? { make_days: f.make_days ?? null } : {}),
       ...(f.engraving !== undefined ? { engraving: f.engraving?.enabled ? f.engraving : null } : {}),
       ...(f.seo_title !== undefined ? { seo_title: f.seo_title?.trim() || null } : {}),
       ...(f.seo_description !== undefined ? { seo_description: f.seo_description?.trim() || null } : {}),

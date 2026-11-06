@@ -227,10 +227,13 @@ export function ProductGallery({
   images,
   title,
   variantImages = {},
+  overlay,
 }: {
   images: Img[]
   title: string
   variantImages?: Record<string, string[]>
+  // Shown over the main photo's corner (the wishlist heart).
+  overlay?: React.ReactNode
 }) {
   const [selected, setSelected] = useState(0)
   const [preview, setPreview] = useState<number | null>(null)
@@ -263,7 +266,7 @@ export function ProductGallery({
   }, [selected])
 
   if (!count) {
-    return <div className="relative aspect-square overflow-hidden rounded-md bg-placeholder" />
+    return <div className="relative aspect-square overflow-hidden rounded-md bg-placeholder">{overlay}</div>
   }
 
   const go = (i: number) => setSelected((i + count) % count)
@@ -283,6 +286,7 @@ export function ProductGallery({
           if (e.key === "Enter") setViewer(true)
         }}
       >
+        {overlay}
         <Track
           images={images}
           index={selected}

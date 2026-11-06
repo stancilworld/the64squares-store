@@ -12,6 +12,10 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     cod: s.cod_enabled,
     cod_max: s.cod_max,
     delivery_text: s.delivery_text,
+    dispatch_days: s.dispatch_days,
+    transit_days: s.transit_days,
+    dispatch_from: s.dispatch_from,
+    returns_text: s.returns_text,
     google: !!keys.google,
   })
 }

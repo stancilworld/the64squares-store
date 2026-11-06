@@ -15,6 +15,17 @@ export type CheckoutSettings = {
   delivery_text: string
   // Where "new order" alerts go. Empty = no alerts.
   order_alert_email: string
+  // Product page "Arrives by" date: days to pack an in-stock order, then days in transit
+  // (the latest of the usual range). A product's own "days to make" replaces the packing days.
+  dispatch_days: number
+  transit_days: number
+  // Product page lines: where orders ship from, and the returns promise.
+  dispatch_from: string
+  returns_text: string
+  // "In 5+ carts": real count of open carts holding the product in the last 3 days, shown
+  // only when at least in_carts_min carts do.
+  in_carts_enabled: boolean
+  in_carts_min: number
 }
 
 export const DEFAULT_CHECKOUT_SETTINGS: CheckoutSettings = {
@@ -23,6 +34,12 @@ export const DEFAULT_CHECKOUT_SETTINGS: CheckoutSettings = {
   online_enabled: true,
   delivery_text: "Free delivery across India in 3–7 days.",
   order_alert_email: process.env.OWNER_EMAIL || "",
+  dispatch_days: 1,
+  transit_days: 7,
+  dispatch_from: "India",
+  returns_text: "Returns accepted within 7 days of delivery",
+  in_carts_enabled: true,
+  in_carts_min: 5,
 }
 
 export const resolveCheckoutSettings = (stored: Record<string, unknown> | null | undefined): CheckoutSettings => ({

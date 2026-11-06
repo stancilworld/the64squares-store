@@ -101,7 +101,7 @@ const RULES: Rule[] = [
   // Always fine for staff: their session, saved table views, notifications, search.
   r("any", /^\/(views|layouts|notifications|feature-flags|search|property-labels)(\/|$)/, "allow"),
   r("read", /^\/users(\/|$)/, "allow"),
-  r("any", /^\/uploads(\/|$)/, "allow"),
+  r("any", /^\/(uploads|image-preview)(\/|$)/, "allow"),
 
   // Admin only.
   r("any", /^\/(api-keys|invites|rbac|workflows-executions|plugins|index)(\/|$)/, "admin"),

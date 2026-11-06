@@ -2,9 +2,7 @@ import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { Container, Heading, Text } from "@medusajs/ui"
 import { useUploadLimits } from "../lib/upload-limits"
 
-// Reminder of the photo size the website expects, shown on every product page in the admin.
-// Also shows the product photo size limit, because Medusa's media screen only says
-// "Failed to upload" when a photo is over it.
+// Explains how product photos are handled, shown on every product page in the admin.
 const ProductPhotoGuide = () => {
   const { data } = useUploadLimits()
   const limit = data?.limits.find((l) => l.type === "product_photo")
@@ -13,14 +11,19 @@ const ProductPhotoGuide = () => {
     <Container className="px-6 py-4">
       <Heading level="h2">Product photos</Heading>
       <Text size="small" className="mt-1 text-ui-fg-subtle">
-        Recommended: <span className="font-medium text-ui-fg-base">1500 × 1500 px square</span>, WebP or JPG,
-        under 500 KB, product centred on the same light background. GIFs work too; videos are not supported here.
+        Upload photos straight from your phone or camera: HEIC (iPhone), JPG, PNG and WebP are all fine, at any size.
+        Each photo is turned the right way up, shrunk to at most 2000 px and saved as a small WebP automatically.
         The first photo in Media is the one on the shop card.
+      </Text>
+      <Text size="small" className="mt-2 text-ui-fg-subtle">
+        To pick the square part of each photo (with zoom), add photos in{" "}
+        the <span className="font-medium text-ui-fg-base">Simple editor</span>. Photos added in Media here are
+        used as they are.
       </Text>
       {limit && (
         <Text size="small" className="mt-2 text-ui-fg-subtle">
-          Largest photo allowed: <span className="font-medium text-ui-fg-base">{limit.max_mb} MB</span>. If an upload
-          says "Failed to upload", the photo is probably bigger than this (change it in Settings → Upload limits).
+          Largest photo allowed after shrinking: <span className="font-medium text-ui-fg-base">{limit.max_mb} MB</span>{" "}
+          (Settings → Upload limits).
         </Text>
       )}
     </Container>

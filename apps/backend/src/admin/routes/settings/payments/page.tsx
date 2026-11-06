@@ -12,6 +12,12 @@ type Settings = {
   online_enabled: boolean
   delivery_text: string
   order_alert_email: string
+  dispatch_days: number
+  transit_days: number
+  dispatch_from: string
+  returns_text: string
+  in_carts_enabled: boolean
+  in_carts_min: number
 }
 type Keys = {
   razorpay: boolean
@@ -151,6 +157,69 @@ const PaymentsPage = () => {
             Shown at checkout under the address and in the order summary.
           </Text>
         </div>
+        <div className="px-6 pb-1 pt-5">
+          <Text size="small" weight="plus">On the product page</Text>
+          <Text size="xsmall" className="text-ui-fg-subtle">
+            The lines under the Add to cart button. The &ldquo;Arrives by&rdquo; date is today + days to pack + days in
+            transit; a product&apos;s own &ldquo;Days to make&rdquo; replaces the days to pack.
+          </Text>
+        </div>
+        <Row title="Days to pack an order" hint="For products in stock: days before the parcel leaves.">
+          <Input
+            className="w-20"
+            type="number"
+            min={0}
+            max={60}
+            value={form.dispatch_days}
+            onChange={(e) => set("dispatch_days", Math.max(0, Math.min(60, Math.round(Number(e.target.value) || 0))))}
+          />
+        </Row>
+        <Row title="Days in transit" hint="The latest a parcel usually takes to reach a customer, so the date is one you can keep.">
+          <Input
+            className="w-20"
+            type="number"
+            min={1}
+            max={60}
+            value={form.transit_days}
+            onChange={(e) => set("transit_days", Math.max(1, Math.min(60, Math.round(Number(e.target.value) || 1))))}
+          />
+        </Row>
+        <div className="grid gap-4 px-6 py-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-y-2">
+            <Label htmlFor="dispatch-from">Dispatched from</Label>
+            <Input id="dispatch-from" value={form.dispatch_from} maxLength={60} placeholder="India" onChange={(e) => set("dispatch_from", e.target.value)} />
+            <Text size="xsmall" className="text-ui-fg-subtle">Leave empty to hide the line.</Text>
+          </div>
+          <div className="flex flex-col gap-y-2">
+            <Label htmlFor="returns-text">Returns</Label>
+            <Input id="returns-text" value={form.returns_text} maxLength={120} onChange={(e) => set("returns_text", e.target.value)} />
+            <Text size="xsmall" className="text-ui-fg-subtle">
+              Personalised items always say they can&apos;t be returned. Leave empty to hide the line.
+            </Text>
+          </div>
+        </div>
+        <Row
+          title="Show how many carts hold a product"
+          hint="“In 5+ carts”: a real count of shoppers' carts from the last 3 days, shown only when it reaches the minimum."
+        >
+          <div className="flex items-center gap-x-3">
+            {form.in_carts_enabled && (
+              <div className="flex items-center gap-x-2">
+                <Text size="small" className="text-ui-fg-subtle">From</Text>
+                <Input
+                  className="w-20"
+                  type="number"
+                  min={2}
+                  max={1000}
+                  value={form.in_carts_min}
+                  aria-label="Minimum carts"
+                  onChange={(e) => set("in_carts_min", Math.max(2, Math.min(1000, Math.round(Number(e.target.value) || 2))))}
+                />
+              </div>
+            )}
+            <Switch checked={form.in_carts_enabled} onCheckedChange={(v) => set("in_carts_enabled", v)} aria-label="Show cart count" />
+          </div>
+        </Row>
         <div className="flex flex-col gap-y-2 px-6 py-4">
           <Label htmlFor="alert-email">New order alerts</Label>
           <Input

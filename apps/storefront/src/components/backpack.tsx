@@ -50,7 +50,12 @@ function Item({ line, onChange }: { line: Line; onChange: (fn: () => Promise<voi
             <p className="mt-[2px] text-[13px] text-black/60 lg:text-[15px]">{line.variant_title}</p>
           )}
           {typeof line.metadata?.engraving === "string" && line.metadata.engraving && (
-            <p className="mt-[2px] text-[13px] text-black/60 lg:text-[15px]">Personalisation: “{line.metadata.engraving}”</p>
+            <p className="mt-[2px] text-[13px] text-black/60 lg:text-[15px]">
+              Personalisation: “{line.metadata.engraving}”
+              {typeof line.metadata.engraving_fee === "number" && line.metadata.engraving_fee > 0
+                ? ` (+${formatPrice(line.metadata.engraving_fee)} each)`
+                : ""}
+            </p>
           )}
           <p className="mt-[2px] text-[12px] italic lg:text-[14px]">Quantity: {line.quantity}</p>
           <div className="mt-[6px] flex h-[22px] w-[74px] items-center justify-between rounded-md border border-black text-[12px] lg:h-[28px] lg:w-[92px] lg:text-[14px]">

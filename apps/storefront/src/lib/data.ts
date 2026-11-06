@@ -213,15 +213,65 @@ export async function getColourPalette(): Promise<Record<string, string>> {
 }
 
 // The delivery message set in the admin (Settings → Payments & delivery).
-export async function getDeliveryText(): Promise<string> {
+// Delivery and returns details from Settings → Payments & delivery.
+export type DeliveryInfo = {
+  delivery_text: string
+  dispatch_days: number
+  transit_days: number
+  dispatch_from: string
+  returns_text: string
+}
+const DELIVERY_FALLBACK: DeliveryInfo = {
+  delivery_text: "Free delivery across India.",
+  dispatch_days: 1,
+  transit_days: 7,
+  dispatch_from: "India",
+  returns_text: "",
+}
+
+export async function getDeliveryInfo(): Promise<DeliveryInfo> {
   "use cache"
   cacheLife("minutes")
   cacheTag("checkout-config")
   try {
-    const { delivery_text } = await sdk.client.fetch<{ delivery_text?: string }>("/store/checkout-config")
-    return delivery_text || "Free delivery across India."
+    const c = await sdk.client.fetch<Partial<DeliveryInfo>>("/store/checkout-config")
+    return {
+      delivery_text: c.delivery_text || DELIVERY_FALLBACK.delivery_text,
+      dispatch_days: typeof c.dispatch_days === "number" ? c.dispatch_days : DELIVERY_FALLBACK.dispatch_days,
+      transit_days: typeof c.transit_days === "number" ? c.transit_days : DELIVERY_FALLBACK.transit_days,
+      dispatch_from: c.dispatch_from ?? DELIVERY_FALLBACK.dispatch_from,
+      returns_text: c.returns_text ?? "",
+    }
   } catch {
-    return "Free delivery across India."
+    return DELIVERY_FALLBACK
+  }
+}
+
+// The sale price list behind a product's discounted price, if any.
+export const salePriceListOf = (p: HttpTypes.StoreProduct): string | null => {
+  for (const v of p.variants ?? []) {
+    const c = v.calculated_price as
+      | { calculated_price?: { price_list_id?: string | null; price_list_type?: string | null } }
+      | undefined
+    const list = c?.calculated_price
+    if (list?.price_list_id && list.price_list_type === "sale") return list.price_list_id
+  }
+  return null
+}
+
+// "In N+ carts" (a real, rounded-down count) and when the sale ends. Refreshed every few minutes.
+export async function getProductExtras(
+  productId: string,
+  priceListId: string | null
+): Promise<{ in_carts: number | null; sale_ends_at: string | null }> {
+  "use cache"
+  cacheLife("minutes")
+  try {
+    return await sdk.client.fetch(`/store/product-extras/${productId}`, {
+      query: priceListId ? { price_list_id: priceListId } : {},
+    })
+  } catch {
+    return { in_carts: null, sale_ends_at: null }
   }
 }
 

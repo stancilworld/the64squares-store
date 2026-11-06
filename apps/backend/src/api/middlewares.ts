@@ -18,6 +18,7 @@ import {
   StaffUpdateBody,
   StaffDefaultsBody,
   CheckoutSettingsBody,
+  PersonalisedItemBody,
   SeoSettingsBody,
   ProductFormBody,
   InvoiceSettingsBody,
@@ -175,6 +176,17 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/mailbox/actions",
       middlewares: [validateAndTransformBody(MailActionBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/carts/:id/personalised-items",
+      middlewares: [validateAndTransformBody(PersonalisedItemBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/image-preview",
+      // The photo is the raw request body, read by the route itself.
+      bodyParser: false,
     },
     {
       method: ["POST"],

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ready-made files served as they are (the bundled chess engine).
+    "public/**",
   ]),
 ]);
 

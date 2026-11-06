@@ -3,12 +3,11 @@
 import type { HttpTypes } from "@medusajs/types"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState, useTransition } from "react"
-import { HeartIcon } from "@/components/icons"
+import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react"
 import { addToCart } from "@/lib/cart"
 import { notifyCartChanged } from "@/lib/cart-events"
 import { notifyVariantSelected } from "@/lib/product-events"
-import { useList } from "@/lib/list"
+import { arrivalDate, formatArrival, formatShortDate, indiaToday } from "@/lib/delivery-date"
 import { useSwatch } from "./colours-provider"
 import { formatPrice } from "@/lib/format"
 import { trackAddToCart } from "@/lib/track"
@@ -21,17 +20,58 @@ const valueOf = (v: Variant, title: string) =>
 const inStock = (v?: Variant) =>
   !!v && (!v.manage_inventory || !!v.allow_backorder || (v.inventory_quantity ?? 0) > 0)
 
-type Engraving = { enabled: boolean; label: string; max: number; required: boolean }
+type Engraving = { enabled: boolean; label: string; max: number; required: boolean; fee: number }
 const engravingOf = (meta: Record<string, unknown> | null | undefined): Engraving | null => {
   const e = meta?.engraving as Partial<Engraving> | null | undefined
   if (!e?.enabled) return null
-  return { enabled: true, label: e.label || "Engraving text", max: Math.min(200, Math.max(1, Number(e.max) || 30)), required: !!e.required }
+  return {
+    enabled: true,
+    label: e.label || "Engraving text",
+    max: Math.min(200, Math.max(1, Number(e.max) || 30)),
+    required: !!e.required,
+    fee: Math.max(0, Math.round(Number(e.fee) || 0)),
+  }
 }
 
-export function ProductOptions({ product }: { product: HttpTypes.StoreProduct }) {
+// Most of one item a shopper can pick at once (fewer when stock is lower).
+const MAX_QTY = 10
+const qtyLimit = (v?: Variant) =>
+  !v || !v.manage_inventory || v.allow_backorder ? MAX_QTY : Math.max(1, Math.min(MAX_QTY, v.inventory_quantity ?? 1))
+
+// Today's date in India, read on the device (the page itself is cached).
+const noSubscribe = () => () => {}
+const useToday = () => useSyncExternalStore(noSubscribe, () => indiaToday(Date.now()), () => null)
+
+export type ProductPageInfo = {
+  // Days to pack (stock items) or the product's days to make, plus days in transit.
+  dispatch_days: number
+  transit_days: number
+  dispatch_from: string
+  returns_text: string
+  in_carts: number | null
+  sale_ends_at: string | null
+}
+
+const Tick = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="mt-[2px] shrink-0 text-[#2f6fd6]">
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </svg>
+)
+const Pin = () => (
+  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" className="mt-[2px] shrink-0 text-[#2f6fd6]">
+    <path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
+  </svg>
+)
+
+export function ProductOptions({ product, info }: { product: HttpTypes.StoreProduct; info: ProductPageInfo }) {
   const engraving = engravingOf(product.metadata)
   const leadTime = typeof product.metadata?.lead_time === "string" ? product.metadata.lead_time : ""
+  const makeDays = typeof product.metadata?.make_days === "number" ? product.metadata.make_days : null
   const [text, setText] = useState("")
+  // Optional personalisation is chosen from a list first; required personalisation is always on.
+  const [personalise, setPersonalise] = useState(false)
+  const [qty, setQty] = useState(1)
+  const today = useToday()
   const swatch = useSwatch()
   const variants = useMemo(() => product.variants ?? [], [product.variants])
   const optionTitles = useMemo(
@@ -62,23 +102,24 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
   }, [selected?.id])
 
   const router = useRouter()
-  const list = useList()
-  const saved = list.has(product.id, selected?.id ?? null)
+  const engravingOn = !!engraving && (engraving.required || personalise)
+  const limit = qtyLimit(selected)
+  const quantity = Math.min(qty, limit)
 
   // "Add to cart" adds to the cart; "Buy now" adds and opens the cart.
   const add = (thenOpenBackpack: boolean) => {
     if (!selected) {
       return
     }
-    if (engraving?.required && !text.trim()) {
-      setError(`Please fill in “${engraving.label}”.`)
+    if (engraving && engravingOn && !text.trim()) {
+      setError(`Please fill in “${engraving.label}”${engraving.required ? "" : ", or choose No personalisation"}.`)
       document.getElementById("engraving-text")?.focus()
       return
     }
     setError("")
     start(async () => {
       try {
-        await addToCart(selected.id, 1, engraving ? text : null)
+        await addToCart(selected.id, quantity, engravingOn ? text : null, engravingOn && (engraving?.fee ?? 0) > 0)
         notifyCartChanged()
         trackAddToCart({ id: product.id, name: product.title, price: selected.calculated_price?.calculated_amount ?? null })
         if (thenOpenBackpack) {
@@ -92,21 +133,36 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
     })
   }
 
-  const toggleList = () => {
-    const variantId = selected?.id ?? null
-    if (saved) {
-      list.remove(product.id, variantId)
-    } else {
-      list.add(product.id, variantId)
-    }
-  }
+  const price = selected?.calculated_price?.calculated_amount ?? null
+  const was = selected?.calculated_price?.original_amount ?? null
+  const onSale = typeof price === "number" && typeof was === "number" && price < was
+  const percentOff = onSale ? Math.round(((was - price) / was) * 100) : 0
+  const fee = engravingOn ? (engraving?.fee ?? 0) : 0
+  const days = (makeDays ?? info.dispatch_days) + info.transit_days
+  const returns = engravingOn ? "Personalised items can't be returned" : info.returns_text
 
   return (
     <div>
-      <p className="mt-4 text-[22px]">
-        {formatPrice(selected?.calculated_price?.calculated_amount ?? null)}
+      {info.in_carts && (
+        <p className="mt-4 text-[14px] font-semibold text-love">In {info.in_carts}+ carts</p>
+      )}
+      <div className={`flex flex-wrap items-baseline gap-x-3 ${info.in_carts ? "mt-1" : "mt-4"}`}>
+        <p className="text-[24px] font-semibold">{formatPrice(price === null ? null : price + fee)}</p>
+        {onSale && <p className="text-[16px] text-muted line-through">{formatPrice(was + fee)}</p>}
+      </div>
+      {onSale && percentOff > 0 && (
+        <p className="mt-0.5 text-[15px] font-medium text-[#2e7d32]">
+          {percentOff}% off
+          {info.sale_ends_at && (
+            <>
+              <span aria-hidden="true"> · </span>Sale ends {formatShortDate(info.sale_ends_at)}
+            </>
+          )}
+        </p>
+      )}
+      <p className="text-[13px] text-muted">
+        Inclusive of all taxes{fee > 0 ? ` · includes ${formatPrice(fee)} for personalisation` : ""}
       </p>
-      <p className="text-[13px] text-muted">Inclusive of all taxes</p>
       {leadTime && (
         <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-linen px-3 py-1 text-[13px] font-medium">
           <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -157,12 +213,42 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
         </fieldset>
       ))}
 
-      {engraving && (
+      {engraving && !engraving.required && (
         <div className="mt-7">
+          <label htmlFor="personalise" className="block text-[14px] font-medium">
+            Personalisation
+          </label>
+          <div className="relative mt-2">
+            <select
+              id="personalise"
+              value={personalise ? "yes" : "no"}
+              onChange={(e) => {
+                setPersonalise(e.target.value === "yes")
+                setAdded(false)
+                setError("")
+              }}
+              className="h-[48px] w-full appearance-none rounded-md border border-rule bg-white pl-4 pr-10 text-[15px] outline-none focus:border-black"
+            >
+              <option value="no">No personalisation</option>
+              <option value="yes">
+                Add personalisation{engraving.fee > 0 ? ` (+${formatPrice(engraving.fee)})` : " (free)"}
+              </option>
+            </select>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      {engraving && engravingOn && (
+        <div className={engraving.required ? "mt-7" : "mt-4"}>
           <label htmlFor="engraving-text" className="flex justify-between text-[14px] font-medium">
             <span>
               {engraving.label}
-              {!engraving.required && <span className="font-normal text-muted"> (optional)</span>}
+              {engraving.required && engraving.fee > 0 && (
+                <span className="font-normal text-muted"> (+{formatPrice(engraving.fee)})</span>
+              )}
             </span>
             <span className="font-normal text-muted">
               {text.length}/{engraving.max}
@@ -172,6 +258,7 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
             id="engraving-text"
             value={text}
             maxLength={engraving.max}
+            autoFocus={!engraving.required}
             onChange={(e) => {
               setText(e.target.value)
               setAdded(false)
@@ -180,6 +267,34 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
             className="mt-2 h-[48px] w-full rounded-md border border-rule bg-white px-4 text-[15px] outline-none focus:border-black"
           />
           <p className="mt-1.5 text-[13px] text-muted">Check the spelling: personalised items can&apos;t be returned.</p>
+        </div>
+      )}
+
+      {selected && inStock(selected) && (
+        <div className="mt-7">
+          <label htmlFor="quantity" className="block text-[14px] font-medium">
+            Quantity
+          </label>
+          <div className="relative mt-2 w-[120px]">
+            <select
+              id="quantity"
+              value={quantity}
+              onChange={(e) => {
+                setQty(Number(e.target.value))
+                setAdded(false)
+              }}
+              className="h-[48px] w-full appearance-none rounded-md border border-rule bg-white pl-4 pr-10 text-[15px] outline-none focus:border-black"
+            >
+              {Array.from({ length: limit }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
         </div>
       )}
 
@@ -200,15 +315,6 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
         >
           Buy now
         </button>
-        <button
-          type="button"
-          onClick={toggleList}
-          aria-pressed={saved}
-          className="inline-flex h-[52px] items-center gap-2 rounded-md px-3 text-[15px] hover:bg-linen"
-        >
-          <HeartIcon filled={saved} className={`h-[20px] w-[22px] ${saved ? "text-love" : ""}`} />
-          {saved ? "In your wishlist" : "Add to wishlist"}
-        </button>
       </div>
       {added && (
         <p className="mt-4 text-[15px]">
@@ -219,6 +325,29 @@ export function ProductOptions({ product }: { product: HttpTypes.StoreProduct })
         </p>
       )}
       {error && <p className="mt-3 text-[15px] text-red-700">{error}</p>}
+
+      <ul className="mt-7 space-y-2.5 text-[15px]">
+        {info.dispatch_from && (
+          <li className="flex gap-2.5">
+            <Pin />
+            <span>Dispatched from {info.dispatch_from}</span>
+          </li>
+        )}
+        {today !== null && selected && inStock(selected) && (
+          <li className="flex gap-2.5">
+            <Tick />
+            <span>
+              Arrives by <span className="font-medium">{formatArrival(arrivalDate(today, days))}</span> if you order today
+            </span>
+          </li>
+        )}
+        {returns && (
+          <li className="flex gap-2.5">
+            <Tick />
+            <span>{returns}</span>
+          </li>
+        )}
+      </ul>
     </div>
   )
 }

@@ -53,11 +53,21 @@ export async function getCartCount(): Promise<number> {
   }
 }
 
-export async function addToCart(variantId: string, quantity = 1, engraving?: string | null) {
+// paidPersonalisation: the product charges extra for personalisation, so the server adds the
+// item at its price plus the fee (it checks the fee itself).
+export async function addToCart(variantId: string, quantity = 1, engraving?: string | null, paidPersonalisation = false) {
   const id = await ensureCart()
+  const qty = Math.max(1, Math.min(20, Math.round(quantity) || 1))
   // Personalisation text: one line, printable characters only.
   const text = (engraving ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 200)
-  await sdk.store.cart.createLineItem(id, { variant_id: variantId, quantity, ...(text ? { metadata: { engraving: text } } : {}) })
+  if (text && paidPersonalisation) {
+    await sdk.client.fetch(`/store/carts/${id}/personalised-items`, {
+      method: "POST",
+      body: { variant_id: variantId, quantity: qty, text },
+    })
+  } else {
+    await sdk.store.cart.createLineItem(id, { variant_id: variantId, quantity: qty, ...(text ? { metadata: { engraving: text } } : {}) })
+  }
   return { ok: true }
 }
 

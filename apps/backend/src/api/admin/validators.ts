@@ -128,6 +128,12 @@ export const CheckoutSettingsBody = z.object({
   online_enabled: z.boolean().optional(),
   delivery_text: z.string().max(200).optional(),
   order_alert_email: z.union([z.string().email(), z.literal("")]).optional(),
+  dispatch_days: z.number().int().min(0).max(60).optional(),
+  transit_days: z.number().int().min(1).max(60).optional(),
+  dispatch_from: z.string().trim().max(60).optional(),
+  returns_text: z.string().trim().max(120).optional(),
+  in_carts_enabled: z.boolean().optional(),
+  in_carts_min: z.number().int().min(2).max(1000).optional(),
 })
 export type CheckoutSettingsBodyType = z.infer<typeof CheckoutSettingsBody>
 
@@ -158,8 +164,15 @@ export const ProductFormBody = z.object({
   assembly: z.string().max(200).nullable().optional(),
   care: z.string().max(1500).nullable().optional(),
   lead_time: z.string().max(80).nullable().optional(),
+  make_days: z.number().int().min(0).max(120).nullable().optional(),
   engraving: z
-    .object({ enabled: z.boolean(), label: z.string().trim().max(60), max: z.number().int().min(1).max(200), required: z.boolean() })
+    .object({
+      enabled: z.boolean(),
+      label: z.string().trim().max(60),
+      max: z.number().int().min(1).max(200),
+      required: z.boolean(),
+      fee: z.number().int().min(0).max(100_000).default(0),
+    })
     .nullable()
     .optional(),
   seo_title: z.string().max(120).nullable().optional(),
@@ -455,3 +468,11 @@ export const FairPlayDecisionBody = z.object({
   note: z.string().trim().max(500).optional(),
 })
 export type FairPlayDecisionBodyType = z.infer<typeof FairPlayDecisionBody>
+
+// POST /store/carts/:id/personalised-items (workflows/personalised-item.ts).
+export const PersonalisedItemBody = z.object({
+  variant_id: z.string().min(1).max(100),
+  quantity: z.number().int().min(1).max(20),
+  text: z.string().max(400),
+})
+export type PersonalisedItemBodyType = z.infer<typeof PersonalisedItemBody>

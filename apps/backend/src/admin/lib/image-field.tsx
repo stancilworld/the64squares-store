@@ -1,6 +1,6 @@
 import { Button, Label, Text, toast } from "@medusajs/ui"
 import { useRef, useState } from "react"
-import { uploadImage } from "./upload"
+import { isConvertedPicture, uploadImage } from "./upload"
 import { limitFor, useUploadLimits } from "./upload-limits"
 
 // The size to export for a spot (2x what it shows on a laptop), plus an optional tip.
@@ -18,8 +18,8 @@ type Props = {
   onFile?: (file: File, url: string) => void
 }
 
-const IMAGE_TYPES = "image/png,image/jpeg,image/webp,image/svg+xml"
-const MEDIA_TYPES = `${IMAGE_TYPES},image/gif,image/avif,video/mp4,video/webm,video/quicktime`
+const IMAGE_TYPES = "image/png,image/jpeg,image/webp,image/svg+xml,image/avif,image/heic,image/heif,.heic,.heif"
+const MEDIA_TYPES = `${IMAGE_TYPES},image/gif,video/mp4,video/webm,video/quicktime`
 
 export const isVideoUrl = (url: string) => /\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i.test(url)
 
@@ -74,8 +74,10 @@ export const ImageField = ({ label, value, onChange, allowVideo = true, recommen
     if (!file) {
       return
     }
-    // Checked here for a quick answer; the server checks the same limits again.
-    const limit = limitData && limitFor(limitData.limits, file)
+    // Checked here for a quick answer; the server checks the same limits again. Pictures are
+    // shrunk on the server first, so only their converted size counts.
+    const converted = isConvertedPicture(file)
+    const limit = !converted && limitData && limitFor(limitData.limits, file)
     if (limit && file.size > limit.max_mb * 1024 * 1024) {
       toast.error("File too large", {
         description: `This ${limit.label} is ${mb(file.size)}. The limit for ${limit.label} files is ${limit.max_mb} MB. Compress it, or raise the limit in Settings → Upload limits.`,
@@ -88,7 +90,7 @@ export const ImageField = ({ label, value, onChange, allowVideo = true, recommen
     setBusy(true)
     try {
       const url = await uploadImage(file)
-      setUpload({ url, bytes: file.size })
+      if (!converted) setUpload({ url, bytes: file.size })
       onChange(url)
       onFile?.(file, url)
     } catch (e) {
