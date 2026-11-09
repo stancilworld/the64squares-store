@@ -166,7 +166,7 @@ export function ReviewView({ game }: { game: ReviewGame }) {
       <span className="w-[46px] text-right font-mono text-[13px] font-bold">{evalNow ? evalText(evalNow, whiteToMove) : "…"}</span>
       <div className="relative h-[12px] flex-1 overflow-hidden rounded-full bg-[#2a2622] ring-1 ring-white/10">
         <div className="absolute inset-y-0 left-0 bg-[#f3ead8] transition-[width] duration-500" style={{ width: `${win}%` }} />
-        <div className="absolute inset-y-0 left-1/2 w-px bg-[var(--g-gold)]/60" />
+        <div className="absolute inset-y-0 left-1/2 w-px bg-[var(--g-accent)]/60" />
       </div>
     </div>
   )
@@ -251,7 +251,7 @@ export function ReviewView({ game }: { game: ReviewGame }) {
             <span className="w-[64px] truncate text-center font-bold">{game.white}</span>
             <span className="w-[64px] truncate text-center font-bold">{game.black}</span>
             <span className="g-muted">Accuracy</span>
-            <span className="rounded-md bg-[#f3ead8] py-1 text-center font-mono text-[16px] font-bold text-[#1d1408]">{accW ?? "—"}</span>
+            <span className="rounded-md bg-[#f3ead8] py-1 text-center font-mono text-[16px] font-bold text-black">{accW ?? "—"}</span>
             <span className="rounded-md bg-[#2a2622] py-1 text-center font-mono text-[16px] font-bold ring-1 ring-white/10">{accB ?? "—"}</span>
             {ORDER.map((k) => (
               <div key={k} className="contents">

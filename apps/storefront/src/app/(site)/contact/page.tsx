@@ -60,7 +60,7 @@ function PanelItem({ item }: { item: ContactPanelItem }) {
         href={`https://wa.me/${digits(v)}${text}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-1 inline-flex h-[46px] items-center gap-[10px] rounded-full bg-[#25d366] px-6 text-[16px] font-semibold text-white hover:bg-[#1ebe5a]"
+        className="mt-1 inline-flex h-[46px] items-center gap-[10px] rounded-sm bg-[#25d366] px-6 text-[16px] font-semibold text-white hover:bg-[#1ebe5a]"
       >
         <WhatsAppIcon className="h-[20px] w-[20px]" />
         {item.button_label || "Chat on WhatsApp"}

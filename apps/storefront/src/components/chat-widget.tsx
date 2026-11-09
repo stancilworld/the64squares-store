@@ -70,7 +70,7 @@ function Words({ text }: { text: string }) {
   )
 }
 
-const chip = "rounded-full border border-rule bg-white px-4 py-[9px] text-[14px] font-medium leading-none hover:bg-linen disabled:opacity-50"
+const chip = "rounded-full border border-rule bg-white px-4 py-[9px] text-[14px] font-medium leading-none hover:bg-chalk disabled:opacity-50"
 const box = "h-[44px] w-full rounded-full border border-rule bg-white px-4 text-[15px] outline-none placeholder:text-black/40 focus:shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
 
 const never = () => () => {}
@@ -216,7 +216,7 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
         >
           {/* Header: big hello on a fresh chat, a slim bar once talking. */}
           <div
-            className={`relative z-[1] shrink-0 bg-velvet text-white sm:rounded-t-xl ${fresh ? "px-6 pb-6 pt-5" : "flex items-center gap-3 border-b border-white/15 px-4 py-3"}`}
+            className={`relative z-[1] shrink-0 bg-ink text-white sm:rounded-t-xl ${fresh ? "px-6 pb-6 pt-5" : "flex items-center gap-3 border-b border-white/15 px-4 py-3"}`}
           >
             {fresh ? (
               <>
@@ -248,7 +248,7 @@ export function ChatWidget({ config }: { config: ChatbotConfig }) {
                     key={q.id}
                     type="button"
                     onClick={() => quick(q)}
-                    className="group flex min-h-[92px] flex-col items-start justify-between gap-2 rounded-xl border border-rule bg-white p-3.5 text-left text-[15px] font-medium leading-tight transition-colors hover:bg-linen focus-visible:bg-velvet text-white focus-visible:outline-none"
+                    className="group flex min-h-[92px] flex-col items-start justify-between gap-2 rounded-xl border border-rule bg-white p-3.5 text-left text-[15px] font-medium leading-tight transition-colors hover:bg-chalk focus-visible:bg-ink text-white focus-visible:outline-none"
                   >
                     <QuickIcon action={q.action} />
                     {q.label}
@@ -498,7 +498,7 @@ function OrderCard({ o }: { o: ChatOrder }) {
         <ol className="mt-3 grid grid-cols-4 gap-1" aria-label="Progress">
           {STEPS.map((s, i) => (
             <li key={s} className="flex flex-col gap-1">
-              <span className={`h-[7px] rounded-full border border-black ${i <= at ? "bg-velvet" : "bg-white"}`} />
+              <span className={`h-[7px] rounded-full border border-black ${i <= at ? "bg-ink" : "bg-white"}`} />
               <span className={`text-[11px] ${i <= at ? "font-medium" : "text-muted"}`}>{STEP_LABEL[s]}</span>
             </li>
           ))}

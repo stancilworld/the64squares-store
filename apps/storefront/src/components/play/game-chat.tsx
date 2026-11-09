@@ -58,8 +58,8 @@ export function GameChat({
           messages.map((m) =>
             muted && m.from !== me ? null : (
               <p key={m.id} className={m.from === me ? "text-right" : ""}>
-                <span className={`inline-block max-w-[85%] rounded-xl px-2.5 py-1 ${m.kind === "emoji" ? "text-[20px] leading-tight" : ""} ${m.from === me ? "bg-[var(--g-panel-3)]" : "bg-black/25"}`}>
-                  {m.from !== me && <b className="mr-1 text-[var(--g-gold)]">{m.name}:</b>}
+                <span className={`inline-block max-w-[85%] rounded-xl px-2.5 py-1 ${m.kind === "emoji" ? "text-[20px] leading-tight" : ""} ${m.from === me ? "bg-[var(--g-panel-3)]" : "bg-[var(--g-panel-2)]"}`}>
+                  {m.from !== me && <b className="mr-1 text-[var(--g-accent)]">{m.name}:</b>}
                   {m.text}
                 </span>
               </p>
@@ -107,13 +107,13 @@ export function GameChat({
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Message"
                 aria-label="Message"
-                className="h-[36px] min-w-0 flex-1 rounded-lg border border-[var(--g-line)] bg-[var(--g-panel-2)] px-2.5 text-[13px] outline-none focus:border-[var(--g-gold)]"
+                className="h-[36px] min-w-0 flex-1 rounded-lg border border-[var(--g-line)] bg-[var(--g-panel-2)] px-2.5 text-[13px] outline-none focus:border-[var(--g-accent)]"
               />
             ) : (
               <span className="g-muted min-w-0 flex-1 truncate text-[11px]">Typing is for games with friends.</span>
             )}
           </form>
-          {error && <p className="mt-1 text-[12px] text-[#ff8a7d]">{error}</p>}
+          {error && <p className="mt-1 text-[12px] text-[var(--g-bad)]">{error}</p>}
         </div>
       )}
     </div>

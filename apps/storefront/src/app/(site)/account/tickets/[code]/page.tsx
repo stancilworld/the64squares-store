@@ -34,13 +34,13 @@ async function TicketView({ params, searchParams }: PageProps<"/account/tickets/
   return (
     <div className="mx-auto max-w-[760px]">
       {sp.new && !cancelled && (
-        <p role="status" className="mb-6 rounded-md bg-maple-soft px-5 py-4 text-[15px]">
+        <p role="status" className="mb-6 rounded-md bg-chalk px-5 py-4 text-[15px]">
           You&apos;re registered. We&apos;ve emailed this ticket to {ticket.email}.
         </p>
       )}
       <article className={`overflow-hidden rounded-md border ${cancelled ? "border-rule opacity-70" : "border-black"} print:border-black`}>
-        <div className="bg-velvet px-6 py-5 text-white print:bg-white print:text-black">
-          <p className="text-[13px] text-maple print:text-black">Tournament ticket</p>
+        <div className="bg-ink px-6 py-5 text-white print:bg-white print:text-black">
+          <p className="text-[13px] text-white/60 print:text-black">Tournament ticket</p>
           <h1 className="font-display h-section mt-1">{ev.title}</h1>
         </div>
         <div className="grid gap-6 p-6 sm:grid-cols-[1fr_200px]">
@@ -85,10 +85,10 @@ async function TicketView({ params, searchParams }: PageProps<"/account/tickets/
               <div className="w-[168px] [&_svg]:h-auto [&_svg]:w-full" role="img" aria-label={`QR code for ticket ${ticket.ticket_code}`} dangerouslySetInnerHTML={{ __html: qr }} />
             )}
             <p className="font-mono text-[18px] font-semibold tracking-[0.12em]">{ticket.ticket_code}</p>
-            {ticket.checked_in_at && <p className="text-[13px] text-velvet">Checked in</p>}
+            {ticket.checked_in_at && <p className="text-[13px] text-good">Checked in</p>}
           </div>
         </div>
-        <p className="border-t border-rule bg-linen px-6 py-3 text-[13px] text-muted print:bg-white">
+        <p className="border-t border-rule bg-chalk px-6 py-3 text-[13px] text-muted print:bg-white">
           {cancelled
             ? "This place was cancelled."
             : ev.mode === "offline"

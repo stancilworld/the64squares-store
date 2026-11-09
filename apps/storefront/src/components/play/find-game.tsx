@@ -96,17 +96,17 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
     const name = profile?.display_name ?? pass?.me.name ?? "You"
     return (
       <div className="menu-stage mx-auto flex min-h-[calc(100dvh-170px)] max-w-[640px] flex-col items-center justify-center py-6 text-center lg:min-h-[calc(100dvh-80px)]">
-        <p className="menu-rise text-[12px] font-bold uppercase tracking-[0.22em] text-[var(--g-gold)]">
+        <p className="menu-rise text-[12px] font-semibold text-[var(--g-muted)]">
           {SPEED_LABEL[sSpeed]} · {TIME_CONTROLS.find((t) => t.tc === seeking.tc)?.detail} · {pass?.me.guest ? "Casual" : "Rated"}
         </p>
         <div className="relative mt-16 grid h-[150px] w-[150px] place-items-center">
           <span className="mm-ring" />
           <span className="mm-ring [animation-delay:0.8s]" />
           <span className="mm-ring [animation-delay:1.6s]" />
-          <span className="absolute inset-0 overflow-hidden rounded-full border border-[var(--g-gold)]/25 bg-[radial-gradient(circle,rgba(214,176,106,0.12),transparent_70%)]">
+          <span className="absolute inset-0 overflow-hidden rounded-full border border-[var(--g-accent)]/25 bg-[radial-gradient(circle,rgba(255,179,0,0.12),transparent_70%)]">
             <span className="mm-sweep" />
           </span>
-          <span className="relative rounded-full ring-4 ring-[var(--g-gold)]/70">
+          <span className="relative rounded-full ring-4 ring-[var(--g-accent)]/70">
             <Avatar url={profile?.avatar_url ?? null} name={name} size={96} className="[&>*]:!rounded-full" />
           </span>
         </div>
@@ -117,8 +117,8 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
             {Math.floor(waited / 60)}:{String(waited % 60).padStart(2, "0")}
           </span>
         </p>
-        <p className="mt-8 max-w-[34ch] rounded-xl bg-black/20 px-4 py-3 text-[14px]">
-          <span className="font-bold text-[var(--g-gold)]">Tip · </span>
+        <p className="mt-8 max-w-[34ch] rounded-xl bg-[var(--g-panel-2)] px-4 py-3 text-[14px]">
+          <span className="font-bold text-[var(--g-accent)]">Tip · </span>
           {TIPS[Math.floor(waited / 6) % TIPS.length]}
         </p>
         <button type="button" className="g-btn mt-8 h-[48px] w-full max-w-[280px]" onClick={cancel}>
@@ -139,7 +139,7 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
             {lobby ? (
               <>
                 {" "}
-                <span className="text-[#5fd07a]">●</span> {lobby.playing} {lobby.playing === 1 ? "game" : "games"} on now.
+                <span className="text-[var(--g-good)]">●</span> {lobby.playing} {lobby.playing === 1 ? "game" : "games"} on now.
               </>
             ) : null}
           </>
@@ -149,13 +149,13 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
       <div className="fixed inset-x-0 bottom-[62px] z-20 bg-gradient-to-t from-[var(--g-bg)] via-[var(--g-bg)]/95 to-transparent px-3 pb-3 pt-6 lg:static lg:bg-none lg:p-0">
         <div className="mx-auto flex max-w-[980px] flex-col items-center gap-3 sm:flex-row">
           <button type="button" onClick={play} disabled={!token} className="menu-play flex h-[60px] w-full items-center justify-center gap-3 sm:w-[320px]">
-            <span className="relative text-[20px] font-black uppercase tracking-wide">Play {label}</span>
+            <span className="relative text-[20px] font-extrabold tracking-tight">Play {label}</span>
           </button>
           <p className="g-muted text-center text-[13px] sm:text-left">
             {pass?.me.guest ? (
               <>
                 Playing as <b className="text-[var(--g-text)]">{pass.me.name}</b> · casual.{" "}
-                <Link href="/account?next=/play/online" className="text-[var(--g-gold)] underline underline-offset-2">
+                <Link href="/account?next=/play/online" className="text-[var(--g-accent)] underline underline-offset-2">
                   Sign up
                 </Link>{" "}
                 for a rating.
@@ -168,7 +168,7 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
           </p>
         </div>
         {error && (
-          <p className="mt-3 text-center text-[14px] text-[#ff8a7d] sm:text-left">
+          <p className="mt-3 text-center text-[14px] text-[var(--g-bad)] sm:text-left">
             {error.text}{" "}
             {error.game && (
               <Link href={`/play/${error.game}`} className="font-semibold underline underline-offset-2">

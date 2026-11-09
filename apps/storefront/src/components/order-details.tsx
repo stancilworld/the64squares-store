@@ -30,9 +30,9 @@ export function OrderDetails({ order }: { order: AccountOrder }) {
             {STEPS.map((s, i) => (
               <li key={s.key} className="flex flex-1 flex-col items-center text-center" aria-current={i === at ? "step" : undefined}>
                 <span className="flex w-full items-center">
-                  <span className={`h-[2px] flex-1 ${i === 0 ? "opacity-0" : i <= at ? "bg-black" : "bg-black/20"}`} />
-                  <span className={`h-[14px] w-[14px] shrink-0 rounded-full border-[2px] ${i <= at ? "border-black bg-black" : "border-black/30 bg-white"}`} />
-                  <span className={`h-[2px] flex-1 ${i === STEPS.length - 1 ? "opacity-0" : i < at ? "bg-black" : "bg-black/20"}`} />
+                  <span className={`h-[2px] flex-1 ${i === 0 ? "opacity-0" : i <= at ? "bg-black" : "bg-[var(--g-panel-2)]"}`} />
+                  <span className={`h-[14px] w-[14px] shrink-0 rounded-sm border-[2px] ${i <= at ? "border-black bg-black" : "border-black/30 bg-white"}`} />
+                  <span className={`h-[2px] flex-1 ${i === STEPS.length - 1 ? "opacity-0" : i < at ? "bg-black" : "bg-[var(--g-panel-2)]"}`} />
                 </span>
                 <span className={`mt-2 text-[12px] lg:text-[15px] ${i <= at ? "text-black" : "text-black/40"}`}>{s.label}</span>
               </li>
@@ -121,7 +121,7 @@ export function OrderDetails({ order }: { order: AccountOrder }) {
               href={order.invoice_url}
               target="_blank"
               rel="noreferrer"
-              className="mt-5 flex h-[42px] items-center justify-center rounded-full border border-black text-[15px] hover:bg-linen"
+              className="mt-5 flex h-[42px] items-center justify-center rounded-sm border border-black text-[15px] hover:bg-chalk"
             >
               Download GST invoice
             </a>

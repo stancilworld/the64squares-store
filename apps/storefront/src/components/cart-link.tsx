@@ -31,7 +31,7 @@ export function CartLink() {
     <Link href="/cart" aria-label={count ? `Cart, ${count} items` : "Cart"} className="relative">
       <CartIcon className="h-[22px] w-[23px]" />
       {count > 0 && (
-        <span className="absolute -right-2 -top-1.5 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-velvet px-1 text-[10px] leading-none text-white">
+        <span className="absolute -right-2 -top-1.5 flex h-[16px] min-w-[16px] items-center justify-center bg-amber px-1 text-[10px] font-bold leading-none text-black">
           {count > 99 ? "99+" : count}
         </span>
       )}

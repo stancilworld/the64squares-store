@@ -1,5 +1,6 @@
 "use client"
 
+import { GIcon } from "@/components/play-shell/icons"
 import type { Colour } from "./board"
 import { Avatar, LevelBadge } from "@/components/play/avatar"
 import { pieceSrc, useBoardSettings } from "@/lib/chess/settings"
@@ -17,7 +18,7 @@ const fmt = (ms: number) => {
 export function Clock({ ms, running, low }: { ms: number; running: boolean; low: boolean }) {
   return (
     <span
-      className={`inline-flex min-w-[104px] items-center justify-end gap-2 rounded-md px-3 py-1.5 font-mono text-[22px] font-semibold tabular-nums leading-none transition-colors ${
+      className={`inline-flex min-w-[104px] items-center justify-end gap-2 rounded-md px-3 py-1.5 font-mono text-[22px] font-bold tabular-nums leading-none transition-colors ${
         running ? (low ? "bg-[#c6392f] text-white" : "bg-[#f3f0e9] text-[#14110e]") : "bg-[var(--g-panel-2)] text-[var(--g-muted)]"
       }`}
     >
@@ -74,10 +75,10 @@ export function PlayerBar({ name, colour, rating, provisional, diff, taken = [],
           <span
             aria-hidden="true"
             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[15px] font-bold ${
-              isBot ? "bg-[var(--g-gold)] text-[#1d1408]" : colour === "w" ? "bg-[#ece9e2] text-[#2b2826]" : "bg-[#2b2826] text-white ring-1 ring-white/15"
+              isBot ? "bg-[var(--g-accent)] text-black" : colour === "w" ? "bg-[#ece9e2] text-[#2b2826]" : "bg-[#2b2826] text-white ring-1 ring-white/15"
             }`}
           >
-            {isBot ? "⚙" : name.trim().charAt(0).toUpperCase() || "?"}
+            {isBot ? <GIcon name="cpu" size={20} /> : name.trim().charAt(0).toUpperCase() || "?"}
           </span>
         ) : (
           <Avatar url={avatarUrl} name={name} size={36} />
@@ -100,14 +101,14 @@ export function PlayerBar({ name, colour, rating, provisional, diff, taken = [],
               </span>
             )}
             {diff != null && diff !== 0 && (
-              <span className={`shrink-0 text-[13px] font-semibold ${diff > 0 ? "text-[#7bd88f]" : "text-[#ff8a7d]"}`}>
+              <span className={`shrink-0 text-[13px] font-semibold ${diff > 0 ? "text-[#7bd88f]" : "text-[var(--g-bad)]"}`}>
                 {diff > 0 ? `+${diff}` : diff}
               </span>
             )}
           </p>
           <div className="flex h-[18px] items-center">
             {note ? (
-              <span className="text-[12px] font-medium text-[#ff8a7d]">{note}</span>
+              <span className="text-[12px] font-medium text-[var(--g-bad)]">{note}</span>
             ) : (
               <>
                 {taken.map((t, i) => (

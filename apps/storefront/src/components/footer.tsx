@@ -63,8 +63,8 @@ export async function Footer() {
   const f = nav.footer
 
   return (
-    <footer className="mt-auto bg-velvet text-maple-soft">
-      <div className="mx-auto grid max-w-[1440px] gap-10 px-6 pb-10 pt-14 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_1fr_1fr] lg:gap-12 lg:px-10 lg:pb-12 lg:pt-20">
+    <footer className="board-wash mt-auto bg-ink text-white/80">
+      <div className="mx-auto grid max-w-[1440px] gap-10 px-6 pb-10 pt-14 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_1fr_1fr_1fr] lg:gap-12 lg:px-10 lg:pb-12 lg:pt-20">
         <div>
           {media ? (
             <Media src={media} className="h-[160px] w-[160px] rounded-md object-cover lg:h-[200px] lg:w-[200px]" />
@@ -73,22 +73,37 @@ export async function Footer() {
               <Image src="/brand/logo-footer.webp" alt="The 64 Squares" width={388} height={160} className="h-[48px] w-auto lg:h-[56px]" />
             </Link>
           )}
-          {f.tagline && <p className="mt-6 max-w-[340px] font-display text-[22px] leading-[1.3] text-white">{f.tagline}</p>}
+          {f.tagline && <p className="mt-6 max-w-[360px] font-display text-[24px] leading-[1.15] text-white">{f.tagline}</p>}
           <SocialLinks socials={f.socials} className="mt-6 flex items-center gap-5" size="h-[22px] w-[22px]" />
         </div>
 
         <div>
-          <h2 className="text-[13px] font-medium text-maple">{f.col1_title}</h2>
+          <h2 className="sq-mark text-[14px] font-bold text-white">{f.col1_title}</h2>
           <FooterLinks links={f.col1_links} className="mt-4 space-y-2.5 text-[15px]" />
         </div>
 
         <div>
-          <h2 className="text-[13px] font-medium text-maple">{f.col2_title}</h2>
+          <h2 className="sq-mark text-[14px] font-bold text-white">{f.col2_title}</h2>
           <FooterLinks links={f.col2_links} className="mt-4 space-y-2.5 text-[15px]" />
         </div>
+
+        {nav.experience?.show_switch !== false && (
+          <div>
+            <h2 className="sq-mark text-[14px] font-bold text-white">Play</h2>
+            <FooterLinks
+              links={[
+                { label: "Play online", href: "/play" },
+                { label: "Puzzles", href: "/play/puzzles" },
+                { label: "Tournaments", href: "/tournaments" },
+                { label: "Leaderboard", href: "/play/leaderboard" },
+              ]}
+              className="mt-4 space-y-2.5 text-[15px]"
+            />
+          </div>
+        )}
       </div>
       <div className="border-t border-white/10">
-        <p className="mx-auto max-w-[1440px] px-6 py-5 text-[13px] text-maple/80 lg:px-10">The 64 Squares, made in India.</p>
+        <p className="mx-auto max-w-[1440px] px-6 py-5 text-[13px] text-white/55 lg:px-10">The 64 Squares, made in India.</p>
       </div>
     </footer>
   )

@@ -64,7 +64,7 @@ export function BoardSettingsModal() {
         role="switch"
         aria-checked={on}
         onClick={flip}
-        className={`relative h-[26px] w-[46px] rounded-full transition ${on ? "bg-[var(--g-gold)]" : "bg-[var(--g-panel-3)]"}`}
+        className={`relative h-[26px] w-[46px] rounded-full transition ${on ? "bg-[var(--g-accent)]" : "bg-[var(--g-panel-3)]"}`}
       >
         <span className={`absolute top-[3px] h-5 w-5 rounded-full bg-white shadow transition-all ${on ? "left-[23px]" : "left-[3px]"}`} />
       </button>
@@ -96,7 +96,7 @@ export function BoardSettingsModal() {
             {theme.label} board with {PIECE_SETS[s.pieces].label} pieces. Your choice is remembered on this device.
           </p>
         </div>
-        <p className="mt-5 text-[12px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">Board</p>
+        <p className="mt-5 text-[12px] font-semibold text-[var(--g-muted)]">Board</p>
         <div className="mt-2 grid grid-cols-5 gap-2">
           {Object.entries(BOARD_THEMES).map(([key, t]) => (
             <button
@@ -116,7 +116,7 @@ export function BoardSettingsModal() {
             </button>
           ))}
         </div>
-        <p className="mt-5 text-[12px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">Pieces</p>
+        <p className="mt-5 text-[12px] font-semibold text-[var(--g-muted)]">Pieces</p>
         <div className="mt-2 grid grid-cols-3 gap-2">
           {Object.entries(PIECE_SETS).map(([key, p]) => (
             <button

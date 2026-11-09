@@ -52,10 +52,10 @@ export function SideNav({ account, showSwitch = true }: { account: React.ReactNo
               key={n.href}
               href={n.href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] font-semibold transition ${
-                on ? "bg-[var(--g-panel-3)] text-white" : "text-[var(--g-muted)] hover:bg-[var(--g-panel)] hover:text-white"
+                on ? "bg-[var(--g-panel-2)] text-white shadow-[inset_3px_0_0_var(--g-accent)]" : "text-[var(--g-muted)] hover:bg-[var(--g-panel)] hover:text-white"
               }`}
             >
-              <GIcon name={n.icon} className={on ? "text-[var(--g-gold)]" : ""} />
+              <GIcon name={n.icon} className={on ? "text-[var(--g-accent)]" : ""} />
               {n.label}
             </Link>
           )
@@ -118,7 +118,7 @@ export function MobileTabs() {
         const n = PLAY_NAV.find((x) => x.href === href)!
         const on = isActive(path, href)
         return (
-          <Link key={href} href={href} className={`flex flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${on ? "text-[var(--g-gold)]" : "text-[var(--g-muted)]"}`}>
+          <Link key={href} href={href} className={`flex flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${on ? "text-[var(--g-accent)]" : "text-[var(--g-muted)]"}`}>
             <GIcon name={n.icon} size={22} />
             {n.label}
           </Link>

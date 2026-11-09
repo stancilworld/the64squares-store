@@ -16,7 +16,7 @@ async function List() {
   const row = (t: (typeof upcoming)[number], note: string) => (
     <Link key={t.id} href={`/play/arena/${t.handle}`} className="g-panel flex items-center gap-4 p-4 transition hover:brightness-110">
       <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-[var(--g-panel-3)] text-center">
-        <span className="text-[11px] font-semibold uppercase text-[var(--g-gold)]">{eventDay(t.starts_at).split(",")[0]}</span>
+        <span className="text-[12px] font-semibold text-[var(--g-muted)]">{eventDay(t.starts_at).split(",")[0]}</span>
         <span className="text-[13px] font-bold leading-tight">{eventTime(t.starts_at).replace(" IST", "")}</span>
       </span>
       <span className="min-w-0 flex-1">
@@ -31,14 +31,14 @@ async function List() {
   return (
     <div className="flex flex-col gap-6">
       <section>
-        <h2 className="text-[13px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">Online arenas</h2>
+        <h2 className="text-[13px] font-semibold text-[var(--g-muted)]">Online arenas</h2>
         <div className="mt-3 flex flex-col gap-2">
           {online.length ? online.map((t) => row(t, "Open")) : <p className="g-panel g-muted p-6 text-center">No online arenas scheduled right now. Check back soon.</p>}
         </div>
       </section>
       {offline.length > 0 && (
         <section>
-          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">Over-the-board events</h2>
+          <h2 className="text-[13px] font-semibold text-[var(--g-muted)]">Over-the-board events</h2>
           <div className="mt-3 flex flex-col gap-2">
             {offline.map((t) => (
               <Link key={t.id} href={`/tournaments/${t.handle}`} className="g-panel flex items-center justify-between gap-4 p-4 hover:brightness-110">
@@ -56,7 +56,7 @@ async function List() {
       )}
       {finished.length > 0 && (
         <section>
-          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">Finished</h2>
+          <h2 className="text-[13px] font-semibold text-[var(--g-muted)]">Finished</h2>
           <div className="mt-3 flex flex-col gap-2">{finished.map((t) => row(t, "Results"))}</div>
         </section>
       )}

@@ -19,7 +19,7 @@ export function Avatar({ url, name, size = 36, online, className = "" }: { url?:
       {online != null && (
         <span
           title={online ? "Online" : "Offline"}
-          className={`absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-[var(--g-panel)] ${online ? "bg-[#5fd07a]" : "bg-[#6b7a71]"}`}
+          className={`absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-[var(--g-panel)] ${online ? "bg-[var(--g-good)]" : "bg-[#6f6f6f]"}`}
           style={{ width: Math.max(10, size * 0.28), height: Math.max(10, size * 0.28) }}
         />
       )}
@@ -29,7 +29,7 @@ export function Avatar({ url, name, size = 36, online, className = "" }: { url?:
 
 // "Lv 7 · Knight" in the title's colour.
 export function LevelBadge({ level, compact = false }: { level: Level; compact?: boolean }) {
-  const colour = TITLE_COLOURS[level.title] ?? "#9db0a4"
+  const colour = TITLE_COLOURS[level.title] ?? "#a5a29b"
   return (
     <span
       className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-[1px] text-[11px] font-bold leading-[16px]"
@@ -47,7 +47,7 @@ export function XpBar({ level }: { level: Level }) {
   return (
     <div>
       <div className="h-2.5 overflow-hidden rounded-full bg-[var(--g-panel-3)]">
-        <div className="h-full rounded-full bg-gradient-to-r from-[#c99a4c] to-[#e6c57f]" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full bg-[var(--g-accent)]" style={{ width: `${pct}%` }} />
       </div>
       <p className="g-muted mt-1 text-[12px]">
         {level.into} / {level.needed} XP to level {level.level + 1}

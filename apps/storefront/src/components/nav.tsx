@@ -16,7 +16,7 @@ type Props = { categoryLinks: NavLink[]; aboutLinks: NavLink[]; menu: Menu }
 const isExternal = (href: string) => /^https?:\/\//.test(href)
 const aboutPaths = (links: NavLink[]) => ["/about", "/blog", "/contact", "/help", ...links.map((l) => l.href).filter((h) => h.startsWith("/"))]
 
-const underline = "underline decoration-brass decoration-2 underline-offset-[10px]"
+const underline = "underline decoration-amber decoration-2 underline-offset-[10px]"
 
 function Dropdown({
   label,
@@ -58,13 +58,13 @@ function Dropdown({
       </button>
       {open && (
         <div className="absolute left-0 top-full pt-3">
-          <ul className="min-w-[220px] rounded-md border border-rule bg-white py-2 shadow-[0_12px_32px_rgba(0,0,0,0.08)]">
+          <ul className="min-w-[220px] border border-black bg-white py-2 font-medium shadow-[6px_6px_0_rgba(0,0,0,0.9)]">
             {links.map((l) => (
               <li key={l.href + l.label}>
                 <Link
                   href={l.href}
                   onClick={() => setOpen(false)}
-                  className="block px-4 py-2 text-[15px] hover:bg-linen"
+                  className="block px-4 py-2 text-[15px] hover:bg-chalk"
                 >
                   {l.label}
                 </Link>
@@ -85,7 +85,7 @@ export function NavLinksView({ categoryLinks, aboutLinks, menu, path }: Props & 
   return (
     <nav
       aria-label="Main"
-      className="ml-8 hidden items-center gap-8 text-[15px] lg:flex"
+      className="ml-6 hidden items-center gap-7 text-[15px] font-semibold lg:flex"
     >
       <Dropdown
         label={menu.categoriesLabel}

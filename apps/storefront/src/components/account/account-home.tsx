@@ -107,7 +107,7 @@ export function AccountHome({ customer, orders, tickets = [] }: { customer: Http
               router.refresh()
             })
           }
-          className="h-[40px] rounded-md border border-black px-6 text-[15px] hover:bg-linen"
+          className="h-[40px] rounded-md border border-black px-6 text-[15px] hover:bg-chalk"
         >
           Sign out
         </button>

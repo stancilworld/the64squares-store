@@ -10,7 +10,7 @@ import type { FullProfile } from "@/lib/profile-types"
 import { Avatar, LevelBadge, XpBar } from "./avatar"
 import { usePlayPass } from "./use-play-pass"
 
-const field = "h-[46px] w-full rounded-lg border border-[var(--g-line)] bg-[var(--g-panel-2)] px-3 text-[15px] outline-none focus:border-[var(--g-gold)]"
+const field = "h-[46px] w-full rounded-lg border border-[var(--g-line)] bg-[var(--g-panel-2)] px-3 text-[15px] outline-none focus:border-[var(--g-accent)]"
 
 // Your profile: picture, name, username, city and a few words about you.
 export function ProfileEditor({ initialPass }: { initialPass: PlayPass | null }) {
@@ -133,7 +133,7 @@ export function ProfileEditor({ initialPass }: { initialPass: PlayPass | null })
         </label>
         <label className="flex flex-col gap-1.5 text-[14px] font-semibold">
           Username
-          <div className="flex items-center rounded-lg border border-[var(--g-line)] bg-[var(--g-panel-2)] pl-3 focus-within:border-[var(--g-gold)]">
+          <div className="flex items-center rounded-lg border border-[var(--g-line)] bg-[var(--g-panel-2)] pl-3 focus-within:border-[var(--g-accent)]">
             <span className="g-muted">@</span>
             <input
               className="h-[44px] w-full bg-transparent px-1 text-[15px] outline-none"
@@ -151,7 +151,7 @@ export function ProfileEditor({ initialPass }: { initialPass: PlayPass | null })
         <label className="flex flex-col gap-1.5 text-[14px] font-semibold sm:col-span-2">
           About you
           <textarea
-            className="min-h-[90px] w-full rounded-lg border border-[var(--g-line)] bg-[var(--g-panel-2)] p-3 text-[15px] outline-none focus:border-[var(--g-gold)]"
+            className="min-h-[90px] w-full rounded-lg border border-[var(--g-line)] bg-[var(--g-panel-2)] p-3 text-[15px] outline-none focus:border-[var(--g-accent)]"
             maxLength={200}
             value={form.bio}
             onChange={(e) => setForm({ ...form, bio: e.target.value })}
@@ -162,7 +162,7 @@ export function ProfileEditor({ initialPass }: { initialPass: PlayPass | null })
           <button type="button" disabled={busy} className="g-btn g-btn-primary" onClick={save}>
             {busy ? "Saving…" : "Save profile"}
           </button>
-          {note && <p className={`text-[14px] ${note.ok ? "text-[#7bd88f]" : "text-[#ff8a7d]"}`}>{note.text}</p>}
+          {note && <p className={`text-[14px] ${note.ok ? "text-[#7bd88f]" : "text-[var(--g-bad)]"}`}>{note.text}</p>}
         </div>
       </div>
     </div>

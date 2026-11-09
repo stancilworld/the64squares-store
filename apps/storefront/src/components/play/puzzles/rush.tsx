@@ -98,22 +98,22 @@ export function PuzzleRush({ initialPass }: { initialPass: PlayPass | null }) {
         <Link href="/play/puzzles" className="g-btn g-btn-ghost mb-6 !min-h-[38px] self-start !text-[13px]">
           <GIcon name="back" size={18} /> Puzzles
         </Link>
-        <p className="text-[12px] font-bold uppercase tracking-[0.22em] text-[var(--g-gold)]">Puzzle Rush</p>
+        <p className="text-[12px] font-semibold text-[var(--g-muted)]">Puzzle Rush</p>
         {phase === "over" ? (
           <>
-            <p className="menu-rise mt-4 font-mono text-[96px] font-black leading-none text-[var(--g-gold)] drop-shadow-[0_0_30px_rgba(230,197,127,0.35)]">{score}</p>
-            <p className="mt-2 text-[22px] font-extrabold">{newBest ? "New personal best! 🏆" : "puzzles solved"}</p>
+            <p className="menu-rise mt-4 font-mono text-[96px] font-black leading-none text-[var(--g-accent)] drop-shadow-[0_0_30px_rgba(230,197,127,0.35)]">{score}</p>
+            <p className="mt-2 text-[22px] font-extrabold">{newBest ? "New personal best!" : "puzzles solved"}</p>
             <p className="g-muted mt-1 text-[15px]">{best != null ? `Your best: ${best}` : ""}</p>
           </>
         ) : (
           <>
             <h1 className="mt-3 text-[34px] font-extrabold leading-tight sm:text-[42px]">3 minutes. 3 lives.</h1>
             <p className="g-muted mt-3 max-w-[38ch] text-[16px]">Solve as many puzzles as you can. They start easy and get harder. Three wrong moves and the run ends.</p>
-            {best ? <p className="mt-4 text-[15px]">Your best: <b className="text-[var(--g-gold)]">{best}</b></p> : null}
+            {best ? <p className="mt-4 text-[15px]">Your best: <b className="text-[var(--g-accent)]">{best}</b></p> : null}
           </>
         )}
         <button type="button" onClick={start} disabled={!pass} className="menu-play mt-8 flex h-[62px] w-full max-w-[320px] items-center justify-center">
-          <span className="relative text-[21px] font-black uppercase tracking-wide">{phase === "over" ? "Play again" : "Start"}</span>
+          <span className="relative text-[21px] font-extrabold tracking-tight">{phase === "over" ? "Play again" : "Start"}</span>
         </button>
         {phase === "over" && (
           <Link href="/play/puzzles" className="g-muted mt-4 text-[14px] underline underline-offset-4">
@@ -132,9 +132,9 @@ export function PuzzleRush({ initialPass }: { initialPass: PlayPass | null }) {
     <div className="flex h-[44px] items-center justify-between">
       <span className="flex items-center gap-1.5 text-[15px] font-bold">
         {Array.from({ length: LIVES }, (_, i) => (
-          <span key={i} className={`text-[20px] ${i < LIVES - misses.filter(Boolean).length ? "" : "opacity-30 grayscale"}`} aria-hidden="true">
-            ❤️
-          </span>
+          <svg key={i} viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" className={i < LIVES - misses.filter(Boolean).length ? "fill-[#e5483b]" : "fill-white/15"}>
+            <path d="M12 20s-7-4.3-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.5c0 5.2-7 9.5-7 9.5z" />
+          </svg>
         ))}
         <span className="sr-only">{misses.filter(Boolean).length} misses</span>
       </span>
@@ -152,14 +152,14 @@ export function PuzzleRush({ initialPass }: { initialPass: PlayPass | null }) {
         <div className="flex h-[40px] items-center justify-between text-[14px] font-semibold">
           <span className="g-muted">{s.colour === "w" ? "White to play" : "Black to play"}</span>
           <span>
-            Score <b className="font-mono text-[20px] text-[var(--g-gold)]">{score}</b>
+            Score <b className="font-mono text-[20px] text-[var(--g-accent)]">{score}</b>
           </span>
         </div>
       )}
       panel={(s) => (
         <div className="flex min-h-0 flex-1 flex-col gap-3">
           <div className="g-panel p-5 text-center">
-            <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--g-gold)]">Puzzle Rush</p>
+            <p className="text-[12px] font-semibold text-[var(--g-muted)]">Puzzle Rush</p>
             <p className="mt-2 font-mono text-[64px] font-black leading-none">{score}</p>
             <p className="g-muted mt-1 text-[13px]">Puzzle {index + 1} · rating {puzzle.rating}</p>
             <p className="mt-3 text-[15px] font-semibold">{s.yourTurn ? `Find the best move for ${s.colour === "w" ? "White" : "Black"}` : "…"}</p>

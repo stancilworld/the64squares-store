@@ -11,7 +11,7 @@ export function ListLink() {
     <Link href="/list" aria-label={count ? `Wishlist, ${count} saved` : "Wishlist"} className="relative">
       <HeartIcon className="h-[21px] w-[23px]" />
       {count > 0 && (
-        <span className="absolute -right-2 -top-1.5 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-velvet px-1 text-[10px] leading-none text-white">
+        <span className="absolute -right-2 -top-1.5 flex h-[16px] min-w-[16px] items-center justify-center bg-amber px-1 text-[10px] font-bold leading-none text-black">
           {count}
         </span>
       )}

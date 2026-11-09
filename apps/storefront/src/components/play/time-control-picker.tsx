@@ -3,7 +3,6 @@
 import { TIME_CONTROLS } from "@/lib/game-types"
 
 const GROUPS = ["Bullet", "Blitz", "Rapid", "Classical"] as const
-const ICON: Record<(typeof GROUPS)[number], string> = { Bullet: "•", Blitz: "⚡", Rapid: "◷", Classical: "♔" }
 
 // Time controls grouped by speed, as tiles.
 export function TimeControlPicker({ value, onChange }: { value: string; onChange: (tc: string) => void }) {
@@ -11,8 +10,7 @@ export function TimeControlPicker({ value, onChange }: { value: string; onChange
     <div className="flex flex-col gap-3">
       {GROUPS.map((g) => (
         <div key={g}>
-          <p className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">
-            <span aria-hidden="true">{ICON[g]}</span>
+          <p className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-[var(--g-muted)]">
             {g}
           </p>
           <div className="grid grid-cols-3 gap-2">

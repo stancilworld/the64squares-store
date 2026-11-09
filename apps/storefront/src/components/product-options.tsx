@@ -164,7 +164,7 @@ export function ProductOptions({ product, info }: { product: HttpTypes.StoreProd
         Inclusive of all taxes{fee > 0 ? ` · includes ${formatPrice(fee)} for personalisation` : ""}
       </p>
       {leadTime && (
-        <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-linen px-3 py-1 text-[13px] font-medium">
+        <p className="mt-3 inline-flex items-center gap-2 rounded-sm bg-chalk px-3 py-1 text-[13px] font-medium">
           <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <circle cx="12" cy="12" r="9" />
             <path d="M12 7v5l3 2" />
@@ -191,7 +191,7 @@ export function ProductOptions({ product, info }: { product: HttpTypes.StoreProd
                     setChoice((c) => ({ ...c, [title]: value }))
                     setAdded(false)
                   }}
-                  className={`h-[34px] w-[34px] rounded-full border ${active ? "outline outline-2 outline-offset-2 outline-black" : "border-black/15"}`}
+                  className={`h-[34px] w-[34px] rounded-sm border ${active ? "outline outline-2 outline-offset-2 outline-black" : "border-black/15"}`}
                   style={{ backgroundColor: swatch(value) }}
                 />
               ) : (

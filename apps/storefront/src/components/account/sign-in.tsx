@@ -116,7 +116,7 @@ export function SignIn({ google, next }: { google: boolean; next?: string }) {
             type="button"
             onClick={withGoogle}
             disabled={busy}
-            className="mt-8 flex h-[46px] w-full items-center justify-center gap-3 rounded-md border border-black text-[16px] font-medium hover:bg-linen disabled:opacity-60 lg:h-[50px]"
+            className="mt-8 flex h-[46px] w-full items-center justify-center gap-3 rounded-md border border-black text-[16px] font-medium hover:bg-chalk disabled:opacity-60 lg:h-[50px]"
           >
             <svg viewBox="0 0 24 24" className="h-[20px] w-[20px]" aria-hidden="true">
               <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.7z" />
@@ -127,9 +127,9 @@ export function SignIn({ google, next }: { google: boolean; next?: string }) {
             Continue with Google
           </button>
           <p className="my-6 flex items-center gap-3 text-[13px] text-black/50">
-            <span className="h-px flex-1 bg-black/20" />
+            <span className="h-px flex-1 bg-[var(--g-panel-2)]" />
             or with your email
-            <span className="h-px flex-1 bg-black/20" />
+            <span className="h-px flex-1 bg-[var(--g-panel-2)]" />
           </p>
         </>
       )}

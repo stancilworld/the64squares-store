@@ -144,8 +144,8 @@ export function ArenaView({ idOrHandle, token, meId, myName }: { idOrHandle: str
       <PanelHeader title={arena.title} back="/play/tournaments" backLabel="Tournaments" />
     <div className="mt-5 grid gap-5 lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-8">
       <div className="flex flex-col gap-4">
-        <div className="g-panel bg-gradient-to-br from-[#2c4a39] to-[#1a2d23] p-6">
-          <p className="text-[13px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">Arena · {arena.time_control}</p>
+        <div className="g-panel p-6">
+          <p className="text-[13px] font-semibold text-[var(--g-muted)]">Arena · {arena.time_control}</p>
           <p className="mt-2 font-mono text-[26px] font-bold tabular-nums">{header}</p>
         </div>
         <div className="g-panel p-5">
@@ -194,7 +194,7 @@ export function ArenaView({ idOrHandle, token, meId, myName }: { idOrHandle: str
           ) : (
             <p className="text-[15px]">Thanks for playing. Final standings are on the right.</p>
           )}
-          {error && <p className="mt-3 text-[13px] text-[#ff8a7d]">{error}</p>}
+          {error && <p className="mt-3 text-[13px] text-[var(--g-bad)]">{error}</p>}
         </div>
         <div className="g-panel p-5 text-[14px] leading-[1.6]">
           <p className="font-medium">How the arena works</p>
@@ -224,7 +224,7 @@ export function ArenaView({ idOrHandle, token, meId, myName }: { idOrHandle: str
                   <td className="py-2.5">
                     <span className="font-medium">{r.name}</span>
                     {r.on_fire && <span className="ml-2 rounded bg-[#c6542f] px-1.5 py-0.5 text-[11px] font-semibold text-white">🔥 on fire</span>}
-                    {r.status === "playing" && <span className="ml-2 text-[12px] text-[var(--g-gold)]">playing</span>}
+                    {r.status === "playing" && <span className="ml-2 text-[12px] text-[var(--g-accent)]">playing</span>}
                   </td>
                   <td className="hidden py-2.5 font-mono text-[13px] tracking-wider g-muted sm:table-cell">{r.sheet.join(" ")}</td>
                   <td className="py-2.5 text-right text-[18px] font-bold">{r.score}</td>

@@ -144,7 +144,7 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
               sale_ends_at: extras.sale_ends_at,
             }}
           />
-          <div className="mt-8 rounded-md border border-rule bg-linen px-5 py-4 text-[15px]">
+          <div className="mt-8 rounded-md border border-rule bg-chalk px-5 py-4 text-[15px]">
             <p className="font-medium">{delivery}</p>
             <p className="mt-1 text-muted">Enter your pincode at checkout to confirm delivery to your area.</p>
           </div>

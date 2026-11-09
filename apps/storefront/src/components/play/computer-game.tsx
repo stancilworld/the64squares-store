@@ -1,5 +1,6 @@
 "use client"
 
+import { GIcon } from "@/components/play-shell/icons"
 import { Chess, type Square } from "chess.js"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -278,17 +279,17 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
           vs Computer · Level {level.level} ({level.name})
         </span>
         {!following && (
-          <button type="button" className="font-medium text-[var(--g-gold)] underline underline-offset-2" onClick={() => setViewPly(null)}>
+          <button type="button" className="font-medium text-[var(--g-accent)] underline underline-offset-2" onClick={() => setViewPly(null)}>
             Back to the game
           </button>
         )}
       </p>
       {over ? (
-        <div className="g-panel p-5 ring-1 ring-[var(--g-gold)]/40">
+        <div className="g-panel p-5 ring-1 ring-[var(--g-accent)]/40">
           <p className="g-title">{game.result!.score === "1/2-1/2" ? "½–½" : game.result!.score}</p>
           <p className="mt-1 text-[15px] text-[var(--g-text)]">{game.result!.text}</p>
           {saveNote && game.savedId && (
-            <p className="mt-1 text-[13px] text-[var(--g-gold)]">
+            <p className="mt-1 text-[13px] text-[var(--g-accent)]">
               {saveNote}{" "}
               <Link href="/play/history" className="underline underline-offset-2">
                 Game history
@@ -305,7 +306,8 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
             {game.moves.length >= 2 &&
               (game.savedId ? (
                 <Link href={`/play/analysis/${game.savedId}`} className="g-btn">
-                  ★ Game review
+                  <GIcon name="star" size={18} />
+            Game review
                 </Link>
               ) : (
                 <button
@@ -327,7 +329,8 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
                     router.push("/play/analysis/local")
                   }}
                 >
-                  ★ Game review
+                  <GIcon name="star" size={18} />
+            Game review
                 </button>
               ))}
           </div>
@@ -337,10 +340,12 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
           <p className="text-[15px] font-medium">{thinking ? "The computer is thinking…" : myTurn ? "Your move" : "…"}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" className={`${btn}`} disabled={!myTurn} onClick={hint}>
-              💡 Hint
+              <GIcon name="bulb" size={18} />
+              Hint
             </button>
             <button type="button" className={`${btn}`} disabled={game.moves.length < 1} onClick={takeBack}>
-              ↶ Take back
+              <GIcon name="undo" size={18} />
+              Take back
             </button>
             <button
               type="button"
@@ -350,7 +355,8 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
                 setBurst(true)
               }}
             >
-              ⚑ Resign
+              <GIcon name="flag" size={18} />
+              Resign
             </button>
           </div>
         </div>

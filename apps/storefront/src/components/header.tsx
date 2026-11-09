@@ -27,7 +27,7 @@ export async function Header() {
     <>
       {/* The bar stays at the top of the screen while the page scrolls. */}
       <header className="sticky top-0 z-40 border-b border-rule bg-white">
-        <div className="mx-auto flex h-[60px] max-w-[1440px] items-center gap-4 px-4 sm:px-6 lg:h-[76px] lg:px-10">
+        <div className="mx-auto flex h-[60px] max-w-[1440px] items-center gap-4 px-4 sm:px-6 lg:h-[72px] lg:px-10">
           <Suspense fallback={<MobileMenuView categoryLinks={categoryLinks} aboutLinks={aboutLinks} menu={menu} path="" />}>
             <MobileMenu categoryLinks={categoryLinks} aboutLinks={aboutLinks} menu={menu} />
           </Suspense>
@@ -39,7 +39,7 @@ export async function Header() {
               width={388}
               height={160}
               priority
-              className="h-[38px] w-auto lg:h-[50px]"
+              className="h-[38px] w-auto lg:h-[46px]"
             />
           </Link>
           {experience?.show_switch !== false && <ExperienceSwitch active="shop" className="hidden min-[400px]:flex" />}
@@ -53,7 +53,7 @@ export async function Header() {
               action="/shop"
               method="get"
               role="search"
-              className="hidden h-[40px] w-[260px] items-center rounded-md border border-rule bg-white px-3 focus-within:border-black xl:flex"
+              className="hidden h-[42px] w-[260px] items-center rounded-md border border-transparent bg-chalk px-3 focus-within:border-black focus-within:bg-white xl:flex"
             >
               <SearchIcon className="h-[17px] w-[17px] shrink-0 text-muted" />
               <label htmlFor="site-search" className="sr-only">

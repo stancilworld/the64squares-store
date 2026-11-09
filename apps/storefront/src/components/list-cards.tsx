@@ -89,7 +89,7 @@ export function ListCardView({
           type="button"
           aria-label={`Remove ${card.title} from Wishlist`}
           onClick={() => list.remove(card.productId, card.variantId)}
-          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-[18px] leading-none shadow-sm hover:bg-white"
+          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-sm bg-white/90 text-[18px] leading-none shadow-sm hover:bg-white"
         >
           ×
         </button>
@@ -103,7 +103,7 @@ export function ListCardView({
         type="button"
         onClick={onToss}
         disabled={!card.inStock || busy}
-        className={`mt-[10px] inline-flex items-center justify-center rounded-full bg-black text-white hover:bg-velvet disabled:opacity-50 ${lg ? "h-[39px] w-[170px] text-[16px]" : "h-[34px] w-[130px] text-[14px] lg:h-[39px] lg:w-[170px] lg:text-[16px]"}`}
+        className={`mt-[10px] inline-flex items-center justify-center rounded-sm bg-black text-white hover:bg-amber hover:text-black disabled:opacity-50 ${lg ? "h-[39px] w-[170px] text-[16px]" : "h-[34px] w-[130px] text-[14px] lg:h-[39px] lg:w-[170px] lg:text-[16px]"}`}
       >
         {!card.inStock ? "Sold out" : busy ? "Adding..." : card.variantId ? "Add to Cart" : "Choose options"}
       </button>

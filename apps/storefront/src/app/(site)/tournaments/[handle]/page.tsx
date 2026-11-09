@@ -16,7 +16,6 @@ export async function generateMetadata({ params }: PageProps<"/tournaments/[hand
   return t ? { title: t.title, description: t.summary ?? undefined } : { title: "Tournament" }
 }
 
-const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"]
 
 function Facts({ t }: { t: Tournament }) {
   const rows: [string, string][] = [
@@ -64,15 +63,15 @@ async function TournamentDetail({ params }: PageProps<"/tournaments/[handle]">) 
 
   return (
     <>
-      <div className="bg-velvet text-white">
+      <div className="board-wash overflow-hidden bg-ink text-white">
         <div className="mx-auto grid max-w-[1440px] gap-8 px-6 pb-0 pt-8 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-12 lg:px-10 lg:pt-12">
           <div className="pb-8 lg:pb-12">
-            <Link href="/tournaments" className="text-[14px] text-maple hover:underline">
+            <Link href="/tournaments" className="text-[14px] text-white/60 hover:underline">
               Tournaments
             </Link>
             <h1 className="font-display h-page mt-3 text-balance">{t.title}</h1>
-            {t.summary && <p className="mt-4 max-w-[600px] text-[17px] leading-[1.6] text-maple-soft/90">{t.summary}</p>}
-            <p className="mt-6 text-[15px]">
+            {t.summary && <p className="mt-4 max-w-[600px] text-[17px] leading-[1.6] text-white/75">{t.summary}</p>}
+            <p className="mt-6 inline-block bg-amber px-3 py-1.5 text-[15px] font-bold text-black">
               {eventDate(t.starts_at)}, {eventTime(t.starts_at)}
             </p>
             {t.status === "cancelled" && (
@@ -84,21 +83,11 @@ async function TournamentDetail({ params }: PageProps<"/tournaments/[handle]">) 
               <Image src={t.image_url} alt="" fill sizes="420px" className="object-cover" priority />
             </div>
           ) : (
-            <div aria-hidden="true" className="hidden self-end lg:block">
-              <div className="grid aspect-[2/1] grid-cols-8 grid-rows-4 overflow-hidden rounded-t-md">
-                {Array.from({ length: 32 }, (_, i) => (
-                  <span key={i} className={(Math.floor(i / 8) + i) % 2 ? "bg-velvet-deep" : "bg-white/10"} />
-                ))}
-              </div>
+            <div aria-hidden="true" className="relative hidden self-end lg:block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/play-art/bQ.webp" alt="" className="ml-auto h-[230px] w-auto translate-y-[14%] drop-shadow-[0_20px_24px_rgba(0,0,0,0.6)]" />
             </div>
           )}
-        </div>
-        <div aria-hidden="true" className="mx-auto grid max-w-[1440px] grid-cols-8 border-t border-white/10 px-6 lg:px-10">
-          {FILES.map((f) => (
-            <span key={f} className="py-2 text-center font-display text-[14px] italic text-brass">
-              {f}
-            </span>
-          ))}
         </div>
       </div>
 
@@ -151,7 +140,7 @@ async function TournamentDetail({ params }: PageProps<"/tournaments/[handle]">) 
 
 export default function TournamentPage(props: PageProps<"/tournaments/[handle]">) {
   return (
-    <Suspense fallback={<div className="h-[600px] bg-velvet" />}>
+    <Suspense fallback={<div className="h-[600px] bg-ink" />}>
       <TournamentDetail {...props} />
     </Suspense>
   )

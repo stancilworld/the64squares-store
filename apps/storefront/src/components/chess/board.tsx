@@ -232,7 +232,7 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
           // Standing pieces may rise above the top row, so that board isn't clipped; a thin wooden
           // frame takes the place of the rounded corners.
           boardStyle: standing
-            ? { borderRadius: 2, overflow: "visible", boxShadow: "0 0 0 4px #3b2516, 0 0 0 5px rgba(0,0,0,0.35), 0 16px 40px rgba(0,0,0,0.45)" }
+            ? { borderRadius: 2, overflow: "visible", boxShadow: "0 0 0 4px #3b2516, 0 0 0 5px rgba(0,0,0,0.35), 0 12px 30px rgba(0,0,0,0.4)" }
             : { borderRadius: 8, overflow: "hidden", boxShadow: "0 0 0 1px rgba(0,0,0,0.25), 0 14px 40px rgba(0,0,0,0.45)" },
           lightSquareStyle: { backgroundColor: theme.light },
           darkSquareStyle: { backgroundColor: theme.dark },
@@ -265,7 +265,7 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
                 key={p}
                 type="button"
                 aria-label={{ q: "Queen", n: "Knight", r: "Rook", b: "Bishop" }[p]}
-                className="aspect-square w-full p-[6%] transition hover:bg-maple-soft"
+                className="aspect-square w-full p-[6%] transition hover:bg-chalk"
                 onClick={() => {
                   const { from, to } = promotion
                   setPromotion(null)

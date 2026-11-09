@@ -14,7 +14,7 @@ type Lists = { friends: Friend[]; incoming: Friend[]; outgoing: Friend[] }
 type Tab = "friends" | "requests" | "find"
 
 const statusOf = (f: Friend) =>
-  f.playing ? <span className="text-[var(--g-gold)]">● Playing now</span> : f.online ? <span className="text-[#5fd07a]">● Online</span> : <span className="g-muted">Offline</span>
+  f.playing ? <span className="text-[var(--g-accent)]">● Playing now</span> : f.online ? <span className="text-[var(--g-good)]">● Online</span> : <span className="g-muted">Offline</span>
 
 function Card({ p, children, sub }: { p: Friend; children?: React.ReactNode; sub?: React.ReactNode }) {
   return (
@@ -158,7 +158,7 @@ export function Friends({ signedIn }: { signedIn: boolean }) {
         {lists && tab === "requests" && (
           <>
             {lists.incoming.map((f) => (
-              <Card key={f.player_id} p={f} sub={<span className="text-[var(--g-gold)]">Wants to be friends</span>}>
+              <Card key={f.player_id} p={f} sub={<span className="text-[var(--g-accent)]">Wants to be friends</span>}>
                 <button type="button" className="g-btn g-btn-primary !min-h-[38px] text-[13px]" onClick={() => respond(f.player_id, true)}>
                   Accept
                 </button>
@@ -185,7 +185,7 @@ export function Friends({ signedIn }: { signedIn: boolean }) {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search by username or name"
-              className="h-[48px] w-full rounded-xl border border-[var(--g-line)] bg-[var(--g-panel-2)] px-4 text-[15px] outline-none focus:border-[var(--g-gold)]"
+              className="h-[48px] w-full rounded-xl border border-[var(--g-line)] bg-[var(--g-panel-2)] px-4 text-[15px] outline-none focus:border-[var(--g-accent)]"
             />
             {q.trim().length >= 2 &&
               found?.map((p) => {

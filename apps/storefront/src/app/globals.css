@@ -1,28 +1,41 @@
 @import "tailwindcss";
 
-/* The 64 Squares look: the black and white of the logo, the green velvet lining of the
-   travel boxes, walnut and maple from the boards, and a little brass. */
+/* The 64 Squares 2.0. Black and white from the logo, one amber accent (the colour of a
+   highlighted square), neutral greys, and square corners everywhere: the shop and the game
+   area share the same type, shapes and accent. */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  /* Ratings, clocks and move lists: the same face with figures of equal width. */
+  --font-mono: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
 
-  --color-ink: #000000;
-  --color-velvet: #1f3a2b;
-  --color-velvet-deep: #172c20;
-  --color-walnut: #5c3b22;
-  --color-maple: #e8d8b8;
-  --color-maple-soft: #f4ede0;
-  --color-brass: #b08a4e;
-  --color-linen: #f3f1ec;
+  --color-ink: #111111;
+  --color-ink-soft: #1c1c1c;
+  --color-amber: #ffb300;
+  --color-amber-deep: #e09900;
+  --color-chalk: #f3f2ef;
+  --color-chalk-deep: #e6e4de;
+  /* The two squares of a wooden board, for boards drawn on the page. */
+  --color-sq-light: #ecd9b5;
+  --color-sq-dark: #9a6a43;
 
-  /* Older names still used by some components, mapped onto the palette. */
-  --color-placeholder: #ece8df;
-  --color-placeholder-dark: #d9d2c4;
-  --color-pill: #f3f1ec;
-  --color-muted: #6b6760;
-  --color-rule: #dcd8cf;
+  --color-placeholder: #eceae5;
+  --color-placeholder-dark: #d9d6cf;
+  --color-pill: #f3f2ef;
+  --color-muted: #66635d;
+  --color-rule: #e2e0db;
   /* Saved hearts and the counters on the List and Cart icons. */
-  --color-love: #b3261e;
+  --color-love: #c8281e;
+  --color-good: #1f7a45;
+
+  /* Corners are square, softened by a pixel or two. */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --radius-3xl: 6px;
 }
 
 html {
@@ -33,64 +46,74 @@ body {
   background: #ffffff;
   color: #000000;
   font-family: var(--font-sans);
+  font-optical-sizing: auto;
 }
 
 @layer base {
+  /* Headings: the wide, heavy cut of the same typeface. */
   .font-display {
     font-family: var(--font-display);
-    font-weight: 420;
-    font-variation-settings: "SOFT" 40, "WONK" 0;
-    letter-spacing: -0.015em;
-    line-height: 1.08;
+    font-weight: 760;
+    font-stretch: 116%;
+    letter-spacing: -0.028em;
+    line-height: 1.04;
+  }
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
   }
 }
 
-/* One type scale for every heading in the display face. */
+/* One type scale for every heading. */
 @layer components {
   .h-hero {
-    font-size: 44px;
-    line-height: 1.02;
-    letter-spacing: -0.025em;
+    font-size: 40px;
+    line-height: 0.98;
+    letter-spacing: -0.04em;
+    font-weight: 800;
+    font-stretch: 120%;
   }
   .h-page {
-    font-size: 38px;
-    line-height: 1.05;
-    letter-spacing: -0.02em;
+    font-size: 34px;
+    line-height: 1.02;
+    letter-spacing: -0.035em;
   }
   .h-section {
-    font-size: 30px;
-    line-height: 1.1;
+    font-size: 26px;
+    line-height: 1.08;
   }
   .h-sub {
-    font-size: 22px;
+    font-size: 19px;
     line-height: 1.2;
+    letter-spacing: -0.02em;
   }
   @media (min-width: 1024px) {
     .h-hero {
       font-size: 76px;
     }
     .h-page {
-      font-size: 56px;
+      font-size: 52px;
     }
     .h-section {
-      font-size: 40px;
+      font-size: 36px;
     }
     .h-sub {
-      font-size: 28px;
+      font-size: 23px;
     }
   }
 
-  /* Buttons: solid black, or an outline on light backgrounds. */
+  /* Buttons: solid black, amber for the one main action, or an outline. */
   .btn {
     display: inline-flex;
-    height: 48px;
+    height: 50px;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    border-radius: 6px;
-    padding: 0 24px;
+    border-radius: 2px;
+    padding: 0 26px;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 650;
+    letter-spacing: -0.005em;
     transition: background-color 150ms, color 150ms, border-color 150ms;
   }
   .btn-solid {
@@ -98,10 +121,18 @@ body {
     color: #fff;
   }
   .btn-solid:hover {
-    background: var(--color-velvet);
+    background: var(--color-amber);
+    color: #000;
+  }
+  .btn-amber {
+    background: var(--color-amber);
+    color: #000;
+  }
+  .btn-amber:hover {
+    background: #fff;
   }
   .btn-outline {
-    border: 1px solid #000;
+    border: 1.5px solid #000;
     color: #000;
   }
   .btn-outline:hover {
@@ -113,12 +144,37 @@ body {
     color: #000;
   }
   .btn-light:hover {
-    background: var(--color-maple);
+    background: var(--color-amber);
+  }
+  .btn-ghost-light {
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    color: #fff;
+  }
+  .btn-ghost-light:hover {
+    border-color: #fff;
+    background: #fff;
+    color: #000;
+  }
+
+  /* A small square marker in front of a section heading, like a square on the board. */
+  .sq-mark::before {
+    content: "";
+    display: inline-block;
+    width: 0.5em;
+    height: 0.5em;
+    margin-right: 0.45em;
+    background: var(--color-amber);
+    vertical-align: 0.12em;
+  }
+  /* Faint board squares behind dark bands. */
+  .board-wash {
+    background-image: repeating-conic-gradient(rgba(255, 255, 255, 0.028) 0 25%, transparent 0 50%);
+    background-size: 160px 160px;
   }
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-brass);
+  outline: 2px solid var(--color-amber-deep);
   outline-offset: 3px;
 }
 
@@ -156,32 +212,40 @@ body {
 
 /* ---------- Play: the game area (dark, app-like) ---------- */
 .play-ui {
-  --g-bg: #111d17;
-  --g-side: #0c1611;
-  --g-panel: #192a21;
-  --g-panel-2: #213529;
-  --g-panel-3: #2c4536;
-  --g-line: rgba(255, 255, 255, 0.08);
-  --g-text: #eeebe4;
-  --g-muted: #9db0a4;
-  --g-gold: #d6b06a;
+  --g-bg: #151515;
+  --g-side: #0c0c0c;
+  --g-panel: #1e1e1e;
+  --g-panel-2: #282828;
+  --g-panel-3: #343434;
+  --g-line: rgba(255, 255, 255, 0.09);
+  --g-text: #f3f2ef;
+  --g-muted: #a5a29b;
+  --g-accent: #ffb300;
+  --g-good: #58c57a;
+  --g-bad: #ff7a6b;
   background: var(--g-bg);
   color: var(--g-text);
   color-scheme: dark;
 }
 .play-ui .g-panel {
   background: var(--g-panel);
-  border-radius: 12px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 30px rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+  border: 1px solid var(--g-line);
 }
 .play-ui .g-muted {
   color: var(--g-muted);
 }
 .play-ui .g-title {
-  font-weight: 700;
+  font-weight: 760;
+  font-stretch: 112%;
   font-size: 22px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.025em;
   line-height: 1.2;
+}
+.play-ui .g-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--g-muted);
 }
 .play-ui .g-btn {
   display: inline-flex;
@@ -190,49 +254,49 @@ body {
   gap: 0.5rem;
   min-height: 44px;
   padding: 0 16px;
-  border-radius: 10px;
-  font-weight: 600;
+  border-radius: 3px;
+  font-weight: 650;
   font-size: 15px;
   background: var(--g-panel-3);
   color: var(--g-text);
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
-  transition: transform 0.08s, filter 0.15s, background-color 0.15s;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s, transform 0.08s;
   -webkit-tap-highlight-color: transparent;
 }
 .play-ui .g-btn:hover {
-  filter: brightness(1.12);
+  background: #424242;
 }
 .play-ui .g-btn:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  transform: scale(0.98);
 }
 .play-ui .g-btn:disabled {
   opacity: 0.4;
   transform: none;
-  filter: none;
   cursor: default;
 }
 .play-ui .g-btn-primary {
-  background: linear-gradient(#e6c57f, #c99a4c);
-  color: #1d1408;
-  box-shadow: 0 4px 0 #8b6530;
-  font-weight: 700;
+  background: var(--g-accent);
+  color: #000;
+  font-weight: 750;
 }
-.play-ui .g-btn-primary:active {
-  box-shadow: 0 1px 0 #8b6530;
+.play-ui .g-btn-primary:hover {
+  background: #ffc333;
 }
 .play-ui .g-btn-danger {
-  background: #b23b31;
+  background: #c8372b;
   color: #fff;
-  box-shadow: 0 3px 0 #6f221c;
+}
+.play-ui .g-btn-danger:hover {
+  background: #d94a3d;
 }
 .play-ui .g-btn-ghost {
   background: transparent;
-  box-shadow: none;
   border: 1px solid var(--g-line);
 }
+.play-ui .g-btn-ghost:hover {
+  background: var(--g-panel-2);
+}
 .play-ui .g-choice {
-  border-radius: 10px;
+  border-radius: 3px;
   background: var(--g-panel-2);
   border: 2px solid transparent;
   transition: border-color 0.15s, background-color 0.15s;
@@ -242,7 +306,7 @@ body {
 }
 .play-ui .g-choice[aria-pressed="true"],
 .play-ui .g-choice[aria-selected="true"] {
-  border-color: var(--g-gold);
+  border-color: var(--g-accent);
   background: var(--g-panel-3);
 }
 
@@ -252,8 +316,8 @@ body {
 .vs-left { animation: vs-in-left 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.15) both; }
 .vs-right { animation: vs-in-right 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.15) both; }
 .vs-mark {
-  color: var(--g-gold);
-  text-shadow: 0 0 24px rgba(230, 197, 127, 0.65), 0 3px 0 #6d5320;
+  color: var(--g-accent);
+  text-shadow: 0 0 24px rgba(255, 179, 0, 0.65), 0 3px 0 #7a5600;
   animation: vs-slam 0.55s 0.3s cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
 .vs-label { animation: vs-fade 0.4s 0.55s both; }
@@ -269,7 +333,7 @@ body {
 .rb-draw, .rb-neutral { background: radial-gradient(ellipse at center, rgba(34, 32, 28, 0.78) 0%, rgba(10, 9, 8, 0.86) 75%); }
 .rb-icon { filter: drop-shadow(0 6px 10px rgba(0,0,0,0.5)); }
 .rb-card { animation: rb-pop 0.6s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
-.rb-win .rb-title, .rb-win .rb-icon { color: var(--g-gold); text-shadow: 0 0 28px rgba(230, 197, 127, 0.7), 0 3px 0 #6d5320; }
+.rb-win .rb-title, .rb-win .rb-icon { color: var(--g-accent); text-shadow: 0 0 28px rgba(255, 179, 0, 0.7), 0 3px 0 #7a5600; }
 .rb-win img.rb-icon { animation: rb-glow 1.4s ease-in-out infinite alternate; }
 .rb-loss .rb-title, .rb-loss .rb-icon { color: #e8d8d2; text-shadow: 0 2px 0 #3a1d1a; }
 .rb-loss .rb-icon { animation: rb-topple 0.9s 0.2s ease-in both; transform-origin: 50% 90%; }
@@ -277,7 +341,7 @@ body {
 .rb-confetti { position: absolute; top: -16px; border-radius: 2px; animation-name: rb-fall; animation-timing-function: linear; animation-fill-mode: both; }
 @keyframes rb-life { 0%, 85% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
 @keyframes rb-pop { from { transform: scale(0.4); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes rb-glow { from { transform: scale(1); filter: drop-shadow(0 0 0 transparent); } to { transform: scale(1.08); filter: drop-shadow(0 0 14px rgba(230, 197, 127, 0.8)); } }
+@keyframes rb-glow { from { transform: scale(1); filter: drop-shadow(0 0 0 transparent); } to { transform: scale(1.08); filter: drop-shadow(0 0 14px rgba(255, 179, 0, 0.8)); } }
 @keyframes rb-topple { 0% { transform: rotate(0); } 60% { transform: rotate(-24deg); } 100% { transform: rotate(-18deg) translateY(4px); opacity: 0.8; } }
 @keyframes rb-fall { from { transform: translateY(0) rotate(0); opacity: 1; } to { transform: translateY(120vh) rotate(540deg); opacity: 0.9; } }
 @media (prefers-reduced-motion: reduce) {
@@ -288,124 +352,97 @@ body {
 /* ---- Play menus: home screen, mode tiles, setup screens ---- */
 .menu-stage {
   position: relative;
-  isolation: isolate;
 }
-.menu-stage::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(1100px 600px at 75% -10%, rgba(214, 176, 106, 0.13), transparent 60%),
-    radial-gradient(900px 700px at -10% 110%, rgba(60, 140, 100, 0.12), transparent 60%),
-    repeating-conic-gradient(rgba(255, 255, 255, 0.018) 0 25%, transparent 0 50%) 0 0 / 88px 88px;
-  mask-image: linear-gradient(to bottom, black, rgba(0, 0, 0, 0.55));
-}
-.menu-rise { animation: menu-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-@keyframes menu-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.menu-rise { animation: menu-rise 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes menu-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
+/* The quick-pairing panel on the Play home. */
 .menu-hero {
   position: relative;
   overflow: hidden;
-  border-radius: 22px;
-  background:
-    radial-gradient(520px 340px at 82% 40%, rgba(230, 197, 127, 0.28), transparent 65%),
-    linear-gradient(135deg, #1d3328 0%, #142219 55%, #0f1a14 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px rgba(0, 0, 0, 0.35);
-}
-.menu-hero::after {
-  /* the edge of a board, receding */
-  content: "";
-  position: absolute;
-  right: -8%;
-  bottom: -38%;
-  width: 70%;
-  aspect-ratio: 1;
-  background: repeating-conic-gradient(#6b4a2b 0 25%, #c9a36b 0 50%) 0 0 / 25% 25%;
-  transform: perspective(700px) rotateX(62deg) rotateZ(-18deg);
-  opacity: 0.33;
-  mask-image: radial-gradient(closest-side, black 40%, transparent);
-  pointer-events: none;
+  border-radius: 4px;
+  background: var(--g-panel);
+  border: 1px solid var(--g-line);
 }
 .menu-hero-art {
-  filter: drop-shadow(0 26px 30px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 40px rgba(230, 197, 127, 0.25));
-  animation: menu-float 6s ease-in-out infinite;
+  filter: drop-shadow(0 22px 24px rgba(0, 0, 0, 0.55));
 }
-@keyframes menu-float { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(1deg); } }
+
+/* One time control in the pairing grid. */
+.tc-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 68px;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--g-panel-2);
+  border: 1px solid transparent;
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s;
+}
+.tc-cell:hover {
+  background: var(--g-accent);
+  color: #000;
+}
+.tc-cell:hover .g-muted {
+  color: rgba(0, 0, 0, 0.65);
+}
 
 .menu-play {
   position: relative;
-  overflow: hidden;
-  border-radius: 16px;
-  background: linear-gradient(#f0d28c, #c99a4c);
-  color: #1d1408;
-  box-shadow: 0 6px 0 #8b6530, 0 14px 28px rgba(201, 154, 76, 0.28);
-  transition: transform 0.1s, box-shadow 0.1s, filter 0.15s;
+  border-radius: 3px;
+  background: var(--g-accent);
+  color: #000;
+  transition: background-color 0.15s, transform 0.08s;
 }
-.menu-play::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.55) 45%, transparent 60%);
-  transform: translateX(-120%);
-  animation: menu-shine 3.6s 1s ease-in-out infinite;
-}
-.menu-play:hover { filter: brightness(1.05); }
-.menu-play:active { transform: translateY(4px); box-shadow: 0 2px 0 #8b6530; }
-@keyframes menu-shine { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+.menu-play:hover { background: #ffc333; }
+.menu-play:active { transform: scale(0.985); }
 
 .menu-tile {
   position: relative;
   overflow: hidden;
-  border-radius: 18px;
-  background: linear-gradient(160deg, var(--g-panel-2), var(--g-panel) 70%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 0 rgba(0, 0, 0, 0.35), 0 12px 26px rgba(0, 0, 0, 0.22);
-  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.18s;
+  border-radius: 4px;
+  background: var(--g-panel);
+  border: 1px solid var(--g-line);
+  transition: border-color 0.15s, background-color 0.15s;
 }
-.menu-tile:hover { transform: translateY(-4px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 8px 0 rgba(0, 0, 0, 0.3), 0 22px 36px rgba(0, 0, 0, 0.3); }
-.menu-tile:active { transform: translateY(1px); }
+.menu-tile:hover { border-color: var(--g-accent); background: var(--g-panel-2); }
 .menu-tile-art {
   position: absolute;
-  right: -6%;
-  bottom: -10%;
-  width: 58%;
-  max-width: 190px;
+  right: -4%;
+  bottom: -12%;
+  width: 54%;
+  max-width: 170px;
   filter: drop-shadow(0 14px 16px rgba(0, 0, 0, 0.5));
-  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
   pointer-events: none;
 }
-.menu-tile:hover .menu-tile-art { transform: translateY(-8px) rotate(-4deg) scale(1.04); }
-.menu-tile::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(260px 200px at 90% 100%, var(--tile-glow, rgba(214, 176, 106, 0.18)), transparent 70%);
-  pointer-events: none;
-}
+.menu-tile:hover .menu-tile-art { transform: translateY(-6px); }
 
 .menu-card {
-  border-radius: 18px;
-  background: linear-gradient(180deg, var(--g-panel), #15231b);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 12px 30px rgba(0, 0, 0, 0.28);
+  border-radius: 4px;
+  background: var(--g-panel);
+  border: 1px solid var(--g-line);
 }
-.menu-xp { background: rgba(255, 255, 255, 0.08); }
-.menu-xp > span { background: linear-gradient(90deg, #c99a4c, #f0d28c); box-shadow: 0 0 12px rgba(240, 210, 140, 0.5); }
+.menu-xp { background: rgba(255, 255, 255, 0.1); }
+.menu-xp > span { background: var(--g-accent); }
 
 /* Big choice cards (time controls, opponents, colours). */
 .menu-pick {
   position: relative;
-  border-radius: 14px;
-  background: var(--g-panel-2);
-  border: 2px solid transparent;
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
-  transition: transform 0.12s, border-color 0.15s, background-color 0.15s;
+  border-radius: 3px;
+  background: var(--g-panel);
+  border: 1px solid var(--g-line);
+  transition: border-color 0.15s, background-color 0.15s;
 }
-.menu-pick:hover { background: var(--g-panel-3); transform: translateY(-2px); }
+.menu-pick:hover { background: var(--g-panel-2); }
 .menu-pick[aria-pressed="true"] {
-  border-color: var(--g-gold);
-  background: linear-gradient(180deg, #33503f, var(--g-panel-3));
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 0 0 4px rgba(214, 176, 106, 0.14), 0 10px 24px rgba(214, 176, 106, 0.12);
+  border-color: var(--g-accent);
+  background: var(--g-panel-2);
+  box-shadow: inset 0 0 0 1px var(--g-accent);
 }
 
 /* Matchmaking. */
@@ -413,7 +450,7 @@ body {
   position: absolute;
   inset: 0;
   border-radius: 9999px;
-  border: 2px solid rgba(214, 176, 106, 0.55);
+  border: 2px solid rgba(255, 179, 0, 0.55);
   animation: mm-ping 2.4s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
 }
 @keyframes mm-ping { from { transform: scale(0.7); opacity: 0.9; } to { transform: scale(1.75); opacity: 0; } }
@@ -421,13 +458,13 @@ body {
   position: absolute;
   inset: -40%;
   border-radius: 9999px;
-  background: conic-gradient(from 0deg, transparent 0 75%, rgba(214, 176, 106, 0.28) 100%);
+  background: conic-gradient(from 0deg, transparent 0 75%, rgba(255, 179, 0, 0.28) 100%);
   animation: mm-spin 2.2s linear infinite;
 }
 @keyframes mm-spin { to { transform: rotate(360deg); } }
 .mm-cycle { animation: mm-cycle 1.2s steps(1) infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .menu-rise, .menu-hero-art, .menu-play::before, .mm-ring, .mm-sweep { animation: none !important; }
-  .menu-tile, .menu-tile-art { transition: none; }
+  .menu-rise, .mm-ring, .mm-sweep { animation: none !important; }
+  .menu-tile, .menu-tile-art, .tc-cell { transition: none; }
 }

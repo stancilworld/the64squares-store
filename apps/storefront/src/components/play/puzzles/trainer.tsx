@@ -103,8 +103,8 @@ export function PuzzleTrainer({ mode, initialPass }: { mode: Mode; initialPass: 
 
         {/* What's happening */}
         {s.status === "solved" ? (
-          <div className="menu-rise rounded-2xl bg-gradient-to-b from-[#2f6b44] to-[#24543a] p-5 shadow-[0_4px_0_#163524]">
-            <p className="text-[24px] font-extrabold">{s.missed ? "Solved" : "Correct! ✓"}</p>
+          <div className="menu-rise rounded-lg bg-[#1f6b3f] p-5">
+            <p className="text-[24px] font-extrabold">{s.missed ? "Solved" : "Correct!"}</p>
             <p className="mt-1 text-[14px] text-white/85">
               {s.missed ? "Solved with help: it counts as a miss." : "Well found."} Puzzle rating {puzzle.rating}.
             </p>
@@ -117,7 +117,7 @@ export function PuzzleTrainer({ mode, initialPass }: { mode: Mode; initialPass: 
             <ResultLine result={result} />
           </div>
         ) : s.status === "wrong" ? (
-          <div className="menu-rise rounded-2xl bg-gradient-to-b from-[#6b2f2a] to-[#542420] p-5 shadow-[0_4px_0_#351512]">
+          <div className="menu-rise rounded-lg bg-[#7a2a23] p-5">
             <p className="text-[22px] font-extrabold">Not the move</p>
             <p className="mt-1 text-[14px] text-white/85">There&apos;s something better. Try again, or see the answer.</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
@@ -138,7 +138,8 @@ export function PuzzleTrainer({ mode, initialPass }: { mode: Mode; initialPass: 
             <p className="g-muted mt-1 text-[14px]">Find the best move for {side}.</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button type="button" className="g-btn" onClick={s.hint} disabled={!s.yourTurn}>
-                💡 Hint
+                <GIcon name="bulb" size={18} />
+                Hint
               </button>
               <button type="button" className="g-btn g-btn-ghost" onClick={s.showSolution} disabled={!s.yourTurn}>
                 Solution
@@ -152,11 +153,11 @@ export function PuzzleTrainer({ mode, initialPass }: { mode: Mode; initialPass: 
           <div className="flex flex-col gap-2">
             {canNext ? (
               <button type="button" className="menu-play flex h-[56px] w-full items-center justify-center" onClick={next} autoFocus>
-                <span className="relative text-[18px] font-black uppercase tracking-wide">Next puzzle →</span>
+                <span className="relative text-[18px] font-extrabold tracking-tight">Next puzzle</span>
               </button>
             ) : (
               <Link href="/play/puzzles/train" className="menu-play flex h-[56px] w-full items-center justify-center">
-                <span className="relative text-[18px] font-black uppercase tracking-wide">More puzzles →</span>
+                <span className="relative text-[18px] font-extrabold tracking-tight">More puzzles</span>
               </Link>
             )}
             {puzzle.themes.length > 0 && (
@@ -164,7 +165,7 @@ export function PuzzleTrainer({ mode, initialPass }: { mode: Mode; initialPass: 
                 {puzzle.themes
                   .filter((t) => THEME_LABEL[t])
                   .map((t) => (
-                    <Link key={t} href={`/play/puzzles/train?theme=${t}`} className="rounded-full bg-black/25 px-2.5 py-1 text-[12px] font-semibold hover:text-[var(--g-gold)]">
+                    <Link key={t} href={`/play/puzzles/train?theme=${t}`} className="rounded-full bg-[var(--g-panel-2)] px-2.5 py-1 text-[12px] font-semibold hover:text-[var(--g-accent)]">
                       {THEME_LABEL[t]}
                     </Link>
                   ))}
@@ -175,12 +176,12 @@ export function PuzzleTrainer({ mode, initialPass }: { mode: Mode; initialPass: 
 
         <div className="mt-auto grid grid-cols-3 gap-2">
           <Stat label="Puzzle rating" value={shownRating != null ? `${shownRating}${(result ?? stats)?.provisional ? "?" : ""}` : "—"} />
-          <Stat label="Streak" value={`${(result ?? stats)?.streak ?? 0}`} icon="🔥" />
+          <Stat label="Streak" value={`${(result ?? stats)?.streak ?? 0}`} flame />
           <Stat label="Solved" value={`${(result ?? stats)?.solved ?? 0}`} />
         </div>
         {pass?.me.guest && (
           <p className="g-muted text-[12px]">
-            <Link href="/account?next=/play/puzzles" className="text-[var(--g-gold)] underline underline-offset-2">
+            <Link href="/account?next=/play/puzzles" className="text-[var(--g-accent)] underline underline-offset-2">
               Sign up
             </Link>{" "}
             to keep your puzzle rating and earn XP.
@@ -213,21 +214,21 @@ function ResultLine({ result }: { result: PuzzleResult | null }) {
   const d = result.diff ?? 0
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
-      <span className={`rounded-full px-3 py-1 font-mono text-[15px] font-bold ${d >= 0 ? "bg-[#5fd07a]/20 text-[#7be39a]" : "bg-[#ff8a7d]/15 text-[#ff8a7d]"}`}>
+      <span className={`rounded-full px-3 py-1 font-mono text-[15px] font-bold ${d >= 0 ? "bg-[var(--g-good)]/20 text-[#7be39a]" : "bg-[#ff8a7d]/15 text-[var(--g-bad)]"}`}>
         {d >= 0 ? `+${d}` : d}
       </span>
       <span className="text-[14px]">Rating {result.rating}</span>
-      {result.xp ? <span className="rounded-full bg-[var(--g-gold)]/20 px-2.5 py-1 text-[12px] font-bold text-[var(--g-gold)]">+{result.xp} XP</span> : null}
+      {result.xp ? <span className="rounded-full bg-[var(--g-accent)]/20 px-2.5 py-1 text-[12px] font-bold text-[var(--g-accent)]">+{result.xp} XP</span> : null}
     </div>
   )
 }
 
-function Stat({ label, value, icon }: { label: string; value: string; icon?: string }) {
+function Stat({ label, value, flame }: { label: string; value: string; flame?: boolean }) {
   return (
-    <div className="rounded-xl bg-black/20 px-2 py-2.5 text-center">
-      <p className="g-muted text-[10px] font-bold uppercase tracking-wider">{label}</p>
+    <div className="rounded-xl bg-[var(--g-panel-2)] px-2 py-2.5 text-center">
+      <p className="g-muted text-[12px] font-semibold">{label}</p>
       <p className="mt-0.5 font-mono text-[18px] font-bold">
-        {icon && <span className="mr-0.5 text-[14px]">{icon}</span>}
+        {flame && <GIcon name="flame" size={15} className="mr-1 inline-block align-[-1px] text-[var(--g-accent)]" />}
         {value}
       </p>
     </div>

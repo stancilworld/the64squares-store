@@ -70,7 +70,7 @@ export function MovePanel({ moves, ply, onGo, onFlip, className = "" }: Props) {
         type="button"
         data-current={i === ply}
         onClick={() => onGo(i)}
-        className={`rounded-md px-2 py-0.5 text-left ${i === ply ? "bg-[var(--g-panel-3)] font-bold text-white" : "hover:bg-[var(--g-panel-2)]"}`}
+        className={`rounded-md px-2 py-0.5 text-left ${i === ply ? "bg-[var(--g-accent)] font-bold text-black" : "hover:bg-[var(--g-panel-2)]"}`}
       >
         {moves[i]}
       </button>
@@ -90,7 +90,7 @@ export function MovePanel({ moves, ply, onGo, onFlip, className = "" }: Props) {
                 type="button"
                 data-current={i === ply}
                 onClick={() => onGo(i)}
-                className={`rounded-md px-1.5 py-0.5 ${i === ply ? "bg-[var(--g-panel-3)] font-bold text-white" : ""}`}
+                className={`rounded-md px-1.5 py-0.5 ${i === ply ? "bg-[var(--g-accent)] font-bold text-black" : ""}`}
               >
                 {m}
               </button>

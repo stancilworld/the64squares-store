@@ -1,5 +1,6 @@
 "use client"
 
+import { GIcon } from "@/components/play-shell/icons"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { GAME_URL } from "@/lib/game-types"
@@ -7,7 +8,7 @@ import { GAME_URL } from "@/lib/game-types"
 type Mission = { id: string; title: string; target: number; xp: number; progress: number; done: boolean; claimed: boolean }
 type List = { day: string; missions: Mission[]; can_claim: boolean }
 
-const ICON: Record<string, string> = { play3: "♟️", rapid1: "⏱️", win1: "🏆", bot4: "🤖", puzzles5: "🧩", daily: "📅" }
+const ICON: Record<string, string> = { play3: "pawn", rapid1: "clock", win1: "trophy", bot4: "cpu", puzzles5: "puzzle", daily: "calendar" }
 const LINK: Record<string, string> = {
   play3: "/play/online",
   rapid1: "/play/online?tc=10%2B0",
@@ -53,21 +54,21 @@ export function DailyMissions({ token, signedIn }: { token: string | null; signe
   return (
     <section className="menu-card menu-rise p-4 sm:p-5" aria-label="Daily missions">
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="text-[13px] font-bold uppercase tracking-[0.14em] text-[var(--g-gold)]">Daily missions</h2>
+        <h2 className="text-[13px] font-semibold text-[var(--g-muted)]">Daily missions</h2>
         <span className="g-muted text-[12px]">New ones every day · {list ? left : ""}</span>
       </div>
       {!list ? (
         <div className="grid gap-2 sm:grid-cols-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-[74px] animate-pulse rounded-xl bg-black/20" />
+            <div key={i} className="h-[74px] animate-pulse rounded-md bg-[var(--g-panel-2)]" />
           ))}
         </div>
       ) : (
         <div className="grid gap-2 sm:grid-cols-3">
           {list.missions.map((m) => (
-            <div key={m.id} className={`relative flex items-center gap-3 rounded-xl bg-black/20 p-3 ${m.claimed ? "opacity-60" : ""}`}>
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[var(--g-panel-3)] text-[20px]" aria-hidden="true">
-                {ICON[m.id] ?? "⭐"}
+            <div key={m.id} className={`relative flex items-center gap-3 rounded-md bg-[var(--g-panel-2)] p-3 ${m.claimed ? "opacity-60" : ""}`}>
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[var(--g-panel-3)] text-[var(--g-accent)]" aria-hidden="true">
+                <GIcon name={ICON[m.id] ?? "star"} size={20} />
               </span>
               <div className="min-w-0 flex-1">
                 <Link href={LINK[m.id] ?? "/play"} className="block truncate text-[14px] font-bold hover:underline">
@@ -81,14 +82,14 @@ export function DailyMissions({ token, signedIn }: { token: string | null; signe
                 </p>
               </div>
               {m.claimed ? (
-                <span className="text-[13px] font-bold text-[#5fd07a]">✓</span>
+                <GIcon name="check" size={20} className="text-[var(--g-good)]" />
               ) : m.done && list.can_claim ? (
                 <button type="button" onClick={() => claim(m)} className="g-btn g-btn-primary !min-h-[34px] !px-3 !text-[13px]">
                   Claim
                 </button>
               ) : null}
               {flash === m.id && (
-                <span className="menu-rise pointer-events-none absolute -top-2 right-3 rounded-full bg-[var(--g-gold)] px-2 py-0.5 text-[12px] font-black text-[#1d1408]">+{m.xp} XP</span>
+                <span className="menu-rise pointer-events-none absolute -top-2 right-3 rounded-full bg-[var(--g-accent)] px-2 py-0.5 text-[12px] font-black text-black">+{m.xp} XP</span>
               )}
             </div>
           ))}
@@ -96,7 +97,7 @@ export function DailyMissions({ token, signedIn }: { token: string | null; signe
       )}
       {list && !signedIn && (
         <p className="g-muted mt-2 text-[12px]">
-          <Link href="/account?next=/play" className="text-[var(--g-gold)] underline underline-offset-2">
+          <Link href="/account?next=/play" className="text-[var(--g-accent)] underline underline-offset-2">
             Sign up
           </Link>{" "}
           to claim mission XP.

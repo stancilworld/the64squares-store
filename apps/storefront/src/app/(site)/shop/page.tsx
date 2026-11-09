@@ -72,10 +72,10 @@ async function Shop({ searchParams }: { searchParams: Promise<Search> }) {
 
   return (
     <>
-      <div className="bg-velvet text-white">
+      <div className="board-wash bg-ink text-white">
         <div className="mx-auto max-w-[1440px] px-6 py-10 lg:px-10 lg:py-14">
           <h1 className="font-display h-page">{title}</h1>
-          <p className="mt-2 text-[15px] text-maple">
+          <p className="mt-2 text-[15px] text-white/60">
             {filtered.length} {filtered.length === 1 ? "product" : "products"}
           </p>
         </div>

@@ -17,7 +17,7 @@ const Arrow = ({ dir, onClick, className = "" }: { dir: "prev" | "next"; onClick
       e.stopPropagation()
       onClick()
     }}
-    className={`absolute top-1/2 z-10 flex h-[44px] w-[44px] -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-[0_2px_8px_rgba(0,0,0,0.15)] transition-opacity hover:bg-white ${
+    className={`absolute top-1/2 z-10 flex h-[44px] w-[44px] -translate-y-1/2 items-center justify-center rounded-sm bg-white/90 shadow-[0_2px_8px_rgba(0,0,0,0.15)] transition-opacity hover:bg-white ${
       dir === "prev" ? "left-3 lg:left-4" : "right-3 lg:right-4"
     } ${className}`}
   >
@@ -146,7 +146,7 @@ function Viewer({
             type="button"
             aria-label="Close"
             onClick={() => dialog.current?.close()}
-            className="flex h-[44px] w-[44px] items-center justify-center rounded-full hover:bg-linen"
+            className="flex h-[44px] w-[44px] items-center justify-center rounded-sm hover:bg-chalk"
           >
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
@@ -326,7 +326,7 @@ export function ProductGallery({
           <>
             <Arrow dir="prev" onClick={() => go(selected - 1)} className="lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100" />
             <Arrow dir="next" onClick={() => go(selected + 1)} className="lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100" />
-            <p className="pointer-events-none absolute bottom-4 right-5 z-10 rounded-full bg-white/90 px-3 py-1 text-[13px] lg:bottom-5 lg:right-6">
+            <p className="pointer-events-none absolute bottom-4 right-5 z-10 rounded-sm bg-white/90 px-3 py-1 text-[13px] lg:bottom-5 lg:right-6">
               {shown + 1} / {count}
             </p>
           </>

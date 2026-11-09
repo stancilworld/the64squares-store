@@ -4,25 +4,20 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { Avatar, LevelBadge } from "@/components/play/avatar"
 import { GIcon } from "@/components/play-shell/icons"
-import { GAME_URL, tcText } from "@/lib/game-types"
+import { GAME_URL, TIME_CONTROLS, tcText } from "@/lib/game-types"
+import { MiniBoard } from "@/components/chess/mini-board"
+import { positionAt, puzzleApi } from "@/lib/puzzles"
 import { TITLE_COLOURS } from "@/lib/profile-types"
 import { DailyMissions } from "./menu/missions"
 import { ART, useLobby, useMyProfile } from "./menu/screen"
 
 type Live = { id: string; white_name: string | null; black_name: string | null; initial_ms: number; increment_ms: number }
 
-const QUICK = [
-  { tc: "3+2", label: "3 | 2", speed: "Blitz" },
-  { tc: "5+0", label: "5 min", speed: "Blitz" },
-  { tc: "10+0", label: "10 min", speed: "Rapid" },
-]
-
 const MODES = [
-  { href: "/play/online", art: ART.online, title: "Play Online", text: "Rated games against a player of your level", glow: "rgba(230,197,127,0.22)" },
-  { href: "/play/computer", art: ART.computer, title: "Vs Computer", text: "Eight bots, beginner to master", glow: "rgba(120,190,255,0.16)" },
-  { href: "/play/puzzles", art: ART.heroDark, title: "Puzzles", text: "Daily puzzle, trainer and Puzzle Rush", glow: "rgba(255,140,90,0.18)" },
-  { href: "/play/friend", art: ART.friend, title: "Play a Friend", text: "Send a link on WhatsApp", glow: "rgba(110,215,150,0.16)" },
-  { href: "/play/tournaments", art: ART.tournaments, title: "Tournaments", text: "Free online arenas", glow: "rgba(200,140,230,0.18)" },
+  { href: "/play/computer", art: ART.computer, title: "Computer", text: "Eight opponents, beginner to master" },
+  { href: "/play/puzzles", art: ART.heroDark, title: "Puzzles", text: "Daily puzzle, trainer and Puzzle Rush" },
+  { href: "/play/friend", art: ART.friend, title: "Play a friend", text: "Send a link on WhatsApp" },
+  { href: "/play/tournaments", art: ART.tournaments, title: "Tournaments", text: "Free online arenas" },
 ]
 
 const LINKS = [
@@ -42,6 +37,8 @@ const RANKS = [
 ]
 const nextTitle = (level: number) => RANKS.find((r) => r.from > level) ?? null
 
+const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
 const greeting = () => {
   const h = new Date().getHours()
   return h < 5 ? "Late-night chess" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"
@@ -53,6 +50,21 @@ export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null
   const [hello, setHello] = useState("Welcome back")
   const profile = useMyProfile(signedIn ? meId : null)
   const lobby = useLobby()
+  const [daily, setDaily] = useState<{ fen: string; white: boolean; marks: string[] } | null>(null)
+
+  useEffect(() => {
+    let on = true
+    puzzleApi
+      .daily(null)
+      .then((d) => {
+        const pos = positionAt(d.puzzle, 1)
+        if (on) setDaily({ fen: pos.fen, white: pos.chess.turn() === "w", marks: pos.last ? [pos.last.from, pos.last.to] : [] })
+      })
+      .catch(() => {})
+    return () => {
+      on = false
+    }
+  }, [])
 
   useEffect(() => {
     const t = setTimeout(() => setHello(greeting()), 0)
@@ -73,11 +85,11 @@ export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null
   const people = profile?.stats.people
 
   return (
-    <div className="menu-stage mx-auto flex max-w-[1180px] flex-col gap-4 sm:gap-5">
+    <div className="menu-stage mx-auto flex max-w-[1180px] flex-col gap-3 sm:gap-4">
       {live && (
         <Link
           href={`/play/${live.id}`}
-          className="menu-rise flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-[#b23b31] to-[#8f2d25] px-5 py-3.5 text-white shadow-[0_4px_0_#5c1d18]"
+          className="menu-rise flex items-center justify-between gap-3 rounded-lg bg-[#c8372b] px-5 py-3.5 text-white"
         >
           <span className="flex items-center gap-3">
             <span className="relative flex h-3 w-3">
@@ -95,65 +107,52 @@ export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null
         </Link>
       )}
 
-      <div className="grid gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-        {/* Hero */}
-        <section className="menu-hero menu-rise min-h-[300px] p-6 sm:min-h-[340px] sm:p-9 lg:col-start-1 lg:row-start-1" aria-label="Quick play">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={ART.hero}
-            alt=""
-            className="menu-hero-art pointer-events-none absolute right-[-3%] top-[4%] z-[1] w-[34%] max-w-[330px] sm:bottom-[-4%] sm:right-[2%] sm:top-auto sm:w-[40%]"
-          />
-          <div className="relative z-[2] flex h-full max-w-[460px] flex-col">
-            <p className="text-[12px] font-bold uppercase tracking-[0.22em] text-[var(--g-gold)]">The 64 Squares · Play</p>
-            <h1 className="font-display mt-3 max-w-[70%] text-[34px] leading-[1.05] sm:max-w-none sm:text-[48px]">
-              {hello},
-              <br />
-              <span className="text-[var(--g-gold)]">{first}.</span>
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {/* Quick pairing */}
+        <section className="menu-hero menu-rise flex flex-col p-5 sm:p-7 lg:col-start-1 lg:row-start-1" aria-label="Quick play">
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+            <h1 className="font-display text-[28px] sm:text-[38px]">
+              {hello}, {first}.
             </h1>
-            <p className="g-muted mt-3 max-w-[30ch] text-[15px] sm:text-[16px]">
+            <p className="g-muted flex items-center gap-2 text-[14px] font-medium">
               {lobby && (lobby.online || lobby.playing) ? (
                 <>
-                  <span className="text-[#5fd07a]">●</span> {lobby.online ? `${lobby.online} online · ` : ""}
+                  <span className="h-2 w-2 bg-[var(--g-good)]" />
+                  {lobby.online ? `${lobby.online} online, ` : ""}
                   {lobby.playing} {lobby.playing === 1 ? "game" : "games"} on now
                 </>
               ) : (
-                "Find an opponent in seconds."
+                "Pick a time control to find an opponent."
               )}
             </p>
-            <div className="mt-auto pt-6">
-              <Link href="/play/online?tc=10%2B0&go=1" className="menu-play flex w-full max-w-[340px] items-center justify-between px-6 py-4">
-                <span className="relative">
-                  <span className="block text-[24px] font-black uppercase leading-none tracking-wide sm:text-[28px]">Play</span>
-                  <span className="mt-1 block text-[13px] font-semibold opacity-75">Rapid · 10 min{signedIn ? " · rated" : ""}</span>
-                </span>
-                <span className="relative grid h-11 w-11 place-items-center rounded-full bg-[#1d1408]/15">
-                  <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-                    <path d="M8 5.5v13l10.5-6.5z" />
-                  </svg>
-                </span>
-              </Link>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {QUICK.map((q) => (
-                  <Link
-                    key={q.tc}
-                    href={`/play/online?tc=${encodeURIComponent(q.tc)}&go=1`}
-                    className="rounded-full border border-white/10 bg-black/25 px-3.5 py-1.5 text-[13px] font-semibold backdrop-blur hover:border-[var(--g-gold)]/60"
-                  >
-                    {q.label}
-                    <span className="g-muted ml-1.5 text-[11px] font-medium">{q.speed}</span>
-                  </Link>
-                ))}
-                <Link href="/play/online" className="rounded-full px-2 py-1.5 text-[13px] font-semibold text-[var(--g-gold)] hover:underline">
-                  More…
-                </Link>
-              </div>
-            </div>
           </div>
+          <div className="mt-5 grid flex-1 auto-rows-fr grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5">
+            {TIME_CONTROLS.map((t) => {
+              const waiting = lobby?.seeking?.[t.tc] ?? 0
+              return (
+                <Link key={t.tc} href={`/play/online?tc=${encodeURIComponent(t.tc)}&go=1`} className="tc-cell">
+                  <span className="font-mono text-[24px] font-extrabold leading-none tracking-tight sm:text-[30px]">{t.tc}</span>
+                  <span className="g-muted text-[12px] font-semibold sm:text-[13px]">{t.label}</span>
+                  {waiting > 0 && <span aria-label={`${waiting} waiting`} className="absolute right-2 top-2 h-2 w-2 bg-[var(--g-good)]" />}
+                </Link>
+              )
+            })}
+            <Link href="/play/online" className="tc-cell">
+              <span className="text-[17px] font-extrabold leading-none tracking-tight sm:text-[20px]">Custom</span>
+              <span className="g-muted text-[12px] font-semibold sm:text-[13px]">All options</span>
+            </Link>
+          </div>
+          <Link href="/play/online?tc=10%2B0&go=1" className="menu-play mt-3 flex h-[58px] w-full items-center justify-center gap-3 text-[18px] font-extrabold tracking-tight">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+              <path d="M8 5.5v13l10.5-6.5z" />
+            </svg>
+            Play 10 min rapid{signedIn ? ", rated" : ""}
+          </Link>
         </section>
 
         {/* Player card */}
-        <section className="menu-card menu-rise order-3 flex flex-col p-5 [animation-delay:80ms] lg:order-none lg:col-start-2 lg:row-start-1" aria-label="Your profile">
+        <div className="order-3 flex flex-col gap-3 sm:gap-4 lg:order-none lg:col-start-2 lg:row-start-1">
+        <section className="menu-card menu-rise flex flex-col p-5 [animation-delay:80ms]" aria-label="Your profile">
           <div className="flex items-center gap-3">
             <Avatar url={profile?.avatar_url ?? null} name={name} size={58} />
             <div className="min-w-0 flex-1">
@@ -186,8 +185,8 @@ export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null
                 {(["bullet", "blitz", "rapid"] as const).map((s) => {
                   const r = rating(s)
                   return (
-                    <div key={s} className="rounded-xl bg-black/20 px-2 py-2.5 text-center">
-                      <p className="g-muted text-[11px] font-bold uppercase tracking-wider">{s}</p>
+                    <div key={s} className="rounded-md bg-[var(--g-panel-2)] px-2 py-2.5 text-center">
+                      <p className="g-muted text-[12px] font-semibold capitalize">{s}</p>
                       <p className="mt-0.5 font-mono text-[18px] font-bold">
                         {r ? r.rating : "—"}
                         {r?.provisional ? <span className="g-muted text-[12px]">?</span> : null}
@@ -198,8 +197,8 @@ export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null
               </div>
               {people && people.games > 0 && (
                 <p className="g-muted mt-3 text-center text-[13px]">
-                  <b className="text-[#5fd07a]">{people.wins}</b> wins · <b className="text-[var(--g-text)]">{people.draws}</b> draws ·{" "}
-                  <b className="text-[#ff8a7d]">{people.losses}</b> losses
+                  <b className="text-[var(--g-good)]">{people.wins}</b> wins · <b className="text-[var(--g-text)]">{people.draws}</b> draws ·{" "}
+                  <b className="text-[var(--g-bad)]">{people.losses}</b> losses
                 </p>
               )}
               {level && (
@@ -213,7 +212,7 @@ export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null
                       "Top rank reached"
                     )}
                   </span>
-                  <Link href="/play/profile" className="shrink-0 text-[13px] font-bold text-[var(--g-gold)] hover:underline">
+                  <Link href="/play/profile" className="shrink-0 text-[13px] font-bold text-[var(--g-accent)] hover:underline">
                     Profile →
                   </Link>
                 </div>
@@ -229,22 +228,27 @@ export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null
           )}
         </section>
 
+        <Link href="/play/puzzles/daily" className="menu-tile menu-rise flex flex-1 flex-col p-5 [animation-delay:120ms]">
+          <span className="flex items-baseline justify-between gap-3">
+            <span className="text-[18px] font-extrabold leading-tight tracking-tight">Puzzle of the day</span>
+            <span className="text-[14px] font-bold text-[var(--g-accent)]">Solve it</span>
+          </span>
+          <MiniBoard fen={daily?.fen ?? START} flip={daily ? !daily.white : false} marks={daily?.marks ?? []} className="mx-auto mt-4 w-full max-w-[300px]" />
+          <span className="g-muted mt-3 flex items-center gap-2 text-[14px] font-medium">
+            {daily && <span className={`h-3 w-3 border border-white/40 ${daily.white ? "bg-white" : "bg-black"}`} />}
+            {daily ? `${daily.white ? "White" : "Black"} to move` : "A new puzzle every day"}
+          </span>
+        </Link>
+        </div>
+
       {/* Modes */}
-      <nav aria-label="Ways to play" className="order-2 grid grid-cols-2 gap-3 sm:gap-4 lg:order-none lg:col-span-2 lg:grid-cols-5">
+      <nav aria-label="Ways to play" className="order-2 grid grid-cols-2 gap-3 sm:gap-4 lg:order-none lg:col-span-2 lg:grid-cols-4">
         {MODES.map((m, i) => (
-          <Link
-            key={m.href}
-            href={m.href}
-            className={`menu-tile menu-rise flex min-h-[150px] flex-col p-4 sm:min-h-[190px] sm:p-5 ${i === 2 ? "col-span-2 lg:col-span-1" : ""}`}
-            style={{ animationDelay: `${120 + i * 60}ms`, ["--tile-glow" as string]: m.glow }}
-          >
+          <Link key={m.href} href={m.href} className="menu-tile menu-rise flex min-h-[140px] flex-col p-4 sm:min-h-[170px] sm:p-5" style={{ animationDelay: `${80 + i * 40}ms` }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={m.art} alt="" className="menu-tile-art" />
-            <span className="relative z-[1] max-w-[78%] text-[17px] font-extrabold leading-tight sm:text-[21px]">{m.title}</span>
-            <span className="g-muted relative z-[1] mt-1 max-w-[62%] text-[12px] leading-snug sm:text-[13px]">{m.text}</span>
-            <span className="relative z-[1] mt-auto inline-flex w-fit items-center gap-1 rounded-full bg-black/25 px-2.5 py-1 text-[12px] font-bold text-[var(--g-gold)]">
-              Start →
-            </span>
+            <span className="relative z-[1] max-w-[78%] text-[18px] font-extrabold leading-tight tracking-tight sm:text-[22px]">{m.title}</span>
+            <span className="g-muted relative z-[1] mt-1.5 max-w-[58%] text-[13px] leading-snug sm:text-[14px]">{m.text}</span>
           </Link>
         ))}
       </nav>
@@ -257,8 +261,8 @@ export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null
 
       <div className="menu-rise order-4 grid grid-cols-2 gap-2 [animation-delay:380ms] sm:grid-cols-4 sm:gap-3 lg:order-none lg:col-span-2">
         {LINKS.map((l) => (
-          <Link key={l.href} href={signedIn || l.href === "/play/leaderboard" ? l.href : `/account?next=${l.href}`} className="g-btn justify-start !rounded-xl !px-4 text-[14px]">
-            <GIcon name={l.icon} size={19} className="text-[var(--g-gold)]" />
+          <Link key={l.href} href={signedIn || l.href === "/play/leaderboard" ? l.href : `/account?next=${l.href}`} className="g-btn g-btn-ghost justify-start !px-4 text-[14px]">
+            <GIcon name={l.icon} size={19} className="text-[var(--g-accent)]" />
             {l.label}
           </Link>
         ))}

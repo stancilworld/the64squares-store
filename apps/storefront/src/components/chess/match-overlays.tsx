@@ -47,7 +47,7 @@ function Side({ f, side }: { f: Fighter; side: "left" | "right" }) {
       </div>
       {f.record && f.record.games > 0 && (
         <p className="mt-1 text-[12px] text-white/70 sm:text-[13px]">
-          <b className="text-[var(--g-gold)]">{f.record.wins}</b> wins · {f.record.games} games
+          <b className="text-[var(--g-accent)]">{f.record.wins}</b> wins · {f.record.games} games
         </p>
       )}
     </div>

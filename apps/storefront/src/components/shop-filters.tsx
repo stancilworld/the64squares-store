@@ -49,12 +49,12 @@ function Group({ group, selected, toggle }: { group: FilterGroup; selected: stri
                   aria-hidden="true"
                   className={`flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-[3px] border border-black peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 ${o.disabled ? "border-muted" : ""}`}
                 >
-                  {checked && <span className="h-[10px] w-[10px] rounded-[1px] bg-velvet" />}
+                  {checked && <span className="h-[10px] w-[10px] rounded-[1px] bg-ink" />}
                 </span>
                 {o.swatch && (
                   <span
                     aria-hidden="true"
-                    className="h-[14px] w-[14px] rounded-full border border-black/15"
+                    className="h-[14px] w-[14px] rounded-none border border-black/15"
                     style={{ backgroundColor: swatch(o.label) }}
                   />
                 )}

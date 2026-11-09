@@ -19,15 +19,15 @@ export function TournamentRow({ t, past = false }: { t: Tournament; past?: boole
     <li>
       <Link
         href={`/tournaments/${t.handle}`}
-        className="group grid grid-cols-[72px_1fr] gap-x-5 gap-y-3 rounded-md border border-rule p-4 transition-colors hover:border-black sm:grid-cols-[88px_1fr_auto] sm:items-center sm:p-5"
+        className="group grid grid-cols-[72px_1fr] gap-x-5 gap-y-3 border border-rule p-4 transition-colors hover:border-black sm:grid-cols-[88px_1fr_auto] sm:items-center sm:p-5"
       >
-        <div className={`flex flex-col items-center justify-center rounded-md py-3 ${past ? "bg-linen text-muted" : "bg-velvet text-white"}`}>
+        <div className={`flex flex-col items-center justify-center rounded-md py-3 ${past ? "bg-chalk text-muted" : "bg-amber text-black"}`}>
           <span className="text-[12px]">{d.weekday}</span>
           <span className="font-display text-[30px] leading-none">{d.day}</span>
           <span className="text-[12px]">{d.month}</span>
         </div>
         <div className="min-w-0">
-          <h3 className="font-display h-sub group-hover:underline group-hover:decoration-brass group-hover:underline-offset-4">{t.title}</h3>
+          <h3 className="font-display h-sub group-hover:underline group-hover:decoration-amber group-hover:underline-offset-4">{t.title}</h3>
           {t.summary && <p className="mt-1 line-clamp-2 text-[15px] text-muted">{t.summary}</p>}
           <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
             <span>
@@ -40,7 +40,7 @@ export function TournamentRow({ t, past = false }: { t: Tournament; past?: boole
           </p>
         </div>
         <div className="col-span-2 flex items-center justify-between gap-4 border-t border-rule pt-3 sm:col-span-1 sm:flex-col sm:items-end sm:border-0 sm:pt-0">
-          <span className={`text-[13px] ${t.registration_open && !past ? "text-velvet" : "text-muted"}`}>{status}</span>
+          <span className={`text-[13px] ${t.registration_open && !past ? "text-good" : "text-muted"}`}>{status}</span>
           {!past && t.registration_open && <span className="btn btn-solid h-[40px] px-5 text-[14px]">Register</span>}
         </div>
       </Link>

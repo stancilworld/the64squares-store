@@ -30,8 +30,8 @@ export function ProductReviews({ productId, summary, reviews }: { productId: str
                   return (
                     <li key={n} className="flex items-center gap-2 text-[13px]">
                       <span className="w-[42px] text-muted">{n} star</span>
-                      <span className="h-[8px] flex-1 overflow-hidden rounded-full bg-linen">
-                        <span className="block h-full rounded-full bg-[#d99a00]" style={{ width: `${summary.count ? (c / summary.count) * 100 : 0}%` }} />
+                      <span className="h-[8px] flex-1 overflow-hidden rounded-sm bg-chalk">
+                        <span className="block h-full rounded-sm bg-[#d99a00]" style={{ width: `${summary.count ? (c / summary.count) * 100 : 0}%` }} />
                       </span>
                       <span className="w-[24px] text-right text-muted">{c}</span>
                     </li>
@@ -61,7 +61,7 @@ export function ProductReviews({ productId, summary, reviews }: { productId: str
                     {r.source === "etsy" && <span className="ml-2">· via Etsy</span>}
                   </p>
                   {r.reply && (
-                    <div className="mt-3 rounded-md bg-linen px-4 py-3 text-[14px]">
+                    <div className="mt-3 rounded-md bg-chalk px-4 py-3 text-[14px]">
                       <p className="font-medium">Reply from The 64 Squares</p>
                       <p className="mt-1 whitespace-pre-line leading-[1.6]">{r.reply}</p>
                     </div>

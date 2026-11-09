@@ -174,7 +174,7 @@ export function PlayLive({ pass }: { pass: PlayPass | null }) {
       )}
       {c && (
         <div className="fixed inset-x-0 top-3 z-[70] flex justify-center px-3" role="alertdialog" aria-label="Challenge">
-          <div className="w-full max-w-[420px] rounded-2xl border border-[var(--g-gold)]/50 bg-[var(--g-panel)] p-4 shadow-2xl">
+          <div className="w-full max-w-[420px] rounded-2xl border border-[var(--g-accent)]/50 bg-[var(--g-panel)] p-4 shadow-2xl">
             <div className="flex items-center gap-3">
               <Avatar url={c.from.avatar_url} name={c.from.display_name} size={48} online />
               <div className="min-w-0 flex-1">
@@ -224,7 +224,7 @@ export function PlayLive({ pass }: { pass: PlayPass | null }) {
           <div key={t.id} className="pointer-events-auto flex max-w-[440px] items-center gap-3 rounded-xl bg-[var(--g-panel-3)] px-4 py-3 text-[14px] shadow-2xl">
             <span>{t.text}</span>
             {t.href && (
-              <Link href={t.href} className="shrink-0 font-semibold text-[var(--g-gold)]">
+              <Link href={t.href} className="shrink-0 font-semibold text-[var(--g-accent)]">
                 View
               </Link>
             )}

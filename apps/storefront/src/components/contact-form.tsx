@@ -105,7 +105,7 @@ export function ContactForm({ page }: { page: ContactPage }) {
       <button
         type="submit"
         disabled={state === "sending"}
-        className="mt-[30px] flex h-[52px] w-full items-center justify-center gap-3 rounded-md bg-black text-[17px] font-semibold text-white hover:bg-velvet disabled:opacity-60 lg:h-[58px] lg:text-[18px]"
+        className="mt-[30px] flex h-[52px] w-full items-center justify-center gap-3 rounded-md bg-black text-[17px] font-semibold text-white hover:bg-amber hover:text-black disabled:opacity-60 lg:h-[58px] lg:text-[18px]"
       >
         <SendIcon className="h-[20px] w-[20px]" />
         {state === "sending" ? "Sending…" : page.submit_label}

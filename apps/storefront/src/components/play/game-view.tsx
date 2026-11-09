@@ -1,5 +1,6 @@
 "use client"
 
+import { GIcon } from "@/components/play-shell/icons"
 import { Chess, type Square } from "chess.js"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -395,7 +396,7 @@ export function GameView({ id, initialPass }: Props) {
             {pass?.me.guest && (
               <p className="g-muted mt-3 text-[13px]">
                 You&apos;ll play as {pass.me.name}.{" "}
-                <Link href={`/account?next=${encodeURIComponent(`/play/${id}`)}`} className="text-[var(--g-gold)] underline underline-offset-2">
+                <Link href={`/account?next=${encodeURIComponent(`/play/${id}`)}`} className="text-[var(--g-accent)] underline underline-offset-2">
                   Sign in
                 </Link>{" "}
                 to play under your own name.
@@ -403,7 +404,7 @@ export function GameView({ id, initialPass }: Props) {
             )}
           </>
         )}
-        {notice && <p className="mt-4 text-[14px] text-[#ff8a7d]">{notice}</p>}
+        {notice && <p className="mt-4 text-[14px] text-[var(--g-bad)]">{notice}</p>}
       </div>
     )
   }
@@ -456,7 +457,7 @@ export function GameView({ id, initialPass }: Props) {
           gone && claimIn != null ? (
             "Left the game"
           ) : game.draw_offer === c && active ? (
-            <span className="text-[var(--g-gold)]">Offers a draw</span>
+            <span className="text-[var(--g-accent)]">Offers a draw</span>
           ) : bubble(c) ? (
             <span className="menu-rise inline-block rounded-full bg-[var(--g-panel-3)] px-2 text-[12px] font-semibold text-[var(--g-text)]">{bubble(c)}</span>
           ) : null
@@ -467,23 +468,23 @@ export function GameView({ id, initialPass }: Props) {
 
   const btn = "g-btn flex-1 px-3 text-[14px]"
   const statusCard = over ? (
-    <div className="g-panel p-5 ring-1 ring-[var(--g-gold)]/40">
+    <div className="g-panel p-5 ring-1 ring-[var(--g-accent)]/40">
       <p className="g-title">{game.result === "1/2-1/2" ? "½–½" : game.result ?? "Aborted"}</p>
       <p className="mt-1 text-[15px] text-[var(--g-text)]">{resultText(game)}</p>
       {game.rated && myColour && (game[myColour === "w" ? "white" : "black"]?.diff ?? null) != null && (
-        <p className="mt-1 text-[14px] text-[var(--g-gold)]">
+        <p className="mt-1 text-[14px] text-[var(--g-accent)]">
           Your {SPEED_LABEL[speed].toLowerCase()} rating: {(game[myColour === "w" ? "white" : "black"]?.rating ?? 0) + (game[myColour === "w" ? "white" : "black"]?.diff ?? 0)} (
           {(game[myColour === "w" ? "white" : "black"]?.diff ?? 0) >= 0 ? "+" : ""}
           {game[myColour === "w" ? "white" : "black"]?.diff})
         </p>
       )}
       {game.mode === "arena" && myColour && (
-        <p className="mt-2 text-[13px] text-[var(--g-gold)]">
+        <p className="mt-2 text-[13px] text-[var(--g-accent)]">
           {nextGame ? `Next game in ${Math.max(nextIn, 1)}…` : "Stay on this page and your next arena game starts by itself."}
         </p>
       )}
-      {rematch?.by && rematch.by !== meId && <p className="mt-2 text-[14px] font-medium text-[var(--g-gold)]">Your opponent wants a rematch.</p>}
-      {rematch?.declined && <p className="mt-2 text-[13px] text-[var(--g-gold)]">Rematch declined.</p>}
+      {rematch?.by && rematch.by !== meId && <p className="mt-2 text-[14px] font-medium text-[var(--g-accent)]">Your opponent wants a rematch.</p>}
+      {rematch?.declined && <p className="mt-2 text-[13px] text-[var(--g-accent)]">Rematch declined.</p>}
       <div className="mt-4 flex flex-wrap gap-2">
         {myColour && game.status === "finished" && (game.mode === "online" || game.mode === "friend") && (
           <>
@@ -520,7 +521,8 @@ export function GameView({ id, initialPass }: Props) {
         )}
         {game.status === "finished" && game.moves.length >= 2 && (
           <Link href={`/play/analysis/${id}`} className="g-btn g-btn-primary h-[42px]">
-            ★ Game review
+            <GIcon name="star" size={18} />
+            Game review
           </Link>
         )}
         {game.status === "finished" && (
@@ -604,13 +606,14 @@ export function GameView({ id, initialPass }: Props) {
                 ½ {game.draw_offer === myColour ? "Draw offered" : "Draw"}
               </button>
               <button type="button" className={`${btn}`} onClick={() => setConfirmResign(true)}>
-                ⚑ Resign
+                <GIcon name="flag" size={18} />
+                Resign
               </button>
             </>
           )}
         </div>
       )}
-      {notice && <p className="mt-3 text-[13px] text-[#ff8a7d]">{notice}</p>}
+      {notice && <p className="mt-3 text-[13px] text-[var(--g-bad)]">{notice}</p>}
     </div>
   )
 
@@ -659,7 +662,7 @@ export function GameView({ id, initialPass }: Props) {
               {game.mode === "arena" ? " · Arena" : ""}
             </span>
             {!following && (
-              <button type="button" className="font-medium text-[var(--g-gold)] underline underline-offset-2" onClick={() => setViewPly(null)}>
+              <button type="button" className="font-medium text-[var(--g-accent)] underline underline-offset-2" onClick={() => setViewPly(null)}>
                 Back to the game
               </button>
             )}

@@ -175,12 +175,12 @@ function PriceTotal({ lines }: { lines: Line[] }) {
       {count > 0 ? (
         <Link
           href="/checkout"
-          className="mt-8 flex h-[44px] w-full items-center justify-center rounded-md bg-black text-[16px] font-semibold text-white hover:bg-velvet lg:h-[54px] lg:text-[18px]"
+          className="mt-8 flex h-[44px] w-full items-center justify-center rounded-md bg-black text-[16px] font-semibold text-white hover:bg-amber hover:text-black lg:h-[54px] lg:text-[18px]"
         >
           Checkout
         </Link>
       ) : (
-        <p className="mt-8 flex h-[44px] w-full items-center justify-center rounded-full bg-pill text-[15px] text-black/60 lg:h-[54px]">
+        <p className="mt-8 flex h-[44px] w-full items-center justify-center rounded-sm bg-pill text-[15px] text-black/60 lg:h-[54px]">
           Tick an item to check out
         </p>
       )}

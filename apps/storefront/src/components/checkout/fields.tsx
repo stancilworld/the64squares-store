@@ -55,7 +55,7 @@ export function PrimaryButton({ children, className = "", ...rest }: React.Butto
   return (
     <button
       {...rest}
-      className={`flex h-[44px] w-full items-center justify-center rounded-md bg-black text-[16px] font-semibold text-white hover:bg-velvet disabled:opacity-60 lg:h-[54px] lg:text-[18px] ${className}`}
+      className={`flex h-[44px] w-full items-center justify-center rounded-md bg-black text-[16px] font-semibold text-white hover:bg-amber hover:text-black disabled:opacity-60 lg:h-[54px] lg:text-[18px] ${className}`}
     >
       {children}
     </button>

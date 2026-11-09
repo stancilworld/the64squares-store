@@ -41,12 +41,12 @@ export function ComputerSetup({ setup, onChange, onStart, signedIn }: { setup: S
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={`/pieces/wood3d/${BOT_ART[i]}.webp`} alt="" className="relative h-[62px] w-[62px] object-contain sm:h-[80px] sm:w-[80px]" />
               </span>
-              <span className="mt-1 text-[11px] font-bold uppercase tracking-wider text-[var(--g-gold)]">Level {l.level}</span>
+              <span className="mt-1 text-[12px] font-semibold text-[var(--g-muted)]">Level {l.level}</span>
               <span className="text-[15px] font-extrabold leading-tight">{l.name}</span>
               <span className="g-muted text-[12px]">Rating {l.elo}</span>
               <span className="mt-2 flex gap-[3px]" aria-hidden="true">
                 {LEVELS.map((x) => (
-                  <span key={x.level} className={`h-[5px] w-[9px] rounded-full ${x.level <= l.level ? "bg-[var(--g-gold)]" : "bg-white/10"}`} />
+                  <span key={x.level} className={`h-[5px] w-[9px] rounded-full ${x.level <= l.level ? "bg-[var(--g-accent)]" : "bg-white/10"}`} />
                 ))}
               </span>
             </button>
@@ -55,25 +55,25 @@ export function ComputerSetup({ setup, onChange, onStart, signedIn }: { setup: S
 
         <aside className="menu-card menu-rise flex flex-col p-5 [animation-delay:200ms]">
           <div className="flex items-center gap-3">
-            <span className="grid h-[64px] w-[64px] shrink-0 place-items-center rounded-2xl bg-black/25">
+            <span className="grid h-[64px] w-[64px] shrink-0 place-items-center rounded-2xl bg-[var(--g-panel-2)]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/pieces/wood3d/${BOT_ART[chosen.level - 1]}.webp`} alt="" className="h-[56px] w-[56px] object-contain" />
             </span>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--g-gold)]">Your opponent</p>
+              <p className="text-[12px] font-semibold text-[var(--g-muted)]">Your opponent</p>
               <p className="text-[19px] font-extrabold leading-tight">{chosen.name}</p>
               <p className="g-muted text-[13px]">Level {chosen.level} · rating {chosen.elo}</p>
             </div>
           </div>
           <p className="g-muted mt-3 text-[14px]">{BOT_LINE[chosen.level - 1]}</p>
-          <h2 className="mb-2 mt-5 text-[13px] font-bold uppercase tracking-[0.14em] text-[var(--g-gold)]">I play</h2>
+          <h2 className="mb-2 mt-5 text-[13px] font-semibold text-[var(--g-muted)]">I play</h2>
           <ColourPick value={setup.colour} onChange={(c) => onChange((s) => ({ ...s, colour: c }))} />
           <button type="button" onClick={onStart} className="menu-play mt-6 hidden h-[60px] w-full items-center justify-center lg:flex">
-            <span className="relative text-[20px] font-black uppercase tracking-wide">Play</span>
+            <span className="relative text-[20px] font-extrabold tracking-tight">Play</span>
           </button>
           {!signedIn && (
             <p className="g-muted mt-3 text-[13px]">
-              <Link href="/account?next=/play/computer" className="text-[var(--g-gold)] underline underline-offset-2">
+              <Link href="/account?next=/play/computer" className="text-[var(--g-accent)] underline underline-offset-2">
                 Sign in
               </Link>{" "}
               to keep your games and earn XP.
@@ -84,7 +84,7 @@ export function ComputerSetup({ setup, onChange, onStart, signedIn }: { setup: S
       {/* On phones the Play button stays at the bottom of the screen. */}
       <div className="fixed inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[var(--g-bg)] via-[var(--g-bg)]/95 to-transparent px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-6 lg:hidden">
         <button type="button" onClick={onStart} className="menu-play flex h-[60px] w-full items-center justify-center">
-          <span className="relative text-[19px] font-black uppercase tracking-wide">
+          <span className="relative text-[19px] font-extrabold tracking-tight">
             Play {chosen.name}
           </span>
         </button>

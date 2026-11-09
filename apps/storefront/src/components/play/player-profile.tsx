@@ -43,7 +43,7 @@ export function PlayerProfile({ username, meId }: { username: string; meId: stri
     <div className="mx-auto max-w-[980px]">
       <PanelHeader title={p.display_name} back="/play/friends" backLabel="Friends" />
       <div className="g-panel mt-5 overflow-hidden">
-        <div className="h-[84px] bg-gradient-to-r from-[#2c4a39] via-[#3a5a46] to-[#5c3b22]" />
+        <div className="h-[84px] board-wash bg-[var(--g-panel-3)]" />
         <div className="-mt-12 flex flex-col gap-4 px-6 pb-6 sm:flex-row sm:items-end">
           <div className="rounded-xl border-4 border-[var(--g-panel)]">
             <Avatar url={p.avatar_url} name={p.display_name} size={104} online={p.online} />
@@ -56,7 +56,7 @@ export function PlayerProfile({ username, meId }: { username: string; meId: stri
             </p>
             <div className="mt-2 flex items-center gap-2">
               <LevelBadge level={p.level} />
-              <span className={`text-[12px] font-semibold ${p.online ? "text-[#5fd07a]" : "g-muted"}`}>{p.online ? "● Online" : "Offline"}</span>
+              <span className={`text-[12px] font-semibold ${p.online ? "text-[var(--g-good)]" : "g-muted"}`}>{p.online ? "● Online" : "Offline"}</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -92,14 +92,14 @@ export function PlayerProfile({ username, meId }: { username: string; meId: stri
           </div>
         </div>
         {p.fair_play_closed && (
-        <p className="border-t border-[var(--g-line)] bg-[#3a1d1a] px-6 py-3 text-[14px] text-[#ff8a7d]">This account was closed for rated play after a fair-play review.</p>
+        <p className="border-t border-[var(--g-line)] bg-[#3a1d1a] px-6 py-3 text-[14px] text-[var(--g-bad)]">This account was closed for rated play after a fair-play review.</p>
       )}
       {p.bio && <p className="border-t border-[var(--g-line)] px-6 py-4 text-[15px]">{p.bio}</p>}
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-[1fr_1fr]">
         <div className="g-panel p-5">
-          <p className="text-[13px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">Experience</p>
+          <p className="text-[13px] font-semibold text-[var(--g-muted)]">Experience</p>
           <p className="mt-2 text-[28px] font-bold">
             Level {p.level.level} <span className="text-[18px] font-semibold text-[var(--g-muted)]">· {p.level.title}</span>
           </p>
@@ -109,7 +109,7 @@ export function PlayerProfile({ username, meId }: { username: string; meId: stri
           <p className="g-muted mt-3 text-[13px]">{p.xp} XP from {total.games + p.stats.computer.games} games</p>
         </div>
         <div className="g-panel p-5">
-          <p className="text-[13px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">Ratings</p>
+          <p className="text-[13px] font-semibold text-[var(--g-muted)]">Ratings</p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             {(["bullet", "blitz", "rapid", "classical"] as const).map((s) => {
               const r = p.ratings.find((x) => x.speed === s)
@@ -128,7 +128,7 @@ export function PlayerProfile({ username, meId }: { username: string; meId: stri
       </div>
 
       <div className="g-panel mt-4 p-5">
-        <p className="text-[13px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">Results against people</p>
+        <p className="text-[13px] font-semibold text-[var(--g-muted)]">Results against people</p>
         <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-[var(--g-panel-3)]">
           <div className="bg-[#5fae6c]" style={{ width: `${pct(total.wins)}%` }} />
           <div className="bg-[#9a948c]" style={{ width: `${pct(total.draws)}%` }} />
@@ -136,7 +136,7 @@ export function PlayerProfile({ username, meId }: { username: string; meId: stri
         </div>
         <p className="mt-2 text-[14px]">
           <b>{total.games}</b> games · <span className="text-[#7bd88f]">{total.wins} won</span> · <span className="g-muted">{total.draws} drawn</span> ·{" "}
-          <span className="text-[#ff8a7d]">{total.losses} lost</span>
+          <span className="text-[var(--g-bad)]">{total.losses} lost</span>
         </p>
       </div>
 

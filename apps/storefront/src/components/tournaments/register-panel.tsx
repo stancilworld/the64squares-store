@@ -29,7 +29,7 @@ export function RegisterPanel({ t, me, ticket }: { t: Tournament; me: Me; ticket
 
   if (ticket && ticket.status === "confirmed") {
     return (
-      <div className="rounded-md border border-velvet/30 bg-maple-soft p-6">
+      <div className="rounded-md border border-black/20 bg-chalk p-6">
         <p className="font-display h-sub">You&apos;re registered</p>
         <p className="mt-2 text-[15px]">
           Ticket <span className="font-mono font-medium">{ticket.ticket_code}</span>
@@ -51,7 +51,7 @@ export function RegisterPanel({ t, me, ticket }: { t: Tournament; me: Me; ticket
 
   if (!t.registration_open) {
     return (
-      <div className="rounded-md border border-rule bg-linen p-6">
+      <div className="rounded-md border border-rule bg-chalk p-6">
         <p className="font-display h-sub">{t.status === "cancelled" ? "Cancelled" : "Registration closed"}</p>
         <p className="mt-2 text-[15px] text-muted">{t.registration_note}</p>
         {t.mode === "online" && t.format === "arena" && t.status !== "cancelled" && (

@@ -53,7 +53,7 @@ export function ReviewForm({ productId }: { productId: string }) {
   }
   if (sent) {
     return (
-      <p className="mt-6 rounded-md bg-linen px-4 py-3 text-[14px]">
+      <p className="mt-6 rounded-md bg-chalk px-4 py-3 text-[14px]">
         Thank you! Your review will appear here once we&apos;ve checked it, usually within a day.
       </p>
     )

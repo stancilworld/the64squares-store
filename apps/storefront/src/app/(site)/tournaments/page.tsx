@@ -52,10 +52,10 @@ async function List() {
 export default function TournamentsPage() {
   return (
     <>
-      <div className="bg-velvet text-white">
+      <div className="board-wash bg-ink text-white">
         <div className="mx-auto max-w-[1440px] px-6 py-10 lg:px-10 lg:py-14">
           <h1 className="font-display h-page">Tournaments</h1>
-          <p className="mt-3 max-w-[560px] text-[16px] leading-[1.6] text-maple-soft/90">
+          <p className="mt-3 max-w-[560px] text-[16px] leading-[1.6] text-white/75">
             Online arenas and over-the-board opens. Register in a minute with your The 64 Squares account and your ticket arrives by email.
           </p>
         </div>

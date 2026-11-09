@@ -23,7 +23,7 @@ export function TicketActions({ code, canCancel }: { code: string; canCancel: bo
         )}
       </div>
       {confirming && (
-        <div className="rounded-md border border-rule bg-linen p-4">
+        <div className="rounded-md border border-rule bg-chalk p-4">
           <p className="text-[15px]">Give up your place? Someone else can take it, and this ticket stops working.</p>
           <div className="mt-3 flex flex-wrap gap-3">
             <button

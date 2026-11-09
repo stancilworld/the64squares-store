@@ -109,7 +109,7 @@ export function HistoryList({ playerId }: { playerId: string }) {
                   <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-sm ring-1 ring-black/25 ${colour === "w" ? "bg-white" : "bg-[#3b3835]"}`} />
                   <span className="truncate">{name}</span>
                   {rating != null && <span className="g-muted">({rating})</span>}
-                  {d != null && d !== 0 && <span className={`text-[12px] ${d > 0 ? "text-[#7bd88f]" : "text-[#ff8a7d]"}`}>{d > 0 ? `+${d}` : d}</span>}
+                  {d != null && d !== 0 && <span className={`text-[12px] ${d > 0 ? "text-[#7bd88f]" : "text-[var(--g-bad)]"}`}>{d > 0 ? `+${d}` : d}</span>}
                 </span>
               )
               return (

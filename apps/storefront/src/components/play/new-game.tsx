@@ -45,7 +45,7 @@ export function NewGame({ initialPass }: { initialPass: PlayPass | null }) {
       <ScreenHeader title="Play a Friend" subtitle="Create a game and send the link. It starts when your friend opens it. Friendly games don't change ratings." />
       <TimeCards value={tc} onChange={setTc} />
       <section className="menu-rise [animation-delay:280ms]">
-        <h2 className="mb-2 text-[13px] font-bold uppercase tracking-[0.14em] text-[var(--g-gold)]">I play</h2>
+        <h2 className="mb-2 text-[13px] font-semibold text-[var(--g-muted)]">I play</h2>
         <div className="max-w-[420px]">
           <ColourPick value={colour} onChange={setColour} />
         </div>
@@ -53,19 +53,19 @@ export function NewGame({ initialPass }: { initialPass: PlayPass | null }) {
       <div className="fixed inset-x-0 bottom-[62px] z-20 bg-gradient-to-t from-[var(--g-bg)] via-[var(--g-bg)]/95 to-transparent px-3 pb-3 pt-6 lg:static lg:bg-none lg:p-0">
         <div className="mx-auto flex max-w-[980px] flex-col items-center gap-3 sm:flex-row">
           <button type="button" disabled={busy || !token} onClick={create} className="menu-play flex h-[60px] w-full items-center justify-center sm:w-[320px]">
-            <span className="relative text-[19px] font-black uppercase tracking-wide">{busy ? "Creating…" : `Create ${label} game`}</span>
+            <span className="relative text-[19px] font-extrabold tracking-tight">{busy ? "Creating…" : `Create ${label} game`}</span>
           </button>
           {pass?.me.guest && (
             <p className="g-muted text-center text-[13px] sm:text-left">
               Playing as {pass.me.name}.{" "}
-              <Link href="/account?next=/play/friend" className="text-[var(--g-gold)] underline underline-offset-2">
+              <Link href="/account?next=/play/friend" className="text-[var(--g-accent)] underline underline-offset-2">
                 Sign in
               </Link>{" "}
               to use your own name.
             </p>
           )}
         </div>
-        {error && <p className="mt-3 text-center text-[14px] text-[#ff8a7d] sm:text-left">{error}</p>}
+        {error && <p className="mt-3 text-center text-[14px] text-[var(--g-bad)] sm:text-left">{error}</p>}
       </div>
     </div>
   )

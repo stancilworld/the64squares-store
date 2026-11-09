@@ -58,7 +58,7 @@ export function ChallengeDialog() {
             <p className="g-muted text-[13px]">@{t.username}</p>
           </div>
         </div>
-        <p className="mt-4 text-[12px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">Time control</p>
+        <p className="mt-4 text-[12px] font-semibold text-[var(--g-muted)]">Time control</p>
         <div className="mt-2 grid grid-cols-3 gap-2">
           {TCS.map(([v, label]) => (
             <button key={v} type="button" aria-pressed={tc === v} onClick={() => setTc(v)} className="g-choice h-[44px] text-[14px] font-bold">
@@ -66,7 +66,7 @@ export function ChallengeDialog() {
             </button>
           ))}
         </div>
-        <p className="mt-4 text-[12px] font-semibold uppercase tracking-wide text-[var(--g-gold)]">I play</p>
+        <p className="mt-4 text-[12px] font-semibold text-[var(--g-muted)]">I play</p>
         <div className="mt-2 grid grid-cols-3 gap-2">
           {(
             [
@@ -80,7 +80,7 @@ export function ChallengeDialog() {
             </button>
           ))}
         </div>
-        {error && <p className="mt-3 text-[14px] text-[#ff8a7d]">{error}</p>}
+        {error && <p className="mt-3 text-[14px] text-[var(--g-bad)]">{error}</p>}
         <div className="mt-5 grid grid-cols-2 gap-2">
           <button type="button" className="g-btn" onClick={() => set(null)}>
             Cancel
