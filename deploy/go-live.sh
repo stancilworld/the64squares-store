@@ -54,17 +54,18 @@ for name in "$LIVE_DOMAIN" "$WWW_DOMAIN" "$LIVE_API" "$OLD_STORE" "$OLD_API"; do
   # An IPv6 (AAAA) record pointing somewhere else makes the SSL check fail.
   for ip6 in $(dig +short AAAA "$name" @1.1.1.1 | grep ':' || true); do
     if ! grep -qw "$ip6" <<<"$SERVER_IP6"; then
-      echo "  PROBLEM  $name has an AAAA (IPv6) record $ip6 that is not this server. Delete it in Hostinger DNS."
+      echo "  PROBLEM  $name has an AAAA (IPv6) record $ip6 that is not this server. Delete it where your DNS is managed (GoDaddy)."
       dns_ok=no
     fi
   done
 done
 if [ "$dns_ok" != yes ]; then
-  fail "DNS is not ready. In Hostinger DNS for $LIVE_DOMAIN set:
+  fail "DNS is not ready. Where the DNS for $LIVE_DOMAIN is managed (GoDaddy: My Products > the64squares.in > DNS) set:
   A     @        $SERVER_IP
   A     www      $SERVER_IP   (or CNAME www -> $LIVE_DOMAIN)
   A     api      $SERVER_IP
-and delete any other A or AAAA records for @, www and api. Do not touch MX or TXT records (email).
+and delete any other A, AAAA or CNAME records for @, www and api (the old Vercel ones). Turn off
+GoDaddy domain forwarding if it is on. Do not touch MX or TXT records (email).
 Changes can take 5-30 minutes to spread. Then run this again. Nothing was changed."
 fi
 
