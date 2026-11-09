@@ -1,7 +1,7 @@
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { MARKETING_MODULE } from "../../../../modules/marketing"
 import type MarketingModuleService from "../../../../modules/marketing/service"
-import { EVENT_NAMES, PLATFORM_KEYS } from "../../../../lib/marketing/settings"
+import { EVENT_NAMES, PLATFORM_KEYS, loadMarketingSettings } from "../../../../lib/marketing/settings"
 
 const STATUSES = ["success", "browser", "pending", "failed", "skipped"] as const
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined)
@@ -26,8 +26,9 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
   const count = async (filters: Record<string, unknown>) => (await m.listAndCountMarketingDeliveries({ ...filters, created_at: range } as never, { take: 1, select: ["id"] }))[1]
   const [total_events] = (await m.listAndCountMarketingEvents({ created_at: range } as never, { take: 1, select: ["id"] })).slice(1) as [number]
   const byStatus = Object.fromEntries(await Promise.all(STATUSES.map(async (s) => [s, await count({ status: s })])))
+  const hooks = (await loadMarketingSettings(req.scope)).webhooks.endpoints.map((e) => `webhook_${e.id}`)
   const byPlatform = await Promise.all(
-    PLATFORM_KEYS.map(async (p) => ({
+    [...PLATFORM_KEYS, ...hooks].map(async (p) => ({
       platform: p,
       total: await count({ platform: p }),
       success: await count({ platform: p, status: ["success", "browser"] }),
@@ -53,7 +54,7 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
   }
   const [events, filtered] = await m.listAndCountMarketingEvents(filters as never, { take: limit, skip: offset, order: { created_at: "DESC" } })
   const deliveries = events.length
-    ? await m.listMarketingDeliveries({ event_id: events.map((e) => e.event_id) }, { select: ["id", "event_id", "platform", "channel", "status", "attempts", "last_error", "delivered_at"] })
+    ? await m.listMarketingDeliveries({ event_id: events.map((e) => e.event_id) }, { select: ["id", "event_id", "platform", "channel", "status", "attempts", "last_error", "delivered_at", "external_status"] })
     : []
   res.json({
     range: { from: from.toISOString(), to: to.toISOString() },

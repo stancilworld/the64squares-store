@@ -1,9 +1,9 @@
-import { type EventData, type EventItem, type Person, type Visitor, META_NAMES, contentIdOf, hashed, round2 } from "./events"
+import { type EventData, type EventItem, type Person, type Visitor, META_NAMES, apiBase, contentIdOf, hashed, round2 } from "./events"
 import type { EventName } from "./settings"
 
 // Meta Conversions API: https://developers.facebook.com/docs/marketing-api/conversions-api
 export const META_API_VERSION = "v25.0"
-export const metaBase = () => (process.env.MARKETING_META_BASE || "https://graph.facebook.com").replace(/\/$/, "")
+export const metaBase = () => apiBase("meta", "https://graph.facebook.com")
 
 const customData = (name: EventName, d: EventData, idMode: "variant" | "product" | "sku") => {
   const items = d.items ?? []

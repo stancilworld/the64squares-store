@@ -16,6 +16,8 @@ const MarketingContext = model
     page: model.text().nullable(),
     consent: model.json().nullable(),
     utm: model.json().nullable(),
+    // Other ad platforms' browser and click ids (LinkedIn, Snapchat, Microsoft, Pinterest).
+    click_ids: model.json().nullable(),
   })
   .indexes([{ on: ["cart_id"], unique: true }, { on: ["created_at"] }])
 

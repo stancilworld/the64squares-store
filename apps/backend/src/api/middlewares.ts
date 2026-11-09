@@ -43,6 +43,8 @@ import {
   MarketingTestBody,
   MarketingRetryBody,
   MarketingDeleteBody,
+  WebhookBody,
+  WebhookUpdateBody,
 } from "./admin/validators"
 import { staffGuard } from "./staff-guard"
 import { activityRecorder, signInRecorder } from "../lib/activity"
@@ -207,6 +209,22 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/marketing/retry",
       middlewares: [validateAndTransformBody(MarketingRetryBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/marketing/webhooks",
+      middlewares: [validateAndTransformBody(WebhookBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/marketing/webhooks/:id",
+      middlewares: [validateAndTransformBody(WebhookUpdateBody)],
+    },
+    {
+      // Meta signs the raw body: keep it for the check.
+      method: ["POST"],
+      matcher: "/webhooks/whatsapp",
+      bodyParser: { preserveRawBody: true },
     },
     {
       method: ["POST"],

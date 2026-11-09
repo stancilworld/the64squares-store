@@ -23,7 +23,12 @@ export type EventData = {
   order_id?: string | null
   // Campaign tags of the visit (first touch): utm_source, utm_medium, utm_campaign...
   utm?: Record<string, string> | null
+  // For messages and webhooks: order number, tracking, the cart recovery link.
+  extra?: Record<string, unknown> | null
 }
+
+// What the customer agreed to at checkout or by subscribing: marketing emails, WhatsApp.
+export type OptIn = { email: boolean; whatsapp: boolean }
 
 // The customer, for matching on the platforms' side. Hashed before it goes anywhere.
 export type Person = {
@@ -46,7 +51,12 @@ export type Visitor = {
   fbc?: string | null
   ga_client_id?: string | null
   page_url?: string | null
+  // Other platforms' browser and click ids (li_fat_id, _scid, ScCid, msclkid, _epik).
+  ids?: Partial<Record<ClickId, string>> | null
 }
+
+export const CLICK_IDS = ["li_fat_id", "scid", "sc_click_id", "msclkid", "epik"] as const
+export type ClickId = (typeof CLICK_IDS)[number]
 
 export type Consent = { analytics: boolean; marketing: boolean }
 
@@ -64,6 +74,9 @@ export const GA4_NAMES: Record<EventName, string | null> = {
   CompleteRegistration: "sign_up",
   Lead: "generate_lead",
   Refund: "refund",
+  AbandonedCart: null,
+  OrderShipped: null,
+  Subscribe: null,
 }
 
 // Meta's standard events; RemoveFromCart and ViewCart go as custom events; Meta has no refund event.
@@ -80,6 +93,9 @@ export const META_NAMES: Record<EventName, { name: string; custom: boolean } | n
   CompleteRegistration: { name: "CompleteRegistration", custom: false },
   Lead: { name: "Lead", custom: false },
   Refund: null,
+  AbandonedCart: null,
+  OrderShipped: null,
+  Subscribe: null,
 }
 
 export const contentIdOf = (item: EventItem, mode: "variant" | "product" | "sku") =>
@@ -101,6 +117,31 @@ const clean = {
   postcode: (v: string) => v.trim().toLowerCase().replace(/\s/g, ""),
   country: (v: string) => v.trim().toLowerCase().slice(0, 2),
 }
+
+// Microsoft asks for the email without dots or "+tag" in the part before @.
+export const hashedMsEmail = (v: string | null | undefined) => {
+  if (!v || !v.includes("@")) return null
+  const [user, domain] = v.trim().toLowerCase().split("@")
+  return sha256(`${user.split("+")[0].replace(/\./g, "")}@${domain}`)
+}
+
+// E.164 phone ("+919876501234"), hashed (Microsoft).
+export const hashedE164 = (v: string | null | undefined) => {
+  if (!v) return null
+  const d = clean.phone(v)
+  return d ? sha256(`+${d}`) : null
+}
+
+// E.164 phone for WhatsApp (digits with country code, no +).
+export const waNumber = (v: string | null | undefined) => {
+  if (!v) return null
+  const d = clean.phone(v)
+  return d.length >= 11 && d.length <= 15 ? d : null
+}
+
+// Address of each platform's API; can be pointed at a stand-in server for testing
+// (MARKETING_<NAME>_BASE).
+export const apiBase = (name: string, fallback: string) => (process.env[`MARKETING_${name.toUpperCase()}_BASE`] || fallback).replace(/\/$/, "")
 
 export const hashed = (kind: keyof typeof clean, v: string | null | undefined) => {
   if (!v || !String(v).trim()) return null

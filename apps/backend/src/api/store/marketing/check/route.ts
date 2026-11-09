@@ -11,6 +11,10 @@ const PASS: Record<string, string> = {
   google_ads: "The Google Ads tag loaded on your website. Conversions show in Google Ads after the first order.",
   gtm: "Your Google Tag Manager container loaded on your website.",
   clarity: "Microsoft Clarity loaded on your website. Recordings show in Clarity within about two hours.",
+  pinterest: "The Pinterest Tag loaded on your website. Check Ads → Conversions → Event history in Pinterest.",
+  snapchat: "The Snap Pixel loaded on your website. Check Events Manager → your Pixel → Event activity in Snapchat.",
+  microsoft_ads: "The UET tag loaded on your website. Microsoft Advertising shows the tag as active within a day.",
+  linkedin: "The LinkedIn Insight Tag loaded on your website. Campaign Manager shows it as active within a day.",
 }
 
 // POST /store/marketing/check: the website reports whether each tag under test loaded.
@@ -29,7 +33,8 @@ export const POST = async (req: MedusaRequest<TagCheckBodyType>, res: MedusaResp
     next.checks[i] = {
       ok: r.ok,
       at: new Date().toISOString(),
-      message: r.ok ? PASS[i] : `The tag did not load on your website${r.detail ? ` (${r.detail})` : ""}. Check the ID, and that an ad blocker isn't on in the browser you tested with.`,
+      // The server half of the same test (when it has one) is reported too.
+      message: r.ok ? `${p.note ? `${p.note.trim()} ` : ""}${PASS[i]}` : `The tag did not load on your website${r.detail ? ` (${r.detail})` : ""}. Check the ID, and that an ad blocker isn't on in the browser you tested with.`,
       fingerprint: fingerprintOf(s, i, secrets),
     }
     delete next.pending_checks[i]

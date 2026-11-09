@@ -2,6 +2,7 @@ import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/frame
 import { MedusaError } from "@medusajs/framework/utils"
 import { MARKETING_MODULE } from "../../../../../modules/marketing"
 import type MarketingModuleService from "../../../../../modules/marketing/service"
+import { PERSONAL_KEYS } from "../../../../../lib/marketing/engine"
 
 // Customer details in a payload are shown only as "sent, hashed", never their values.
 const redact = (payload: Record<string, unknown> | null) => {
@@ -14,7 +15,13 @@ const redact = (payload: Record<string, unknown> | null) => {
     )
   }
   if (typeof out.client_id === "string") out.client_id = "sent"
-  return out
+  // Other platforms (email tools, WhatsApp, webhooks): contact details are hidden here too.
+  const walk = (v: unknown): unknown => {
+    if (Array.isArray(v)) return v.map(walk)
+    if (!v || typeof v !== "object") return v
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => (PERSONAL_KEYS.has(k) && k !== "user_data" && k !== "client_id" && x !== "removed after delivery" ? [k, "sent (hidden)"] : [k, walk(x)])))
+  }
+  return walk(out) as Record<string, unknown>
 }
 
 // GET /admin/marketing/events/:id: one event, with every delivery and its attempts.

@@ -1,12 +1,13 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
+import crypto from "node:crypto"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { MARKETING_MODULE } from "../../modules/marketing"
 import type MarketingModuleService from "../../modules/marketing/service"
+import { storeUrl } from "../emails"
 import { getServiceKeys } from "../service-keys"
-import { type Consent, type EventData, type Person, type Visitor, customerHash } from "./events"
-import { ga4Event, gaClientId, sendToGa4 } from "./ga4"
-import { metaEvent, sendToMeta } from "./meta"
-import { type EventName, type MarketingSettings, type Platform, PLATFORMS, isExcluded, isLive, loadMarketingSettings } from "./settings"
+import { type Consent, type EventData, type OptIn, type Person, type Visitor, customerHash } from "./events"
+import { excludedFor, senderByPlatform, sendersFor } from "./senders"
+import { type EventName, type MarketingSettings, type Platform, PLATFORMS, SECRET_NAMES, type Secrets, loadMarketingSettings } from "./settings"
 
 // The event engine: every shop event is recorded once (Event Manager), handed to the
 // browser tags that sent it, and queued for the platforms this server sends to itself
@@ -14,9 +15,9 @@ import { type EventName, type MarketingSettings, type Platform, PLATFORMS, isExc
 
 const svc = (c: MedusaContainer): MarketingModuleService => c.resolve(MARKETING_MODULE)
 
-export const secretsOf = async (c: MedusaContainer) => {
+export const secretsOf = async (c: MedusaContainer): Promise<Secrets> => {
   const k = await getServiceKeys(c)
-  return { meta: k.metaCapiToken, ga4: k.ga4ApiSecret }
+  return Object.fromEntries(Object.entries(SECRET_NAMES).map(([short, name]) => [short, k.marketing[name] || undefined])) as Secrets
 }
 
 // Waits between tries: 1 min, 5 min, 30 min, 2 h, 6 h; then the delivery is marked failed
@@ -100,33 +101,34 @@ export const addBrowserDeliveries = async (c: MedusaContainer, event: { event_id
   if (rows.length) await m.createMarketingDeliveries(rows).catch(() => {})
 }
 
-// Queues the server copies of an event. Returns the new delivery ids.
+// Queues the server copies of an event (every switched-on platform that takes it). Returns
+// the new delivery ids.
 export const queueServerDeliveries = async (
   c: MedusaContainer,
-  args: { event_id: string; name: EventName; data: EventData; consent: Consent; visitor: Visitor; person: Person | null; time?: Date; settings?: MarketingSettings }
+  args: {
+    event_id: string
+    name: EventName
+    data: EventData
+    consent: Consent
+    visitor: Visitor
+    person: Person | null
+    optin?: OptIn | null
+    time?: Date
+    settings?: MarketingSettings
+  }
 ) => {
   const s = args.settings ?? (await loadMarketingSettings(c))
-  const secrets = await secretsOf(c)
+  const k = await secretsOf(c)
   const time = args.time ?? new Date()
   const rows: Record<string, unknown>[] = []
-  const skip = (p: Platform, why: string) =>
-    rows.push({ event_id: args.event_id, event_name: args.name, platform: p, channel: "server", status: "skipped", attempts: 0, last_error: why, order_id: args.data.order_id ?? null })
-
-  // Meta Conversions API: needs marketing consent.
-  if (isLive(s, "meta_capi", secrets) && isLive(s, "meta_pixel", secrets) && !isExcluded(s, "meta_capi", args.name)) {
-    const ev = metaEvent({ name: args.name, eventId: args.event_id, time, data: args.data, visitor: args.visitor, person: args.person, advanced: s.meta_capi.advanced_matching, idMode: s.content_id })
-    if (ev) {
-      if (!args.consent.marketing) skip("meta_capi", "The visitor did not allow marketing cookies.")
-      else rows.push({ event_id: args.event_id, event_name: args.name, platform: "meta_capi", channel: "server", status: "pending", attempts: 0, next_attempt_at: new Date(), payload: ev, order_id: args.data.order_id ?? null })
-    }
-  }
-  // GA4 server copy: only for what the store itself knows (purchase, refund, sign-up).
-  if (isLive(s, "ga4", secrets) && s.ga4.server_enabled && ["Purchase", "Refund", "CompleteRegistration"].includes(args.name) && !isExcluded(s, "ga4_mp", args.name)) {
-    const body = ga4Event({ name: args.name, data: args.data, idMode: s.content_id, time, clientId: gaClientId(args.visitor.ga_client_id), userId: null, consent: args.consent })
-    if (body) {
-      if (!args.consent.analytics && args.name !== "Refund") skip("ga4_mp", "The visitor did not allow analytics cookies.")
-      else rows.push({ event_id: args.event_id, event_name: args.name, platform: "ga4_mp", channel: "server", status: "pending", attempts: 0, next_attempt_at: new Date(), payload: body, order_id: args.data.order_id ?? null })
-    }
+  for (const sender of sendersFor(s, k)) {
+    if (excludedFor(s, sender.platform, args.name)) continue
+    const a = { name: args.name, eventId: args.event_id, time, data: args.data, visitor: args.visitor, person: args.person, consent: args.consent, optin: args.optin ?? null, s, k }
+    const payload = sender.build(a)
+    if (!payload) continue
+    const why = sender.blocked(a)
+    const base = { event_id: args.event_id, event_name: args.name, platform: sender.platform, channel: "server", order_id: args.data.order_id ?? null }
+    rows.push(why ? { ...base, status: "skipped", attempts: 0, last_error: why } : { ...base, status: "pending", attempts: 0, next_attempt_at: new Date(), payload })
   }
   if (!rows.length) return []
   const m = svc(c)
@@ -142,13 +144,45 @@ export const queueServerDeliveries = async (
   return created
 }
 
-const PRIVATE_KEYS = ["user_data"]
 // After delivery, customer details are removed from the stored copy.
-const stripPersonal = (payload: Record<string, unknown> | null) => {
+export const stripPersonal = (payload: Record<string, unknown> | null): Record<string, unknown> | null => {
   if (!payload) return payload
-  const out = { ...payload }
-  for (const k of PRIVATE_KEYS) if (k in out) out[k] = { removed_after_delivery: true }
-  return out
+  const walk = (v: unknown): unknown => {
+    if (Array.isArray(v)) return v.map(walk)
+    if (!v || typeof v !== "object") return v
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => (PERSONAL_KEYS.has(k) ? [k, "removed after delivery"] : [k, walk(x)])))
+  }
+  return walk(payload) as Record<string, unknown>
+}
+
+// Keys whose values are about a person (contact details, ids, IP address, browser).
+export const PERSONAL_KEYS = new Set([
+  "user_data",
+  "userData",
+  "userIds",
+  "userInfo",
+  "email",
+  "email_address",
+  "email_id",
+  "identifiers",
+  "phone",
+  "phone_number",
+  "to",
+  "customer",
+  "attributes_personal",
+  "merge_fields",
+  "hash",
+  "client_id",
+  "first_name",
+  "last_name",
+  "FIRSTNAME",
+  "LASTNAME",
+])
+
+// The platform's id for what it received (a WhatsApp message id), to follow its delivery.
+const externalIdOf = (body: unknown) => {
+  const id = (body as { messages?: { id?: string }[] } | null)?.messages?.[0]?.id
+  return typeof id === "string" ? id.slice(0, 200) : null
 }
 
 let running = false
@@ -172,19 +206,13 @@ export const dispatchDue = async (c: MedusaContainer, opts: { ids?: string[]; li
         )
     if (!due.length) return { sent, failed }
     const s = await loadMarketingSettings(c)
-    const secrets = await secretsOf(c)
+    const k = await secretsOf(c)
     for (const d of due) {
       const payload = d.payload as Record<string, unknown> | null
-      let r: { ok: boolean; code: number; error?: string; retry: boolean; retryAfterMs?: number }
-      if (d.platform === "meta_capi") {
-        if (!secrets.meta || !s.meta_pixel.pixel_id) r = { ok: false, code: 0, error: "Meta access token or Pixel ID is missing.", retry: false }
-        else r = await sendToMeta(s.meta_pixel.pixel_id, secrets.meta, payload ?? {}, s.meta_capi.test_event_code || undefined)
-      } else if (d.platform === "ga4_mp") {
-        if (!secrets.ga4 || !s.ga4.measurement_id) r = { ok: false, code: 0, error: "GA4 Measurement ID or API secret is missing.", retry: false }
-        else r = await sendToGa4(s.ga4.measurement_id, secrets.ga4, payload ?? {})
-      } else {
-        r = { ok: false, code: 0, error: `No sender for ${d.platform}.`, retry: false }
-      }
+      const sender = senderByPlatform(s, d.platform)
+      const r = sender
+        ? await sender.send(payload ?? {}, s, k)
+        : { ok: false, code: 0, error: `${d.platform} is no longer set up.`, retry: false, retryAfterMs: undefined as number | undefined, body: undefined }
       const attempts = (d.attempts ?? 0) + 1
       if (r.ok) {
         sent++
@@ -198,6 +226,8 @@ export const dispatchDue = async (c: MedusaContainer, opts: { ids?: string[]; li
           last_error: null,
           next_attempt_at: null,
           payload: stripPersonal(payload),
+          external_id: externalIdOf(r.body),
+          external_status: externalIdOf(r.body) ? "sent" : null,
         })
       } else {
         const giveUp = !r.retry || attempts >= MAX_ATTEMPTS
@@ -232,6 +262,7 @@ export const dispatchSoon = (c: MedusaContainer, ids: string[]) => {
 
 type OrderRow = {
   id: string
+  display_id?: number | null
   email?: string | null
   customer_id?: string | null
   currency_code?: string | null
@@ -244,6 +275,7 @@ type OrderRow = {
 
 const ORDER_FIELDS = [
   "id",
+  "display_id",
   "email",
   "customer_id",
   "currency_code",
@@ -303,6 +335,22 @@ const contextFor = async (c: MedusaContainer, cartId: string | null | undefined)
   return ctx ?? null
 }
 
+// What the customer ticked at checkout (cart metadata, copied to the order).
+export const optinFrom = (metadata: Record<string, unknown> | null | undefined): OptIn => {
+  const o = (metadata?.t64_optin ?? null) as Partial<OptIn> | null
+  return { email: o?.email === true, whatsapp: o?.whatsapp === true }
+}
+
+const visitorFrom = (ctx: Awaited<ReturnType<typeof contextFor>>): Visitor => ({
+  ip: ctx?.ip,
+  user_agent: ctx?.user_agent,
+  fbp: ctx?.fbp,
+  fbc: ctx?.fbc,
+  ga_client_id: ctx?.ga_client_id,
+  page_url: ctx?.page,
+  ids: (ctx?.click_ids as Visitor["ids"]) ?? null,
+})
+
 const consentFrom = (raw: unknown, mode: "ask" | "notice"): Consent => {
   const r = (raw ?? null) as Partial<Consent> | null
   if (r && typeof r.analytics === "boolean" && typeof r.marketing === "boolean") return { analytics: r.analytics, marketing: r.marketing }
@@ -324,15 +372,172 @@ export const trackPurchase = async (c: MedusaContainer, orderId: string) => {
     items: orderItems(o),
     order_id: o.id,
     utm: (ctx?.utm as Record<string, string> | null) ?? null,
+    extra: { display_id: o.display_id ?? null },
   }
   const eventId = purchaseEventId(o.id)
   const event = await recordEvent(c, { event_id: eventId, name: "Purchase", source: "server", page: ctx?.page ?? null, order_id: o.id, customer_hash: customerHash(o.email), data, consent })
   if (!event) return []
-  const visitor: Visitor = { ip: ctx?.ip, user_agent: ctx?.user_agent, fbp: ctx?.fbp, fbc: ctx?.fbc, ga_client_id: ctx?.ga_client_id, page_url: ctx?.page }
-  const ids = await queueServerDeliveries(c, { event_id: eventId, name: "Purchase", data, consent, visitor, person: personOf(o), settings: s })
+  const optin = optinFrom(o.metadata)
+  const person = personOf(o)
+  const ids = await queueServerDeliveries(c, { event_id: eventId, name: "Purchase", data, consent, visitor: visitorFrom(ctx), person, optin, settings: s })
+  // Ticked "email me news and offers" at checkout: a subscription too.
+  if (optin.email && o.email) ids.push(...(await trackSubscribe(c, { email: o.email, first_name: person.first_name, last_name: person.last_name, source: "checkout" })))
   // The visit details are no longer needed once the purchase is queued.
   if (ctx) await svc(c).deleteMarketingContexts(ctx.id).catch(() => {})
   return ids
+}
+
+// Marked as shipped in the admin (shipment.created, with the fulfillment id).
+export const trackShipped = async (c: MedusaContainer, fulfillmentId: string) => {
+  const query = c.resolve(ContainerRegistrationKeys.QUERY)
+  const { data: links } = await query.graph({ entity: "order_fulfillment", fields: ["order_id"], filters: { fulfillment_id: fulfillmentId } })
+  const orderId = (links[0] as { order_id?: string } | undefined)?.order_id
+  if (!orderId) return []
+  const o = await loadOrder(c, orderId)
+  if (!o) return []
+  const { data: fs } = await query.graph({ entity: "fulfillment", fields: ["id", "labels.tracking_number", "labels.tracking_url"], filters: { id: fulfillmentId } })
+  const label = ((fs[0] as { labels?: { tracking_number?: string; tracking_url?: string }[] } | undefined)?.labels ?? [])[0]
+  const s = await loadMarketingSettings(c)
+  const data: EventData = {
+    value: Number(o.total ?? 0),
+    currency: (o.currency_code ?? "inr").toUpperCase(),
+    items: orderItems(o),
+    order_id: o.id,
+    extra: { display_id: o.display_id ?? null, tracking_number: label?.tracking_number ?? null, tracking_url: label?.tracking_url ?? null },
+  }
+  const eventId = `shipped_${fulfillmentId}`
+  // Shipping news is a service message, not marketing: it follows the customer's opt-ins only.
+  const consent: Consent = { analytics: false, marketing: false }
+  const event = await recordEvent(c, { event_id: eventId, name: "OrderShipped", source: "server", order_id: o.id, customer_hash: customerHash(o.email), data, consent })
+  if (!event) return []
+  return queueServerDeliveries(c, { event_id: eventId, name: "OrderShipped", data, consent, visitor: {}, person: personOf(o), optin: optinFrom(o.metadata), settings: s })
+}
+
+// A newsletter sign-up, or "email me news and offers" ticked at checkout.
+export const trackSubscribe = async (c: MedusaContainer, p: { email: string; first_name?: string | null; last_name?: string | null; source: string }) => {
+  const email = p.email.trim().toLowerCase()
+  const eventId = `subscribe_${customerHash(email)!.slice(0, 32)}`
+  const consent: Consent = { analytics: false, marketing: false }
+  const event = await recordEvent(c, { event_id: eventId, name: "Subscribe", source: "server", customer_hash: customerHash(email), data: { extra: { source: p.source } }, consent })
+  if (!event) return []
+  return queueServerDeliveries(c, {
+    event_id: eventId,
+    name: "Subscribe",
+    data: { extra: { source: p.source } },
+    consent,
+    visitor: {},
+    person: { email, first_name: p.first_name, last_name: p.last_name },
+    optin: { email: true, whatsapp: false },
+  })
+}
+
+// ------------------------------------------------------------------ abandoned carts
+
+// A link back to an abandoned cart, signed so cart ids can't be guessed into it.
+const recoverySecret = () => `${process.env.JWT_SECRET || "supersecret"}|marketing-recover`
+export const recoveryToken = (cartId: string) => `${cartId}.${crypto.createHmac("sha256", recoverySecret()).update(cartId).digest("base64url").slice(0, 22)}`
+export const cartFromToken = (token: string) => {
+  const [cartId, sig] = token.split(".")
+  if (!cartId || !sig || !/^cart_[A-Z0-9]+$/.test(cartId)) return null
+  const want = recoveryToken(cartId).split(".")[1]
+  return sig.length === want.length && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(want)) ? cartId : null
+}
+
+type CartRow = {
+  id: string
+  email?: string | null
+  completed_at?: string | null
+  updated_at?: string
+  currency_code?: string | null
+  total?: number | string | null
+  customer_id?: string | null
+  metadata?: Record<string, unknown> | null
+  items?: OrderRow["items"]
+  shipping_address?: OrderRow["shipping_address"]
+}
+
+const CART_FIELDS = [
+  "id",
+  "email",
+  "completed_at",
+  "updated_at",
+  "currency_code",
+  "total",
+  "customer_id",
+  "metadata",
+  "items.product_id",
+  "items.variant_id",
+  "items.variant_sku",
+  "items.product_title",
+  "items.variant_title",
+  "items.title",
+  "items.unit_price",
+  "items.quantity",
+  "shipping_address.first_name",
+  "shipping_address.last_name",
+  "shipping_address.city",
+  "shipping_address.province",
+  "shipping_address.postal_code",
+  "shipping_address.country_code",
+  "shipping_address.phone",
+]
+
+// Checkouts that got as far as an email address and then stopped, between the wait set in
+// Advanced (2 hours by default) and 3 days ago.
+export const findAbandonedCarts = async (c: MedusaContainer, afterHours: number) => {
+  const query = c.resolve(ContainerRegistrationKeys.QUERY)
+  const now = Date.now()
+  const { data } = await query.graph({
+    entity: "cart",
+    fields: ["id", "email", "updated_at", "completed_at", "items.id"],
+    filters: { completed_at: null, updated_at: { $lt: new Date(now - afterHours * 3600_000), $gt: new Date(now - 72 * 3600_000) } } as never,
+    pagination: { take: 200 },
+  })
+  return (data as CartRow[]).filter((x) => x.email && !x.completed_at && (x.items ?? []).length)
+}
+
+export const trackAbandoned = async (c: MedusaContainer, cartId: string) => {
+  const eventId = `abandoned_${cartId}`
+  const m = svc(c)
+  const [seen] = await m.listMarketingEvents({ event_id: eventId }, { take: 1 })
+  if (seen) return []
+  const query = c.resolve(ContainerRegistrationKeys.QUERY)
+  const { data } = await query.graph({ entity: "cart", fields: CART_FIELDS, filters: { id: cartId } })
+  const cart = data[0] as CartRow | undefined
+  if (!cart?.email || cart.completed_at || !(cart.items ?? []).length) return []
+  // Bought since (in another checkout)? Then it isn't abandoned.
+  const { data: orders } = await query.graph({
+    entity: "order",
+    fields: ["id"],
+    filters: { email: cart.email, created_at: { $gte: new Date(cart.updated_at ?? 0) } } as never,
+    pagination: { take: 1 },
+  })
+  if (orders.length) return []
+  // One reminder a day per customer, even with checkouts on several devices.
+  const [recent] = await m.listMarketingEvents({ name: "AbandonedCart", customer_hash: customerHash(cart.email), created_at: { $gte: new Date(Date.now() - 24 * 3600_000) } } as never, { take: 1 })
+  if (recent) return []
+  const s = await loadMarketingSettings(c)
+  const ctx = await contextFor(c, cart.id)
+  const consent = consentFrom(ctx?.consent, s.consent.mode)
+  const asOrder = cart as unknown as OrderRow
+  const data2: EventData = {
+    value: Number(cart.total ?? 0),
+    currency: (cart.currency_code ?? "inr").toUpperCase(),
+    items: orderItems(asOrder),
+    extra: { cart_id: cart.id, recovery_url: `${storeUrl()}/cart/recover/${recoveryToken(cart.id)}` },
+  }
+  const event = await recordEvent(c, { event_id: eventId, name: "AbandonedCart", source: "server", customer_hash: customerHash(cart.email), data: data2, consent })
+  if (!event) return []
+  return queueServerDeliveries(c, {
+    event_id: eventId,
+    name: "AbandonedCart",
+    data: data2,
+    consent,
+    visitor: visitorFrom(ctx),
+    person: personOf({ ...asOrder, email: cart.email }),
+    optin: optinFrom(cart.metadata),
+    settings: s,
+  })
 }
 
 // Money refunded on an order's payment (payment.refunded).

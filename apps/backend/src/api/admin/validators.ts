@@ -479,8 +479,30 @@ export type PersonalisedItemBodyType = z.infer<typeof PersonalisedItemBody>
 
 // ---------------------------------------------------------------- Marketing & integrations
 
-const MARKETING_EVENTS = ["PageView", "ViewContent", "Search", "AddToCart", "RemoveFromCart", "ViewCart", "InitiateCheckout", "AddPaymentInfo", "Purchase", "CompleteRegistration", "Lead", "Refund"] as const
-const MARKETING_PLATFORMS = ["meta_pixel", "meta_capi", "ga4", "ga4_mp", "google_ads", "gtm", "clarity"] as const
+const MARKETING_EVENTS = ["PageView", "ViewContent", "Search", "AddToCart", "RemoveFromCart", "ViewCart", "InitiateCheckout", "AddPaymentInfo", "Purchase", "CompleteRegistration", "Lead", "Refund", "AbandonedCart", "OrderShipped", "Subscribe"] as const
+const BROWSER_MARKETING_EVENTS = ["PageView", "ViewContent", "Search", "AddToCart", "RemoveFromCart", "ViewCart", "InitiateCheckout", "AddPaymentInfo", "Purchase", "Lead"] as const
+const MARKETING_PLATFORMS = [
+  "meta_pixel",
+  "meta_capi",
+  "ga4",
+  "ga4_mp",
+  "google_ads",
+  "gtm",
+  "clarity",
+  "pinterest_tag",
+  "pinterest_capi",
+  "snap_pixel",
+  "snap_capi",
+  "uet",
+  "uet_capi",
+  "linkedin_tag",
+  "linkedin_capi",
+  "whatsapp",
+  "brevo",
+  "mailchimp",
+  "klaviyo",
+] as const
+const BROWSER_PLATFORMS = ["meta_pixel", "ga4", "google_ads", "gtm", "clarity", "pinterest_tag", "snap_pixel", "uet", "linkedin_tag"] as const
 const mText = (max: number) => z.string().max(max)
 
 // Events from the website (POST /store/marketing/events).
@@ -492,6 +514,17 @@ export const CollectBody = z.object({
       fbc: mText(500).regex(/^fb\.\d\.\d+\.[\w.-]+$/).nullable().optional(),
       ga: mText(80).regex(/^GA\d\.\d\.\d+\.\d+$/).nullable().optional(),
       page_url: mText(1000).url().nullable().optional(),
+      ids: z
+        .object({
+          li_fat_id: mText(300).regex(/^[\w.:-]+$/),
+          scid: mText(300).regex(/^[\w.:-]+$/),
+          sc_click_id: mText(300).regex(/^[\w.:-]+$/),
+          msclkid: mText(300).regex(/^[\w.:-]+$/),
+          epik: mText(300).regex(/^[\w.:-]+$/),
+        })
+        .partial()
+        .nullable()
+        .optional(),
     })
     .default({}),
   utm: z
@@ -503,9 +536,9 @@ export const CollectBody = z.object({
     .array(
       z.object({
         event_id: z.string().regex(/^[\w.:-]{8,120}$/),
-        name: z.enum(MARKETING_EVENTS),
+        name: z.enum(BROWSER_MARKETING_EVENTS),
         page: mText(1000).nullable().optional(),
-        sent: z.array(z.enum(MARKETING_PLATFORMS)).max(7).default([]),
+        sent: z.array(z.enum(BROWSER_PLATFORMS)).max(9).default([]),
         data: z
           .object({
             value: z.number().min(0).max(10_000_000).nullable().optional(),
@@ -539,7 +572,9 @@ export type CollectBodyType = z.infer<typeof CollectBody>
 // The website's report of a tag test (POST /store/marketing/check).
 export const TagCheckBody = z.object({
   nonce: z.string().regex(/^[a-f0-9]{32}$/),
-  results: z.object({ meta_pixel: z.object({ ok: z.boolean(), detail: mText(300).optional() }), ga4: z.object({ ok: z.boolean(), detail: mText(300).optional() }), google_ads: z.object({ ok: z.boolean(), detail: mText(300).optional() }), gtm: z.object({ ok: z.boolean(), detail: mText(300).optional() }), clarity: z.object({ ok: z.boolean(), detail: mText(300).optional() }) }).partial(),
+  results: z
+    .object({ meta_pixel: z.object({ ok: z.boolean(), detail: mText(300).optional() }), ga4: z.object({ ok: z.boolean(), detail: mText(300).optional() }), google_ads: z.object({ ok: z.boolean(), detail: mText(300).optional() }), gtm: z.object({ ok: z.boolean(), detail: mText(300).optional() }), clarity: z.object({ ok: z.boolean(), detail: mText(300).optional() }), pinterest: z.object({ ok: z.boolean(), detail: mText(300).optional() }), snapchat: z.object({ ok: z.boolean(), detail: mText(300).optional() }), microsoft_ads: z.object({ ok: z.boolean(), detail: mText(300).optional() }), linkedin: z.object({ ok: z.boolean(), detail: mText(300).optional() }) })
+    .partial(),
 })
 export type TagCheckBodyType = z.infer<typeof TagCheckBody>
 
@@ -569,9 +604,45 @@ export const MarketingSettingsBody = z.object({
     .optional(),
   gtm: z.object({ enabled: z.boolean(), container_id: optId(/^GTM-[A-Z0-9]{4,12}$/) }).partial().optional(),
   clarity: z.object({ enabled: z.boolean(), project_id: optId(/^[a-z0-9]{6,20}$/) }).partial().optional(),
+  pinterest: z
+    .object({ enabled: z.boolean(), tag_id: optId(/^\d{10,16}$/), capi_enabled: z.boolean(), ad_account_id: optId(/^\d{8,20}$/), test_mode: z.boolean() })
+    .partial()
+    .optional(),
+  snapchat: z
+    .object({ enabled: z.boolean(), pixel_id: optId(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/), capi_enabled: z.boolean() })
+    .partial()
+    .optional(),
+  microsoft_ads: z.object({ enabled: z.boolean(), tag_id: optId(/^\d{5,12}$/), capi_enabled: z.boolean() }).partial().optional(),
+  linkedin: z
+    .object({
+      enabled: z.boolean(),
+      partner_id: optId(/^\d{4,12}$/),
+      purchase_conversion_id: optId(/^\d{4,14}$/),
+      lead_conversion_id: optId(/^\d{4,14}$/),
+      capi_enabled: z.boolean(),
+      ad_account_id: optId(/^\d{6,14}$/),
+    })
+    .partial()
+    .optional(),
+  whatsapp: z
+    .object({
+      enabled: z.boolean(),
+      phone_number_id: optId(/^\d{10,20}$/),
+      language: z.string().regex(/^[a-z]{2,3}(_[A-Z]{2})?$/),
+      template_order: optId(/^[a-z0-9_]{1,512}$/),
+      template_shipped: optId(/^[a-z0-9_]{1,512}$/),
+      template_abandoned: optId(/^[a-z0-9_]{1,512}$/),
+      test_number: optId(/^\+?\d{10,15}$/),
+    })
+    .partial()
+    .optional(),
+  brevo: z.object({ enabled: z.boolean(), list_id: optId(/^\d{1,10}$/) }).partial().optional(),
+  mailchimp: z.object({ enabled: z.boolean(), audience_id: optId(/^[a-z0-9]{6,20}$/) }).partial().optional(),
+  klaviyo: z.object({ enabled: z.boolean(), list_id: optId(/^[A-Za-z0-9]{6,12}$/) }).partial().optional(),
+  automation: z.object({ abandoned_enabled: z.boolean(), abandoned_after_hours: z.number().int().min(1).max(48) }).partial().optional(),
   content_id: z.enum(["variant", "product", "sku"]).optional(),
   excluded: z
-    .object({ meta_pixel: z.array(z.enum(MARKETING_EVENTS)), meta_capi: z.array(z.enum(MARKETING_EVENTS)), ga4: z.array(z.enum(MARKETING_EVENTS)), ga4_mp: z.array(z.enum(MARKETING_EVENTS)), google_ads: z.array(z.enum(MARKETING_EVENTS)), gtm: z.array(z.enum(MARKETING_EVENTS)), clarity: z.array(z.enum(MARKETING_EVENTS)) })
+    .object(Object.fromEntries(MARKETING_PLATFORMS.map((p) => [p, z.array(z.enum(MARKETING_EVENTS))])) as { [K in (typeof MARKETING_PLATFORMS)[number]]: z.ZodArray<z.ZodEnum<{ [E in (typeof MARKETING_EVENTS)[number]]: E }>> })
     .partial()
     .optional(),
   retention_days: z.number().int().min(7).max(400).optional(),
@@ -579,7 +650,7 @@ export const MarketingSettingsBody = z.object({
 export type MarketingSettingsBodyType = z.infer<typeof MarketingSettingsBody>
 
 export const MarketingTestBody = z.object({
-  integration: z.enum(["meta_pixel", "meta_capi", "ga4", "google_ads", "gtm", "clarity"]),
+  integration: z.enum(["meta_pixel", "meta_capi", "ga4", "google_ads", "gtm", "clarity", "pinterest", "snapchat", "microsoft_ads", "linkedin", "whatsapp", "brevo", "mailchimp", "klaviyo"]),
 })
 export type MarketingTestBodyType = z.infer<typeof MarketingTestBody>
 
@@ -596,3 +667,17 @@ export const MarketingDeleteBody = z
   })
   .refine((b) => !!b.order_id || !!b.email, { message: "Give an order ID or an email address." })
 export type MarketingDeleteBodyType = z.infer<typeof MarketingDeleteBody>
+
+// A webhook endpoint (Settings → Marketing & integrations → Webhooks).
+export const WebhookBody = z.object({
+  url: z
+    .string()
+    .url()
+    .max(500)
+    .refine((u) => u.startsWith("https://") || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(u), { message: "Use an https:// address." }),
+  events: z.array(z.enum(MARKETING_EVENTS)).min(1),
+  enabled: z.boolean().optional(),
+})
+export type WebhookBodyType = z.infer<typeof WebhookBody>
+export const WebhookUpdateBody = WebhookBody.partial()
+export type WebhookUpdateBodyType = z.infer<typeof WebhookUpdateBody>

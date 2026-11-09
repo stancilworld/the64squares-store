@@ -271,7 +271,7 @@ describe("sending with retries", () => {
     await dispatchDue(container, { ids: [d.id] })
     expect(d.status).toBe("success")
     expect(d.attempts).toBe(2)
-    expect(d.payload.user_data).toEqual({ removed_after_delivery: true })
+    expect(d.payload.user_data).toBe("removed after delivery")
   })
 
   it("respects Retry-After when Meta limits the rate", async () => {

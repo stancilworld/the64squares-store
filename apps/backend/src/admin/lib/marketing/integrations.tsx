@@ -1,20 +1,24 @@
 import { InformationCircleSolid, MagnifyingGlass } from "@medusajs/icons"
-import { Alert, Badge, Button, Drawer, Heading, Input, Label, Switch, Text, Tooltip, toast } from "@medusajs/ui"
+import { Alert, Badge, Button, Copy, Drawer, Input, Label, Switch, Text, Tooltip, toast } from "@medusajs/ui"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { sdk } from "../sdk"
-import { type Integration, type IntegrationState, type MarketingView, STATUS_BADGE, type Settings } from "./types"
+import { type Integration, type IntegrationState, type MarketingView, STATUS_BADGE, type SecretName, type Settings } from "./types"
 
 type TextField = { kind: "text"; section: keyof Settings; key: string; label: string; placeholder: string; hint: string; clean?: (v: string) => string }
 type SwitchField = { kind: "switch"; section: keyof Settings; key: string; label: string; hint: string }
 type Field = TextField | SwitchField
+
+type SecretDef = { info: SecretName; label: string; hint: string; when?: (form: Record<string, unknown>) => boolean }
 
 type Def = {
   blurb: string
   where: string
   fields: Field[]
   options: Field[]
-  secret?: { name: "META_CAPI_TOKEN" | "GA4_API_SECRET"; info: "meta_capi_token" | "ga4_api_secret"; label: string; hint: string; when?: (s: Settings) => boolean }
+  secrets?: SecretDef[]
+  // Extra help shown in the wizard (templates, webhook address...).
+  help?: (view: MarketingView) => React.ReactNode
   test: string
 }
 
@@ -50,7 +54,7 @@ export const DEFS: Record<Integration, Def> = {
         hint: "Email, phone, name, city and pincode, scrambled (SHA-256) before they leave the server. Helps Meta match orders to ads. Only for visitors who allowed marketing cookies.",
       },
     ],
-    secret: { name: "META_CAPI_TOKEN", info: "meta_capi_token", label: "Access token", hint: "Starts with EAA… Kept encrypted on the server; never sent to the website." },
+    secrets: [{ info: "meta", label: "Access token", hint: "Starts with EAA… Kept encrypted on the server; never sent to the website." }],
     test: "Checks the token works for your Pixel. With a test event code, also sends one test event.",
   },
   ga4: {
@@ -66,13 +70,14 @@ export const DEFS: Record<Integration, Def> = {
         hint: "More accurate (ad blockers can't stop it) and adds refunds. Needs a Measurement Protocol API secret. When on, the website no longer sends the order itself, so it's counted once.",
       },
     ],
-    secret: {
-      name: "GA4_API_SECRET",
-      info: "ga4_api_secret",
-      label: "Measurement Protocol API secret",
-      hint: "Google Analytics → Admin → Data streams → your website → Measurement Protocol API secrets → Create.",
-      when: (s) => s.ga4.server_enabled,
-    },
+    secrets: [
+      {
+        info: "ga4",
+        label: "Measurement Protocol API secret",
+        hint: "Google Analytics → Admin → Data streams → your website → Measurement Protocol API secrets → Create.",
+        when: (f) => !!f["ga4.server_enabled"],
+      },
+    ],
     test: "Opens your website in a new tab and checks Google Analytics loads. With the server option, Google first checks a test order.",
   },
   google_ads: {
@@ -108,9 +113,116 @@ export const DEFS: Record<Integration, Def> = {
     options: [],
     test: "Opens your website in a new tab and checks Clarity loads.",
   },
+  pinterest: {
+    blurb: "Pinterest ads: the Pinterest Tag reports product views, searches, add to cart and orders, and the optional server copy sends them from this server too.",
+    where: "Pinterest Ads Manager → Conversions → Tag manager. The Tag ID is the long number. The ad account ID is in the address bar of Ads Manager.",
+    fields: [{ kind: "text", section: "pinterest", key: "tag_id", label: "Tag ID", placeholder: "2612345678901", hint: "Digits only.", clean: (v) => v.replace(/\D/g, "") }],
+    options: [
+      { kind: "switch", section: "pinterest", key: "capi_enabled", label: "Also send from the server (API for Conversions)", hint: "Counts orders even when a browser blocks the tag. Matched to the tag's events so nothing counts twice." },
+      { kind: "text", section: "pinterest", key: "ad_account_id", label: "Ad account ID (for the server copy)", placeholder: "549755885175", hint: "Digits only.", clean: (v) => v.replace(/\D/g, "") },
+      { kind: "switch", section: "pinterest", key: "test_mode", label: "Test mode for the server copy", hint: "Pinterest checks the events but doesn't record them. Turn off when you're done testing." },
+    ],
+    secrets: [{ info: "pinterest", label: "Conversion access token", hint: "Pinterest Ads Manager → Conversions → Conversion access token → Generate new token.", when: (f) => !!f["pinterest.capi_enabled"] }],
+    test: "With the server copy on, sends a test event in Pinterest's test mode. Then opens your website to check the tag loads.",
+  },
+  snapchat: {
+    blurb: "Snapchat ads: the Snap Pixel reports visits, product views, cart, checkout and orders; the optional Conversions API sends them from this server too.",
+    where: "Snapchat Ads Manager → Events Manager → your Pixel. The Pixel ID looks like 1a2b3c4d-1234-5678-9abc-123456789abc.",
+    fields: [{ kind: "text", section: "snapchat", key: "pixel_id", label: "Pixel ID", placeholder: "1a2b3c4d-1234-5678-9abc-123456789abc", hint: "Letters, numbers and dashes.", clean: (v) => v.trim().toLowerCase() }],
+    options: [{ kind: "switch", section: "snapchat", key: "capi_enabled", label: "Also send from the server (Conversions API)", hint: "Matched to the Pixel's events with the same event id, so nothing counts twice." }],
+    secrets: [{ info: "snapchat", label: "Conversions API token", hint: "Snapchat Events Manager → your Pixel → Setup → Conversions API → Generate token.", when: (f) => !!f["snapchat.capi_enabled"] }],
+    test: "With the server copy on, Snapchat validates a test event (not recorded). Then opens your website to check the Pixel loads.",
+  },
+  microsoft_ads: {
+    blurb: "Microsoft Advertising (Bing, Yahoo and partner sites): the UET tag counts visits and conversions; the optional Conversions API sends orders from this server too.",
+    where: "Microsoft Advertising → Tools → Conversion tracking → UET tag. The tag ID is the number shown for your tag.",
+    fields: [{ kind: "text", section: "microsoft_ads", key: "tag_id", label: "UET tag ID", placeholder: "187654321", hint: "Digits only.", clean: (v) => v.replace(/\D/g, "") }],
+    options: [{ kind: "switch", section: "microsoft_ads", key: "capi_enabled", label: "Also send from the server (Conversions API)", hint: "Sent only when there's an email, phone or Microsoft click id to match on." }],
+    secrets: [{ info: "microsoft", label: "Conversions API token", hint: "Microsoft Advertising → UET tag → edit → Save and next → Use Conversions API → Copy token.", when: (f) => !!f["microsoft_ads.capi_enabled"] }],
+    help: () => <>In Microsoft Advertising, create conversion goals of type &quot;Event&quot; with the action names purchase, add_to_cart, begin_checkout or generate_lead.</>,
+    test: "With the server copy on, sends a test event marked \"consent denied\" (never used for ads). Then opens your website to check the tag loads.",
+  },
+  linkedin: {
+    blurb: "LinkedIn ads: the Insight Tag reports visits; orders and leads are sent as conversions, from the browser and optionally from this server.",
+    where: "Campaign Manager → Analyze → Insight Tag (Partner ID), and Analyze → Conversion tracking → your conversion → its ID.",
+    fields: [
+      { kind: "text", section: "linkedin", key: "partner_id", label: "Partner ID", placeholder: "1234567", hint: "Digits only.", clean: (v) => v.replace(/\D/g, "") },
+      { kind: "text", section: "linkedin", key: "purchase_conversion_id", label: "Order conversion ID", placeholder: "12345678", hint: "A conversion for completed orders.", clean: (v) => v.replace(/\D/g, "") },
+      { kind: "text", section: "linkedin", key: "lead_conversion_id", label: "Lead conversion ID (optional)", placeholder: "", hint: "For contact messages and newsletter sign-ups.", clean: (v) => v.replace(/\D/g, "") },
+    ],
+    options: [
+      { kind: "switch", section: "linkedin", key: "capi_enabled", label: "Also send from the server (Conversions API)", hint: "The conversions must use the method \"Conversions API\" in Campaign Manager." },
+      { kind: "text", section: "linkedin", key: "ad_account_id", label: "Ad account ID (for the server copy)", placeholder: "512345678", hint: "Campaign Manager → Account. Digits only.", clean: (v) => v.replace(/\D/g, "") },
+    ],
+    secrets: [{ info: "linkedin", label: "Access token", hint: "An OAuth token with the rw_conversions and r_ads scopes. LinkedIn tokens last 60 days: renew it here before it runs out.", when: (f) => !!f["linkedin.capi_enabled"] }],
+    test: "With the server copy on, checks the token and that your conversion IDs exist in the ad account. Then opens your website to check the tag loads.",
+  },
+  whatsapp: {
+    blurb: "WhatsApp messages from your business number: order confirmation, shipping update, and a reminder for checkouts left unfinished. Only to customers who tick \"Send me order updates on WhatsApp\" at checkout.",
+    where: "Meta for Developers → your app → WhatsApp → API Setup. The Phone number ID is under your number (not the phone number itself).",
+    fields: [
+      { kind: "text", section: "whatsapp", key: "phone_number_id", label: "Phone number ID", placeholder: "106540352242922", hint: "Digits only.", clean: (v) => v.replace(/\D/g, "") },
+      { kind: "text", section: "whatsapp", key: "language", label: "Template language code", placeholder: "en", hint: "As set on your templates, e.g. en, en_US or hi.", clean: (v) => v.trim() },
+      { kind: "text", section: "whatsapp", key: "template_order", label: "Order confirmation template", placeholder: "order_confirmed", hint: "Body variables: {{1}} first name, {{2}} order number, {{3}} total.", clean: (v) => v.trim().toLowerCase() },
+      { kind: "text", section: "whatsapp", key: "template_shipped", label: "Shipped template", placeholder: "order_shipped", hint: "Body variables: {{1}} first name, {{2}} order number, {{3}} tracking number or link.", clean: (v) => v.trim().toLowerCase() },
+      { kind: "text", section: "whatsapp", key: "template_abandoned", label: "Unfinished checkout template", placeholder: "cart_reminder", hint: "Body variables: {{1}} first name, {{2}} link back to the cart. Marketing category in WhatsApp.", clean: (v) => v.trim().toLowerCase() },
+    ],
+    options: [{ kind: "text", section: "whatsapp", key: "test_number", label: "Test number (optional)", placeholder: "+919876543210", hint: "The test sends WhatsApp's sample \"hello_world\" message here.", clean: (v) => v.replace(/[^\d+]/g, "") }],
+    secrets: [
+      { info: "whatsapp", label: "Access token", hint: "For live use, a permanent System User token (Business Settings → System users) with the whatsapp_business_messaging permission." },
+      { info: "whatsapp_app_secret", label: "App secret", hint: "App settings → Basic → App secret. Lets the store check delivery updates really come from Meta." },
+    ],
+    help: (v) => (
+      <div className="flex flex-col gap-1.5">
+        <Text size="small" className="text-ui-fg-subtle">
+          Templates are made and approved in WhatsApp Manager → Message templates. For delivery updates (delivered, read, failed in the Event Manager), add this webhook in Meta for Developers → WhatsApp → Configuration and subscribe to &quot;messages&quot;:
+        </Text>
+        <div className="flex items-center gap-2 rounded-md bg-ui-bg-subtle px-3 py-2 font-mono txt-compact-xsmall">
+          <span className="min-w-0 flex-1 break-all">{v.whatsapp_webhook_url}</span>
+          <Copy content={v.whatsapp_webhook_url} />
+        </div>
+        <div className="flex items-center gap-2 rounded-md bg-ui-bg-subtle px-3 py-2 font-mono txt-compact-xsmall">
+          <span className="min-w-0 flex-1">Verify token: {v.whatsapp_verify_token}</span>
+          <Copy content={v.whatsapp_verify_token} />
+        </div>
+      </div>
+    ),
+    test: "Checks the token and phone number with WhatsApp. With a test number, also sends WhatsApp's sample message to it.",
+  },
+  brevo: {
+    blurb: "Brevo (formerly Sendinblue) for email: subscribers are added to your list, and orders, unfinished checkouts and shipping are sent as events to start your automations.",
+    where: "Brevo → Contacts → Lists: the list ID is the number next to the list. API key: your name → SMTP & API → API keys.",
+    fields: [{ kind: "text", section: "brevo", key: "list_id", label: "List ID", placeholder: "3", hint: "Digits only.", clean: (v) => v.replace(/\D/g, "") }],
+    options: [],
+    secrets: [{ info: "brevo", label: "API key", hint: "Starts with xkeysib-." }],
+    help: () => <>Events sent: order_placed, cart_abandoned (with cart_url), order_shipped, subscribed. Build automations on them in Brevo → Automations. Only customers who agreed to marketing emails are sent.</>,
+    test: "Checks the API key and that the list exists.",
+  },
+  mailchimp: {
+    blurb: "Mailchimp: subscribers go to your audience; tags start customer journeys (\"abandoned-cart\" for unfinished checkouts, \"customer\" after an order, \"newsletter\" for sign-ups).",
+    where: "Mailchimp → Audience → Settings → Audience name and defaults: the Audience ID. API key: Profile → Extras → API keys.",
+    fields: [{ kind: "text", section: "mailchimp", key: "audience_id", label: "Audience ID", placeholder: "a1b2c3d4e5", hint: "Letters and numbers.", clean: (v) => v.trim().toLowerCase() }],
+    options: [],
+    secrets: [{ info: "mailchimp", label: "API key", hint: "Ends with your data centre, e.g. -us21." }],
+    help: () => <>For reminder emails with a link back to the cart, add a text merge field with the tag CARTURL (Audience → Settings → Audience fields). Only customers who agreed to marketing emails are sent.</>,
+    test: "Checks the API key and that the audience exists.",
+  },
+  klaviyo: {
+    blurb: "Klaviyo: subscribers go to your list; Placed Order, Abandoned Cart (with the cart link) and Fulfilled Order events start your flows.",
+    where: "Klaviyo → Lists & segments → your list → Settings: the List ID. API key: Settings → API keys → Create private API key.",
+    fields: [{ kind: "text", section: "klaviyo", key: "list_id", label: "List ID", placeholder: "AbC123", hint: "Six letters and numbers.", clean: (v) => v.trim() }],
+    options: [],
+    secrets: [{ info: "klaviyo", label: "Private API key", hint: "Starts with pk_. Needs write access to Events, Profiles, Lists and Subscriptions." }],
+    help: () => <>Only customers who agreed to marketing emails are sent.</>,
+    test: "Checks the API key and that the list exists.",
+  },
 }
 
-export const GROUP_TRACKING: Integration[] = ["meta_pixel", "meta_capi", "ga4", "google_ads", "gtm", "clarity"]
+// Integrations with a tag on the website (their test opens the website).
+const BROWSER: Integration[] = ["meta_pixel", "ga4", "google_ads", "gtm", "clarity", "pinterest", "snapchat", "microsoft_ads", "linkedin"]
+
+export const GROUP_TRACKING: Integration[] = ["meta_pixel", "meta_capi", "ga4", "google_ads", "gtm", "clarity", "pinterest", "snapchat", "microsoft_ads", "linkedin"]
+export const GROUP_MESSAGES: Integration[] = ["whatsapp", "brevo", "mailchimp", "klaviyo"]
 
 const get = (s: Settings, f: Field) => (s[f.section] as Record<string, unknown>)[f.key]
 
@@ -130,6 +242,14 @@ const IDENTITY: Record<Integration, { initials: string; bg: string; maker: strin
   google_ads: { initials: "Ad", bg: "#1A73E8", maker: "Google" },
   gtm: { initials: "TM", bg: "#246FDB", maker: "Google" },
   clarity: { initials: "Cl", bg: "#5C2D91", maker: "Microsoft" },
+  pinterest: { initials: "Pi", bg: "#C8102E", maker: "Pinterest" },
+  snapchat: { initials: "Sn", bg: "#E5C800", maker: "Snap" },
+  microsoft_ads: { initials: "MA", bg: "#00809D", maker: "Microsoft" },
+  linkedin: { initials: "in", bg: "#0A66C2", maker: "LinkedIn" },
+  whatsapp: { initials: "WA", bg: "#1DA851", maker: "Meta" },
+  brevo: { initials: "Br", bg: "#0B996E", maker: "Brevo" },
+  mailchimp: { initials: "Mc", bg: "#241C15", maker: "Intuit" },
+  klaviyo: { initials: "Kl", bg: "#232426", maker: "Klaviyo" },
 }
 
 // Technical words, explained on hover.
@@ -140,19 +260,27 @@ const TERMS: Record<Integration, string> = {
   google_ads: "Tells Google Ads which visits ended in an order, so it can show your ads to similar people. Enhanced conversions add the customer's scrambled email.",
   gtm: "Google Tag Manager: a container where an agency adds and changes tags without changing the website.",
   clarity: "Free heatmaps and session recordings from Microsoft. Recordings hide what visitors type.",
+  pinterest: "The Pinterest Tag is Pinterest's version of a pixel; the API for Conversions is its server copy.",
+  snapchat: "The Snap Pixel runs in the browser; the Conversions API sends the same events from the server.",
+  microsoft_ads: "UET (Universal Event Tracking) is Microsoft Advertising's tag for Bing and partner sites.",
+  linkedin: "The Insight Tag runs in the browser; conversions are the actions you count (orders, leads) in Campaign Manager.",
+  whatsapp: "The WhatsApp Business Platform (Cloud API) sends pre-approved message templates from your business number.",
+  brevo: "An email marketing tool. Events trigger automations; contacts are added to a list.",
+  mailchimp: "An email marketing tool. Tags on a contact can start a customer journey.",
+  klaviyo: "An email and SMS marketing tool. Events (metrics) trigger flows.",
 }
 
 // The integration cards, with a search box.
-export function IntegrationCards({ view, onOpen }: { view: MarketingView; onOpen: (i: Integration) => void }) {
+export function IntegrationCards({ view, onOpen, group = GROUP_TRACKING, search = true }: { view: MarketingView; onOpen: (i: Integration) => void; group?: Integration[]; search?: boolean }) {
   const [q, setQ] = useState("")
-  const shown = GROUP_TRACKING.filter((key) => {
+  const shown = group.filter((key) => {
     const st = view.integrations.find((x) => x.key === key)!
     const hay = `${st.label} ${IDENTITY[key].maker} ${DEFS[key].blurb} ${STATUS_BADGE[st.status].label}`.toLowerCase()
     return hay.includes(q.trim().toLowerCase())
   })
   return (
     <div className="px-6 py-4">
-      <div className="relative mb-3 max-w-[320px]">
+      <div className={`relative mb-3 max-w-[320px] ${search ? "" : "hidden"}`}>
         <MagnifyingGlass className="pointer-events-none absolute left-2.5 top-1/2 z-[1] -translate-y-1/2 text-ui-fg-muted" />
         <Input size="small" className="pl-8" placeholder="Search integrations" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search integrations" />
       </div>
@@ -211,37 +339,6 @@ export function IntegrationCards({ view, onOpen }: { view: MarketingView; onOpen
   )
 }
 
-// What isn't built yet: listed so it's clear, never shown as connected.
-export function ComingNext() {
-  const items = [
-    ["Pinterest Tag and Conversions API", "Ads"],
-    ["Snapchat Pixel and Conversions API", "Ads"],
-    ["Microsoft Advertising (UET)", "Ads"],
-    ["LinkedIn Insight Tag", "Ads"],
-    ["WhatsApp Business (order updates, abandoned carts)", "Automation"],
-    ["Brevo, Mailchimp or Klaviyo (customer sync, abandoned-cart emails)", "Automation"],
-    ["Webhooks to other tools", "Automation"],
-  ]
-  return (
-    <div className="px-6 py-4">
-      <Heading level="h3">Coming next</Heading>
-      <Text size="small" className="text-ui-fg-subtle">
-        Not available yet. They will use the same events and Event Manager. TikTok isn&apos;t planned: it is blocked in India.
-      </Text>
-      <ul className="mt-3 grid gap-2 md:grid-cols-2">
-        {items.map(([name, kind]) => (
-          <li key={name} className="flex items-center justify-between gap-3 rounded-md border border-dashed border-ui-border-base px-3 py-2">
-            <Text size="small">{name}</Text>
-            <Badge size="2xsmall" color="grey">
-              {kind}: not available yet
-            </Badge>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
 // Set up / manage one integration: ids, secret key, options, test, switch on.
 export function IntegrationDrawer({ view, open, onClose }: { view: MarketingView; open: Integration | null; onClose: () => void }) {
   return (
@@ -277,7 +374,7 @@ function Wizard({ view, i }: { view: MarketingView; i: Integration }) {
     for (const f of [...def.fields, ...def.options]) init[`${f.section}.${f.key}`] = get(view.settings, f)
     return init
   })
-  const [secret, setSecret] = useState("")
+  const [secretValues, setSecretValues] = useState<Record<string, string>>({})
   const [password, setPassword] = useState("")
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
   const [polling, setPolling] = useState(false)
@@ -291,10 +388,10 @@ function Wizard({ view, i }: { view: MarketingView; i: Integration }) {
   }
 
   const saveKey = useMutation({
-    mutationFn: () => sdk.client.fetch("/admin/service-keys", { method: "POST", body: { password, values: { [def.secret!.name]: secret } } }),
-    onSuccess: async () => {
-      setSecret("")
-      setPassword("")
+    mutationFn: (sd: SecretDef) =>
+      sdk.client.fetch("/admin/service-keys", { method: "POST", body: { password, values: { [view.secrets[sd.info].name]: secretValues[sd.info] } } }),
+    onSuccess: async (_r, sd) => {
+      setSecretValues({ ...secretValues, [sd.info]: "" })
       toast.success("Key saved. It's kept encrypted on the server.")
       await qc.invalidateQueries({ queryKey: ["marketing"] })
     },
@@ -304,7 +401,7 @@ function Wizard({ view, i }: { view: MarketingView; i: Integration }) {
   const test = useMutation({
     mutationFn: async () => {
       // Opened now (a click), so the browser doesn't block it as a pop-up.
-      const tab = def.secret && i === "meta_capi" ? null : window.open("about:blank", "_blank")
+      const tab = BROWSER.includes(i) ? window.open("about:blank", "_blank") : null
       try {
         await sdk.client.fetch<MarketingView>("/admin/marketing", { method: "POST", body: settingsBody() })
         const r = await sdk.client.fetch<MarketingView & { result: { ok: boolean; message: string; pending?: boolean; url?: string } }>("/admin/marketing/test", {
@@ -360,8 +457,7 @@ function Wizard({ view, i }: { view: MarketingView; i: Integration }) {
       }
     )
 
-  const secretInfo = def.secret ? view.secrets[def.secret.info] : null
-  const showSecret = !!def.secret && (!def.secret.when || def.secret.when({ ...view.settings, ga4: { ...view.settings.ga4, server_enabled: !!form["ga4.server_enabled"] } }))
+  const secrets = (def.secrets ?? []).filter((sd) => !sd.when || sd.when(form))
   const pixelId = view.settings.meta_pixel.pixel_id
   let n = 0
 
@@ -398,26 +494,40 @@ function Wizard({ view, i }: { view: MarketingView; i: Integration }) {
           </Step>
         )}
 
-        {showSecret && def.secret && (
-          <Step n={++n} title={def.secret.label} done={!!secretInfo?.set}>
+        {secrets.length > 0 && (
+          <Step n={++n} title={secrets.length > 1 ? "Secret keys" : secrets[0].label} done={secrets.every((sd) => view.secrets[sd.info]?.set)}>
             {i === "meta_capi" && (
               <Text size="small" className="text-ui-fg-subtle">
                 Where to find it: {def.where}
               </Text>
             )}
             <Text size="small" className="text-ui-fg-subtle">
-              {secretInfo?.set ? `Saved (${secretInfo.preview}${secretInfo.source === "server" ? ", in the server settings" : ""}). Paste a new one to replace it.` : "Not saved yet."}{" "}
-              {def.secret.hint}
+              Only the main admin can save keys (with their password). They&apos;re kept encrypted on the server and never sent to the website.
             </Text>
-            <div className="flex flex-col gap-2">
-              <Input type="password" autoComplete="off" placeholder="Paste the key" value={secret} onChange={(e) => setSecret(e.target.value)} />
-              <Input type="password" autoComplete="current-password" placeholder="Your admin password (main admin only)" value={password} onChange={(e) => setPassword(e.target.value)} />
-              <div>
-                <Button size="small" variant="secondary" disabled={!secret || !password} isLoading={saveKey.isPending} onClick={() => saveKey.mutate()}>
-                  Save key
-                </Button>
-              </div>
-            </div>
+            {secrets.map((sd) => {
+              const info = view.secrets[sd.info]
+              return (
+                <div key={sd.info} className="flex flex-col gap-1.5">
+                  <Label weight="plus">{sd.label}</Label>
+                  <Text size="small" className="text-ui-fg-subtle">
+                    {info?.set ? `Saved (${info.preview}${info.source === "server" ? ", in the server settings" : ""}). Paste a new one to replace it.` : "Not saved yet."} {sd.hint}
+                  </Text>
+                  <div className="flex gap-2">
+                    <Input type="password" autoComplete="off" placeholder="Paste the key" value={secretValues[sd.info] ?? ""} onChange={(e) => setSecretValues({ ...secretValues, [sd.info]: e.target.value })} />
+                    <Button size="small" variant="secondary" disabled={!secretValues[sd.info] || !password} isLoading={saveKey.isPending && saveKey.variables?.info === sd.info} onClick={() => saveKey.mutate(sd)}>
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+            <Input type="password" autoComplete="current-password" placeholder="Your admin password (main admin only)" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Step>
+        )}
+
+        {def.help && (
+          <Step n={++n} title="Good to know" done>
+            <div className="txt-small text-ui-fg-subtle">{def.help(view)}</div>
           </Step>
         )}
 
@@ -453,7 +563,11 @@ function Wizard({ view, i }: { view: MarketingView; i: Integration }) {
                 {st.enabled ? "On" : "Off"}
               </Label>
               <Text size="small" className="text-ui-fg-subtle">
-                {st.tested ? "Runs on the website only for visitors who allow it in the cookie banner." : "Available once the test has passed."}
+                {!st.tested
+                  ? "Available once the test has passed."
+                  : GROUP_MESSAGES.includes(i)
+                    ? "Only for customers who ticked the box for it at checkout (or subscribed)."
+                    : "Runs only for visitors who allow it in the cookie banner."}
               </Text>
             </div>
           </div>

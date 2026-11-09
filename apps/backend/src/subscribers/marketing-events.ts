@@ -3,10 +3,11 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { dispatchSoon } from "../lib/marketing/engine"
 import { trackServerEventWorkflow } from "../workflows/marketing"
 
-const KIND: Record<string, "purchase" | "refund" | "registration"> = {
+const KIND: Record<string, "purchase" | "refund" | "registration" | "shipped"> = {
   "order.placed": "purchase",
   "payment.refunded": "refund",
   "customer.created": "registration",
+  "shipment.created": "shipped",
 }
 
 // Events only the store can vouch for: a confirmed order, a refund, a new account. Sent to
@@ -23,4 +24,4 @@ export default async function marketingEvents({ event, container }: SubscriberAr
   }
 }
 
-export const config: SubscriberConfig = { event: ["order.placed", "payment.refunded", "customer.created"] }
+export const config: SubscriberConfig = { event: ["order.placed", "payment.refunded", "customer.created", "shipment.created"] }

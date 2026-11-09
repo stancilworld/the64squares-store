@@ -21,6 +21,7 @@ export type CheckoutConfig = {
   cod_max: number | null
   delivery_text: string
   google: boolean
+  optins?: { email: boolean; whatsapp: boolean }
 }
 
 export type Address = {
@@ -35,6 +36,9 @@ export type Address = {
   state: string
   pincode: string
   save?: boolean
+  // "Email me news and offers" / "Send me order updates on WhatsApp" (unticked by default).
+  email_optin?: boolean
+  whatsapp_optin?: boolean
 }
 
 export type PincodeInfo = {
@@ -172,7 +176,12 @@ export async function saveAddress(a: Address): Promise<Result<{ cart: HttpTypes.
   try {
     await sdk.store.cart.update(
       id,
-      { email: a.email.trim().toLowerCase(), shipping_address: address, billing_address: address },
+      {
+        email: a.email.trim().toLowerCase(),
+        shipping_address: address,
+        billing_address: address,
+        metadata: { t64_optin: { email: !!a.email_optin, whatsapp: !!a.whatsapp_optin, at: new Date().toISOString() } },
+      },
       {},
       headers
     )

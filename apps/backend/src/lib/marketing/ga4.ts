@@ -1,11 +1,11 @@
 import crypto from "node:crypto"
-import { type Consent, type EventData, type EventItem, GA4_NAMES, round2 } from "./events"
+import { type Consent, type EventData, type EventItem, GA4_NAMES, apiBase, round2 } from "./events"
 import type { SendResult } from "./meta"
 import type { EventName } from "./settings"
 
 // Google Analytics 4 Measurement Protocol, for the events only the store knows about
 // (purchase, refund, sign-up): https://developers.google.com/analytics/devguides/collection/protocol/ga4
-export const gaBase = () => (process.env.MARKETING_GA_BASE || "https://www.google-analytics.com").replace(/\/$/, "")
+export const gaBase = () => apiBase("ga", "https://www.google-analytics.com")
 
 export const ga4Items = (items: EventItem[] | undefined, idMode: "variant" | "product" | "sku") =>
   (items ?? []).map((i) => ({

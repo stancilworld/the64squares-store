@@ -38,6 +38,15 @@ export type KeyName =
   | "GEMINI_MODEL"
   | "META_CAPI_TOKEN"
   | "GA4_API_SECRET"
+  | "PINTEREST_TOKEN"
+  | "SNAPCHAT_TOKEN"
+  | "MICROSOFT_CAPI_TOKEN"
+  | "LINKEDIN_TOKEN"
+  | "WHATSAPP_TOKEN"
+  | "WHATSAPP_APP_SECRET"
+  | "BREVO_API_KEY"
+  | "MAILCHIMP_API_KEY"
+  | "KLAVIYO_API_KEY"
 
 export type KeyDef = {
   name: KeyName
@@ -70,6 +79,15 @@ export const KEY_DEFS: KeyDef[] = [
   { name: "GEMINI_MODEL", group: "ai", label: "Gemini model", secret: false, pattern: /^[\w./:-]{3,80}$/, hint: "Leave empty for gemini-flash-lite-latest" },
   { name: "META_CAPI_TOKEN", group: "marketing", label: "Meta Conversions API access token", secret: true, pattern: /^[A-Za-z0-9]{40,400}$/, hint: "From Meta Events Manager → your Pixel → Settings → Conversions API → Generate access token" },
   { name: "GA4_API_SECRET", group: "marketing", label: "Google Analytics Measurement Protocol API secret", secret: true, pattern: /^[\w-]{10,80}$/, hint: "From Google Analytics → Admin → Data streams → your website → Measurement Protocol API secrets → Create" },
+  { name: "PINTEREST_TOKEN", group: "marketing", label: "Pinterest conversion access token", secret: true, pattern: /^[\w.-]{20,600}$/, hint: "Pinterest Ads Manager → Conversions → Conversion access token → Generate new token" },
+  { name: "SNAPCHAT_TOKEN", group: "marketing", label: "Snapchat Conversions API token", secret: true, pattern: /^[\w.-]{20,600}$/, hint: "Snapchat Ads Manager → Events Manager → your Pixel → Setup → Conversions API → Generate token" },
+  { name: "MICROSOFT_CAPI_TOKEN", group: "marketing", label: "Microsoft Advertising Conversions API token", secret: true, pattern: /^[\w.-]{20,600}$/, hint: "Microsoft Advertising → Tools → UET tag → edit → Use Conversions API → Copy token" },
+  { name: "LINKEDIN_TOKEN", group: "marketing", label: "LinkedIn Conversions API access token", secret: true, pattern: /^[\w.-]{20,1200}$/, hint: "An OAuth token with the rw_conversions and r_ads scopes (LinkedIn developer app, or Campaign Manager → Data → Conversions API)" },
+  { name: "WHATSAPP_TOKEN", group: "marketing", label: "WhatsApp access token", secret: true, pattern: /^[A-Za-z0-9]{40,600}$/, hint: "Meta for Developers → your app → WhatsApp → API Setup (use a permanent System User token for live use)" },
+  { name: "WHATSAPP_APP_SECRET", group: "marketing", label: "WhatsApp app secret", secret: true, pattern: /^[a-f0-9]{32}$/, hint: "Meta for Developers → your app → App settings → Basic → App secret. Checks that delivery updates really come from Meta" },
+  { name: "BREVO_API_KEY", group: "marketing", label: "Brevo API key", secret: true, pattern: /^xkeysib-[\w-]{20,200}$/, hint: "Brevo → your name → SMTP & API → API keys → Generate. Starts with xkeysib-" },
+  { name: "MAILCHIMP_API_KEY", group: "marketing", label: "Mailchimp API key", secret: true, pattern: /^[a-f0-9]{32}-[a-z]{2,4}\d{1,3}$/, hint: "Mailchimp → Profile → Extras → API keys → Create. Ends with the data centre, e.g. -us21" },
+  { name: "KLAVIYO_API_KEY", group: "marketing", label: "Klaviyo private API key", secret: true, pattern: /^pk_[A-Za-z0-9]{20,80}$/, hint: "Klaviyo → Settings → API keys → Create private API key (Events, Profiles, Lists, Subscriptions: write). Starts with pk_" },
   { name: "DELHIVERY_TOKEN", group: "delhivery", label: "Delhivery API token", secret: true, pattern: /^[A-Za-z0-9]{16,}$/, hint: "From Delhivery One → Settings → API Setup" },
 ]
 
@@ -187,6 +205,7 @@ export type ServiceKeys = {
   // Marketing: sent only from this server, never to the website.
   metaCapiToken?: string
   ga4ApiSecret?: string
+  marketing: Partial<Record<string, string>>
   // The chat bot's AI helpers (free plans), tried in this order.
   ai: { provider: "groq" | "gemini"; key: string; model: string }[]
 }
@@ -232,6 +251,7 @@ export const keysFromStored = (stored: Stored): ServiceKeys => {
     delhiveryToken: get("DELHIVERY_TOKEN"),
     metaCapiToken: get("META_CAPI_TOKEN"),
     ga4ApiSecret: get("GA4_API_SECRET"),
+    marketing: Object.fromEntries(KEY_DEFS.filter((d) => d.group === "marketing").map((d) => [d.name, get(d.name)])),
     ai: [
       ...(get("GROQ_API_KEY") ? [{ provider: "groq" as const, key: get("GROQ_API_KEY")!, model: get("GROQ_MODEL") || "llama-3.3-70b-versatile" }] : []),
       ...(get("GEMINI_API_KEY") ? [{ provider: "gemini" as const, key: get("GEMINI_API_KEY")!, model: get("GEMINI_MODEL") || "gemini-flash-lite-latest" }] : []),

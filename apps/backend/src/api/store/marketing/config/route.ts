@@ -32,6 +32,12 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       : null,
     gtm: on("gtm") ? { container_id: s.gtm.container_id } : null,
     clarity: on("clarity") ? { project_id: s.clarity.project_id } : null,
+    pinterest: on("pinterest") ? { tag_id: s.pinterest.tag_id } : null,
+    snapchat: on("snapchat") ? { pixel_id: s.snapchat.pixel_id } : null,
+    microsoft_ads: on("microsoft_ads") ? { tag_id: s.microsoft_ads.tag_id } : null,
+    linkedin: on("linkedin")
+      ? { partner_id: s.linkedin.partner_id, purchase_conversion_id: s.linkedin.purchase_conversion_id || null, lead_conversion_id: s.linkedin.lead_conversion_id || null }
+      : null,
     excluded: s.excluded,
     check: testing.length ? { nonce: check, integrations: testing } : null,
   })

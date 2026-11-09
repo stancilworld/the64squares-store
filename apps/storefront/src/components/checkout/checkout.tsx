@@ -406,6 +406,28 @@ export function Checkout({ config, customer }: { config: CheckoutConfig; custome
                   Save this address to my account
                 </label>
               )}
+              {(config.optins?.email || config.optins?.whatsapp) && (
+                <div className="mt-5 flex flex-col gap-3 px-1 text-[14px] lg:text-[15px]">
+                  {config.optins?.whatsapp && (
+                    <label className="flex items-start gap-3">
+                      <input type="checkbox" checked={!!form.whatsapp_optin} onChange={set("whatsapp_optin")} className="mt-[3px] h-[16px] w-[16px] accent-black" />
+                      <span>
+                        Send me order updates on WhatsApp
+                        <span className="block text-[13px] text-black/55">Order confirmation and shipping, and a reminder if I don&apos;t finish this order.</span>
+                      </span>
+                    </label>
+                  )}
+                  {config.optins?.email && (
+                    <label className="flex items-start gap-3">
+                      <input type="checkbox" checked={!!form.email_optin} onChange={set("email_optin")} className="mt-[3px] h-[16px] w-[16px] accent-black" />
+                      <span>
+                        Email me news and offers
+                        <span className="block text-[13px] text-black/55">New sets, tournaments and the odd discount. Unsubscribe any time.</span>
+                      </span>
+                    </label>
+                  )}
+                </div>
+              )}
               {error && <p className="mt-5 text-[15px] text-red-700" role="alert">{error}</p>}
               <PrimaryButton type="submit" disabled={busy} className="mt-8 lg:max-w-[400px]">
                 {busy ? "Saving…" : "Continue to payment"}

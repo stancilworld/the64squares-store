@@ -8,6 +8,10 @@ export type MarketingConfig = {
   google_ads: { conversion_id: string; purchase_label: string | null; lead_label: string | null; enhanced_conversions: boolean } | null
   gtm: { container_id: string } | null
   clarity: { project_id: string } | null
+  pinterest: { tag_id: string } | null
+  snapchat: { pixel_id: string } | null
+  microsoft_ads: { tag_id: string } | null
+  linkedin: { partner_id: string; purchase_conversion_id: string | null; lead_conversion_id: string | null } | null
   excluded: Partial<Record<Platform, EventName[]>>
   check: { nonce: string; integrations: string[] } | null
 }
@@ -24,7 +28,22 @@ export type EventName =
   | "Purchase"
   | "Lead"
 
-export type Platform = "meta_pixel" | "meta_capi" | "ga4" | "ga4_mp" | "google_ads" | "gtm" | "clarity"
+export type Platform =
+  | "meta_pixel"
+  | "meta_capi"
+  | "ga4"
+  | "ga4_mp"
+  | "google_ads"
+  | "gtm"
+  | "clarity"
+  | "pinterest_tag"
+  | "pinterest_capi"
+  | "snap_pixel"
+  | "snap_capi"
+  | "uet"
+  | "uet_capi"
+  | "linkedin_tag"
+  | "linkedin_capi"
 
 export type TrackItem = {
   product_id: string
@@ -60,8 +79,16 @@ export const NO_TRACKING: MarketingConfig = {
   google_ads: null,
   gtm: null,
   clarity: null,
+  pinterest: null,
+  snapchat: null,
+  microsoft_ads: null,
+  linkedin: null,
   excluded: {},
   check: null,
 }
 
-export const anyTag = (c: MarketingConfig) => !!(c.meta_pixel || c.ga4 || c.google_ads || c.gtm || c.clarity)
+export const anyTag = (c: MarketingConfig) =>
+  !!(c.meta_pixel || c.ga4 || c.google_ads || c.gtm || c.clarity || c.pinterest || c.snapchat || c.microsoft_ads || c.linkedin)
+
+// Tags that need marketing consent (ads), as opposed to analytics.
+export const anyAdTag = (c: MarketingConfig) => !!(c.meta_pixel || c.google_ads || c.gtm || c.pinterest || c.snapchat || c.microsoft_ads || c.linkedin)

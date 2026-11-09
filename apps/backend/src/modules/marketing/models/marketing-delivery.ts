@@ -23,12 +23,17 @@ const MarketingDelivery = model
     // hashed, and removed once it has been delivered.
     payload: model.json().nullable(),
     order_id: model.text().nullable(),
+    // The platform's own id for what was sent (a WhatsApp message id), and its later state
+    // (delivered, read) from the platform's webhook.
+    external_id: model.text().nullable(),
+    external_status: model.text().nullable(),
   })
   .indexes([
     { on: ["event_id", "platform"], unique: true },
     { on: ["status", "next_attempt_at"] },
     { on: ["created_at"] },
     { on: ["platform"] },
+    { on: ["external_id"] },
   ])
 
 export default MarketingDelivery

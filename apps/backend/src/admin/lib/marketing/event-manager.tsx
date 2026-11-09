@@ -2,9 +2,9 @@ import { Badge, Button, Drawer, Heading, Input, Select, Switch, Table, Text, toa
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../sdk"
-import { DELIVERY_BADGE, EVENT_LABELS, EVENT_NAMES, type EventName, PLATFORM_LABELS, type Platform } from "./types"
+import { DELIVERY_BADGE, EVENT_LABELS, EVENT_NAMES, type EventName, type MarketingView, PLATFORM_LABELS, type Platform, platformLabel } from "./types"
 
-type Delivery = { id: string; event_id: string; platform: Platform; channel: string; status: string; attempts: number; last_error: string | null; delivered_at: string | null }
+type Delivery = { id: string; event_id: string; platform: Platform; channel: string; status: string; attempts: number; last_error: string | null; delivered_at: string | null; external_status?: string | null }
 type Row = {
   id: string
   event_id: string
@@ -51,8 +51,14 @@ function Tile({ label, value, tone }: { label: string; value: React.ReactNode; t
 }
 
 // Settings → Marketing & integrations → Event Manager.
+// Webhook endpoints, to name "webhook_<id>" deliveries (from the page's settings query).
+const useHooks = () => useQuery({ queryKey: ["marketing"], queryFn: () => sdk.client.fetch<MarketingView>("/admin/marketing") }).data?.webhooks ?? []
+
+const WA_STATUS: Record<string, string> = { sent: "sent", delivered: "delivered to the phone", read: "read", failed: "not delivered" }
+
 export function EventManager() {
   const qc = useQueryClient()
+  const hooks = useHooks()
   const [days, setDays] = useState("7")
   const [platform, setPlatform] = useState(ALL)
   const [name, setName] = useState(ALL)
@@ -120,6 +126,11 @@ export function EventManager() {
                   {PLATFORM_LABELS[p]}
                 </Select.Item>
               ))}
+              {hooks.map((w) => (
+                <Select.Item key={w.id} value={`webhook_${w.id}`}>
+                  {platformLabel(`webhook_${w.id}`, hooks)}
+                </Select.Item>
+              ))}
             </Select.Content>
           </Select>
         </div>
@@ -166,7 +177,7 @@ export function EventManager() {
         <Tile label="Delivered" value={t ? delivered : "…"} tone="green" />
         <Tile label="Failed" value={t?.deliveries.failed ?? "…"} tone={t?.deliveries.failed ? "red" : undefined} />
         <Tile label="Pending" value={t?.deliveries.pending ?? "…"} tone={t?.deliveries.pending ? "orange" : undefined} />
-        <Tile label="Last delivered by the server" value={<span className="txt-compact-small-plus">{t?.last_success ? `${PLATFORM_LABELS[t.last_success.platform]}, ${when(t.last_success.at)}` : "None yet"}</span>} />
+        <Tile label="Last delivered by the server" value={<span className="txt-compact-small-plus">{t?.last_success ? `${platformLabel(t.last_success.platform, hooks)}, ${when(t.last_success.at)}` : "None yet"}</span>} />
       </div>
 
       {t && (t.by_platform.length > 0 || t.by_event.length > 0) && (
@@ -185,7 +196,7 @@ export function EventManager() {
               <Table.Body>
                 {t.by_platform.map((p) => (
                   <Table.Row key={p.platform}>
-                    <Table.Cell>{PLATFORM_LABELS[p.platform]}</Table.Cell>
+                    <Table.Cell>{platformLabel(p.platform, hooks)}</Table.Cell>
                     <Table.Cell className="text-right">{p.success}</Table.Cell>
                     <Table.Cell className="text-right">{p.pending}</Table.Cell>
                     <Table.Cell className={`text-right ${p.failed ? "text-ui-fg-error" : ""}`}>{p.failed}</Table.Cell>
@@ -223,7 +234,7 @@ export function EventManager() {
               <li key={e.id} className="rounded-md bg-ui-bg-subtle px-3 py-2">
                 <Text size="small">
                   <span className="txt-compact-small-plus">
-                    {PLATFORM_LABELS[e.platform]} · {EVENT_LABELS[e.event_name]}
+                    {platformLabel(e.platform, hooks)} · {EVENT_LABELS[e.event_name]}
                   </span>{" "}
                   <span className="text-ui-fg-subtle">
                     {when(e.last_attempt_at)}, after {e.attempts} {e.attempts === 1 ? "try" : "tries"}
@@ -265,7 +276,7 @@ export function EventManager() {
                     {r.deliveries.length ? (
                       r.deliveries.map((d) => (
                         <Badge key={d.id} size="2xsmall" color={DELIVERY_BADGE[d.status]?.color ?? "grey"}>
-                          {PLATFORM_LABELS[d.platform]}: {DELIVERY_BADGE[d.status]?.label ?? d.status}
+                          {platformLabel(d.platform, hooks)}: {DELIVERY_BADGE[d.status]?.label ?? d.status}
                         </Badge>
                       ))
                     ) : (
@@ -309,6 +320,7 @@ type Detail = {
 
 function EventDrawer({ id, onClose }: { id: string | null; onClose: () => void }) {
   const qc = useQueryClient()
+  const hooks = useHooks()
   const { data } = useQuery({ queryKey: ["marketing-event", id], queryFn: () => sdk.client.fetch<Detail>(`/admin/marketing/events/${id}`), enabled: !!id })
   const retry = useMutation({
     mutationFn: (ids: string[]) => sdk.client.fetch<{ queued: number }>("/admin/marketing/retry", { method: "POST", body: { ids } }),
@@ -371,7 +383,7 @@ function EventDrawer({ id, onClose }: { id: string | null; onClose: () => void }
                     <li key={d.id} className="rounded-md border border-ui-border-base p-3">
                       <div className="flex items-center justify-between gap-2">
                         <Text weight="plus" size="small">
-                          {PLATFORM_LABELS[d.platform]} <span className="font-normal text-ui-fg-subtle">({d.channel === "server" ? "from the store's server" : "from the visitor's browser"})</span>
+                          {platformLabel(d.platform, hooks)} <span className="font-normal text-ui-fg-subtle">({d.channel === "server" ? "from the store's server" : "from the visitor's browser"})</span>
                         </Text>
                         <Badge size="2xsmall" color={DELIVERY_BADGE[d.status]?.color ?? "grey"}>
                           {DELIVERY_BADGE[d.status]?.label ?? d.status}
@@ -383,6 +395,11 @@ function EventDrawer({ id, onClose }: { id: string | null; onClose: () => void }
                           {d.last_attempt_at ? `, last ${when(d.last_attempt_at)}` : ""}
                           {d.response_code ? ` (answer ${d.response_code})` : ""}
                           {d.status === "pending" && d.next_attempt_at ? `. Next try ${when(d.next_attempt_at)}.` : ""}
+                        </Text>
+                      )}
+                      {d.external_status && (
+                        <Text size="small" className={d.external_status === "failed" ? "mt-1 text-ui-fg-error" : "mt-1 text-ui-fg-subtle"}>
+                          WhatsApp: message {WA_STATUS[d.external_status] ?? d.external_status}.
                         </Text>
                       )}
                       {d.last_error && (

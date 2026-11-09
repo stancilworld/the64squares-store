@@ -1,10 +1,30 @@
-import { Button, Checkbox, Heading, Input, Label, Select, Table, Text, toast } from "@medusajs/ui"
+import { Button, Checkbox, Heading, Input, Label, Select, Switch, Table, Text, toast } from "@medusajs/ui"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../sdk"
 import { EVENT_LABELS, EVENT_NAMES, type EventName, type MarketingView, PLATFORM_LABELS, type Platform, type Settings } from "./types"
 
-const PLATFORMS: Platform[] = ["meta_pixel", "meta_capi", "ga4", "ga4_mp", "google_ads", "gtm", "clarity"]
+const PLATFORMS: Platform[] = [
+  "meta_pixel",
+  "meta_capi",
+  "ga4",
+  "ga4_mp",
+  "google_ads",
+  "gtm",
+  "clarity",
+  "pinterest_tag",
+  "pinterest_capi",
+  "snap_pixel",
+  "snap_capi",
+  "uet",
+  "uet_capi",
+  "linkedin_tag",
+  "linkedin_capi",
+  "whatsapp",
+  "brevo",
+  "mailchimp",
+  "klaviyo",
+]
 // Events each platform can receive at all.
 const POSSIBLE: Record<Platform, EventName[]> = {
   meta_pixel: ["PageView", "ViewContent", "Search", "AddToCart", "RemoveFromCart", "ViewCart", "InitiateCheckout", "AddPaymentInfo", "Purchase", "Lead"],
@@ -14,6 +34,18 @@ const POSSIBLE: Record<Platform, EventName[]> = {
   google_ads: ["Purchase", "Lead"],
   gtm: ["PageView", "ViewContent", "Search", "AddToCart", "RemoveFromCart", "ViewCart", "InitiateCheckout", "AddPaymentInfo", "Purchase", "Lead"],
   clarity: ["ViewContent", "Search", "AddToCart", "RemoveFromCart", "ViewCart", "InitiateCheckout", "AddPaymentInfo", "Purchase", "Lead"],
+  pinterest_tag: ["PageView", "ViewContent", "Search", "AddToCart", "Purchase", "Lead"],
+  pinterest_capi: ["ViewContent", "Search", "AddToCart", "Purchase", "Lead", "CompleteRegistration"],
+  snap_pixel: ["PageView", "ViewContent", "Search", "AddToCart", "InitiateCheckout", "AddPaymentInfo", "Purchase"],
+  snap_capi: ["PageView", "ViewContent", "Search", "AddToCart", "InitiateCheckout", "AddPaymentInfo", "Purchase", "CompleteRegistration"],
+  uet: ["ViewContent", "Search", "AddToCart", "InitiateCheckout", "AddPaymentInfo", "Purchase", "Lead"],
+  uet_capi: ["PageView", "ViewContent", "Search", "AddToCart", "InitiateCheckout", "AddPaymentInfo", "Purchase", "Lead", "CompleteRegistration"],
+  linkedin_tag: ["Purchase", "Lead"],
+  linkedin_capi: ["Purchase", "Lead"],
+  whatsapp: ["Purchase", "OrderShipped", "AbandonedCart"],
+  brevo: ["Purchase", "AbandonedCart", "OrderShipped", "Subscribe"],
+  mailchimp: ["Purchase", "AbandonedCart", "Subscribe"],
+  klaviyo: ["Purchase", "AbandonedCart", "OrderShipped", "Subscribe"],
 }
 
 export function Advanced({ view }: { view: MarketingView }) {
@@ -21,8 +53,13 @@ export function Advanced({ view }: { view: MarketingView }) {
   const [contentId, setContentId] = useState<Settings["content_id"]>(view.settings.content_id)
   const [days, setDays] = useState(String(view.settings.retention_days))
   const [excluded, setExcluded] = useState<Settings["excluded"]>(view.settings.excluded)
+  const [auto, setAuto] = useState<Settings["automation"]>(view.settings.automation)
   const save = useMutation({
-    mutationFn: () => sdk.client.fetch<MarketingView>("/admin/marketing", { method: "POST", body: { content_id: contentId, retention_days: Number(days), excluded } }),
+    mutationFn: () =>
+      sdk.client.fetch<MarketingView>("/admin/marketing", {
+        method: "POST",
+        body: { content_id: contentId, retention_days: Number(days), excluded, automation: { ...auto, abandoned_after_hours: Number(auto.abandoned_after_hours) } },
+      }),
     onSuccess: (r) => {
       qc.setQueryData(["marketing"], r)
       toast.success("Saved.")
@@ -65,10 +102,28 @@ export function Advanced({ view }: { view: MarketingView }) {
           </Text>
         </div>
       </div>
+      <div className="flex flex-col gap-3 px-6 py-4">
+        <div>
+          <Heading level="h2">Unfinished checkouts</Heading>
+          <Text size="small" className="text-ui-fg-subtle">
+            When a customer gives their details at checkout but doesn&apos;t order, the store sends one reminder (WhatsApp, email tools, webhooks) with a link that puts the same items back in their cart. Only to customers who ticked the box for it, and never if they have ordered since.
+          </Text>
+        </div>
+        <label className="flex items-center gap-2 txt-compact-small">
+          <Switch checked={auto.abandoned_enabled} onCheckedChange={(v) => setAuto({ ...auto, abandoned_enabled: v })} />
+          Send unfinished-checkout reminders
+        </label>
+        <div className="flex max-w-[240px] flex-col gap-1.5">
+          <Label weight="plus" htmlFor="abandoned-hours">
+            Wait before reminding (hours)
+          </Label>
+          <Input id="abandoned-hours" type="number" min={1} max={72} disabled={!auto.abandoned_enabled} value={auto.abandoned_after_hours} onChange={(e) => setAuto({ ...auto, abandoned_after_hours: Number(e.target.value) })} />
+        </div>
+      </div>
       <div className="px-6 py-4">
         <Heading level="h2">Which events each platform gets</Heading>
         <Text size="small" className="text-ui-fg-subtle">
-          Untick an event to stop sending it to that platform. Grey: the platform doesn&apos;t take that event.
+          Untick an event to stop sending it to that platform. A dash: the platform doesn&apos;t take that event. Webhooks choose their own events in the Webhooks tab.
         </Text>
         <div className="mt-3 overflow-x-auto">
           <Table>

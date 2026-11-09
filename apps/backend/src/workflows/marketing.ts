@@ -3,7 +3,7 @@ import { MARKETING_MODULE } from "../modules/marketing"
 import type MarketingModuleService from "../modules/marketing/service"
 import { type CollectInput, collect } from "../lib/marketing/collector"
 import { customerHash } from "../lib/marketing/events"
-import { trackPurchase, trackRefund, trackRegistration } from "../lib/marketing/engine"
+import { trackAbandoned, trackPurchase, trackRefund, trackRegistration, trackShipped, trackSubscribe } from "../lib/marketing/engine"
 
 // Marketing & integrations. Recording events is append-only (nothing to undo); sending
 // happens afterwards, in the background (lib/marketing/engine.ts dispatchDue).
@@ -17,7 +17,7 @@ export const collectMarketingEventsWorkflow = createWorkflow("collect-marketing-
   return new WorkflowResponse(recordMarketingEventsStep(input))
 })
 
-type ServerEventInput = { kind: "purchase" | "refund" | "registration"; id: string }
+type ServerEventInput = { kind: "purchase" | "refund" | "registration" | "shipped" | "abandoned" | "subscribe"; id: string; first_name?: string | null; last_name?: string | null; source?: string }
 
 const recordServerEventStep = createStep("record-server-event", async (input: ServerEventInput, { container }) => {
   const ids =
@@ -25,11 +25,18 @@ const recordServerEventStep = createStep("record-server-event", async (input: Se
       ? await trackPurchase(container, input.id)
       : input.kind === "refund"
         ? await trackRefund(container, input.id)
-        : await trackRegistration(container, input.id)
+        : input.kind === "shipped"
+          ? await trackShipped(container, input.id)
+          : input.kind === "abandoned"
+            ? await trackAbandoned(container, input.id)
+            : input.kind === "subscribe"
+              ? await trackSubscribe(container, { email: input.id, first_name: input.first_name, last_name: input.last_name, source: input.source ?? "newsletter" })
+              : await trackRegistration(container, input.id)
   return new StepResponse({ ids })
 })
 
-// Events the store makes itself: a confirmed order, a refund, a new account.
+// Events the store makes itself: a confirmed order, a refund, a new account, a shipment, an
+// abandoned checkout, a newsletter sign-up.
 export const trackServerEventWorkflow = createWorkflow("track-server-event", (input: ServerEventInput) => {
   return new WorkflowResponse(recordServerEventStep(input))
 })

@@ -18,14 +18,24 @@ export type CollectedEvent = {
 
 export type CollectInput = {
   consent: Consent
-  visitor: { fbp?: string | null; fbc?: string | null; ga?: string | null; page_url?: string | null }
+  visitor: { fbp?: string | null; fbc?: string | null; ga?: string | null; page_url?: string | null; ids?: Visitor["ids"] }
   utm?: Record<string, string> | null
   events: CollectedEvent[]
   ip: string | null
   user_agent: string | null
 }
 
-const BROWSER_INTEGRATION: Partial<Record<Platform, Integration>> = { meta_pixel: "meta_pixel", ga4: "ga4", google_ads: "google_ads", gtm: "gtm", clarity: "clarity" }
+const BROWSER_INTEGRATION: Partial<Record<Platform, Integration>> = {
+  meta_pixel: "meta_pixel",
+  ga4: "ga4",
+  google_ads: "google_ads",
+  gtm: "gtm",
+  clarity: "clarity",
+  pinterest_tag: "pinterest",
+  snap_pixel: "snapchat",
+  uet: "microsoft_ads",
+  linkedin_tag: "linkedin",
+}
 const CONTEXT_EVENTS: EventName[] = ["InitiateCheckout", "AddPaymentInfo"]
 
 // Only the path of the page is kept with the event; campaign tags are kept on their own.
@@ -85,6 +95,7 @@ export const collect = async (c: MedusaContainer, input: CollectInput) => {
       fbc: input.visitor.fbc,
       ga_client_id: input.visitor.ga,
       page_url: cleanUrl(e.page ?? input.visitor.page_url),
+      ids: input.consent.marketing ? (input.visitor.ids ?? null) : null,
     }
     queued.push(...(await queueServerDeliveries(c, { event_id: e.event_id, name: e.name, data, consent: input.consent, visitor, person: null, settings: s })))
 
@@ -104,6 +115,7 @@ export const collect = async (c: MedusaContainer, input: CollectInput) => {
         page: cleanUrl(input.visitor.page_url),
         consent: input.consent as unknown as Record<string, unknown>,
         utm: (input.utm ?? null) as Record<string, unknown> | null,
+        click_ids: mk ? ((input.visitor.ids ?? null) as Record<string, unknown> | null) : null,
       }
       const [ctx] = await m.listMarketingContexts({ cart_id: cartId }, { take: 1 })
       if (ctx) await m.updateMarketingContexts({ id: ctx.id, ...row })

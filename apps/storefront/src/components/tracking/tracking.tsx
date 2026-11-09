@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation"
 import { useEffect, useState, useSyncExternalStore } from "react"
 import { CONSENT_CHANGED, OPEN_CONSENT, effectiveConsent, readConsent, saveConsent, type Stored } from "@/lib/tracking/consent"
 import { loadScript, setupTracking, track } from "@/lib/tracking/engine"
-import { type Consent, type MarketingConfig, anyTag } from "@/lib/tracking/types"
+import { type Consent, type MarketingConfig, anyAdTag, anyTag } from "@/lib/tracking/types"
 
 const subscribe = (cb: () => void) => {
   addEventListener(CONSENT_CHANGED, cb)
@@ -66,7 +66,7 @@ function ConsentBanner({ config, current, detailed, onDone }: { config: Marketin
     onDone()
   }
   const hasAnalytics = !!(config.ga4 || config.clarity || config.gtm)
-  const hasMarketing = !!(config.meta_pixel || config.google_ads || config.gtm)
+  const hasMarketing = anyAdTag(config)
   return (
     <div role="region" aria-label="Cookie choices" className="fixed inset-x-0 bottom-0 z-[60] max-h-[85dvh] overflow-y-auto border-t border-white/10 bg-ink text-white shadow-[0_-8px_30px_rgba(0,0,0,0.25)]">
       <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:gap-8 lg:px-10">
@@ -103,7 +103,7 @@ function ConsentBanner({ config, current, detailed, onDone }: { config: Marketin
                   <input type="checkbox" checked={pick.marketing} onChange={(e) => setPick({ ...pick, marketing: e.target.checked })} className="mt-0.5 h-4 w-4 accent-amber" />
                   <span>
                     <span className="block font-semibold text-white">Marketing</span>
-                    <span className="block text-[13px] text-white/65">Measures our ads on Facebook, Instagram and Google.</span>
+                    <span className="block text-[13px] text-white/65">Measures our ads on {adNetworks(config)}.</span>
                   </span>
                 </label>
               )}
@@ -134,12 +134,29 @@ function ConsentBanner({ config, current, detailed, onDone }: { config: Marketin
   )
 }
 
+// "Facebook, Instagram and Google", from the ad tags switched on.
+const adNetworks = (c: MarketingConfig) => {
+  const n = [
+    ...(c.meta_pixel ? ["Facebook", "Instagram"] : []),
+    ...(c.google_ads || c.gtm ? ["Google"] : []),
+    ...(c.pinterest ? ["Pinterest"] : []),
+    ...(c.snapchat ? ["Snapchat"] : []),
+    ...(c.microsoft_ads ? ["Bing"] : []),
+    ...(c.linkedin ? ["LinkedIn"] : []),
+  ]
+  return n.length > 1 ? `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}` : (n[0] ?? "other websites")
+}
+
 const SCRIPT: Record<string, (c: MarketingConfig) => string | null> = {
   meta_pixel: (c) => (c.meta_pixel ? "https://connect.facebook.net/en_US/fbevents.js" : null),
   ga4: (c) => (c.ga4 ? `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(c.ga4.measurement_id)}` : null),
   google_ads: (c) => (c.google_ads ? `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(c.google_ads.conversion_id)}` : null),
   gtm: (c) => (c.gtm ? `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(c.gtm.container_id)}` : null),
   clarity: (c) => (c.clarity ? `https://www.clarity.ms/tag/${encodeURIComponent(c.clarity.project_id)}` : null),
+  pinterest: (c) => (c.pinterest ? "https://s.pinimg.com/ct/core.js" : null),
+  snapchat: (c) => (c.snapchat ? "https://sc-static.net/scevent.min.js" : null),
+  microsoft_ads: (c) => (c.microsoft_ads ? "https://bat.bing.com/bat.js" : null),
+  linkedin: (c) => (c.linkedin ? "https://snap.licdn.com/li.lms-analytics/insight.min.js" : null),
 }
 
 // A test started in the admin: loads the tags under test (without sending any event) and
@@ -174,7 +191,17 @@ function TagCheck({ nonce }: { nonce: string }) {
       alive = false
     }
   }, [nonce])
-  const NAMES: Record<string, string> = { meta_pixel: "Meta Pixel", ga4: "Google Analytics 4", google_ads: "Google Ads", gtm: "Google Tag Manager", clarity: "Microsoft Clarity" }
+  const NAMES: Record<string, string> = {
+    meta_pixel: "Meta Pixel",
+    ga4: "Google Analytics 4",
+    google_ads: "Google Ads",
+    gtm: "Google Tag Manager",
+    clarity: "Microsoft Clarity",
+    pinterest: "Pinterest Tag",
+    snapchat: "Snap Pixel",
+    microsoft_ads: "Microsoft UET",
+    linkedin: "LinkedIn Insight Tag",
+  }
   return (
     <div role="status" className="fixed inset-x-4 bottom-4 z-[70] mx-auto max-w-[460px] border border-black bg-white p-5 shadow-[6px_6px_0_rgba(0,0,0,0.9)]">
       <p className="text-[17px] font-extrabold tracking-tight">{state.done ? "Tag test finished" : "Testing your tags…"}</p>
