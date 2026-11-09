@@ -1,7 +1,9 @@
 import Image from "next/image"
 import Link from "next/link"
 import type { ComponentType } from "react"
-import { type FooterLink, type SiteNavigation, getContent, getSiteNavigation } from "@/lib/data"
+import { type FooterLink, type SiteNavigation, getContent, getMarketingConfig, getSiteNavigation } from "@/lib/data"
+import { anyTag } from "@/lib/tracking/types"
+import { CookieSettingsLink } from "./tracking/tracking"
 import { FacebookIcon, InstagramIcon, LinkedInIcon, WhatsAppIcon, YouTubeIcon } from "./icons"
 import { Media } from "./media"
 
@@ -58,7 +60,7 @@ function FooterLinks({ links, className }: { links: FooterLink[]; className: str
 }
 
 export async function Footer() {
-  const [site, nav] = await Promise.all([getContent("site"), getSiteNavigation()])
+  const [site, nav, marketing] = await Promise.all([getContent("site"), getSiteNavigation(), getMarketingConfig()])
   const media = site.find((b) => b.section === "footer_media")?.image_url
   const f = nav.footer
 
@@ -103,7 +105,10 @@ export async function Footer() {
         )}
       </div>
       <div className="border-t border-white/10">
-        <p className="mx-auto max-w-[1440px] px-6 py-5 text-[13px] text-white/55 lg:px-10">The 64 Squares, made in India.</p>
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-5 text-[13px] text-white/55 lg:px-10">
+          <p>The 64 Squares, made in India.</p>
+          {anyTag(marketing) && <CookieSettingsLink className="underline underline-offset-2 hover:text-white" />}
+        </div>
       </div>
     </footer>
   )

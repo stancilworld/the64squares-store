@@ -17,7 +17,16 @@ async function OrderPage({ params, searchParams }: PageProps<"/order/[id]">) {
   const fresh = sp.new === "1"
   return (
     <>
-      {fresh && <TrackPurchase id={order.id} total={order.total} items={order.items} />}
+      {fresh && (
+        <TrackPurchase
+          id={order.id}
+          total={order.total}
+          currency={(order.currency_code ?? "inr").toUpperCase()}
+          items={order.items}
+          email={order.email}
+          phone={order.shipping_address?.phone ?? null}
+        />
+      )}
       <div className="mx-auto max-w-[760px] text-center">
         <h1 className="font-display h-page">{fresh ? "Thank you!" : "Your order"}</h1>
         <p className="mt-4 text-[16px] lg:text-[20px]">

@@ -172,7 +172,12 @@ export const describe = (method: string, path: string, body: Record<string, unkn
     case "api-keys":
       return { action: "Changed API keys", area: "Settings" }
     case "service-keys":
-      return { action: "Changed payment or email keys", area: "Settings" }
+      return { action: "Changed payment, email or marketing keys", area: "Settings" }
+    case "marketing":
+      if (id === "test") return { action: "Tested a marketing integration", area: "Settings" }
+      if (id === "retry") return { action: "Re-sent marketing events", area: "Settings" }
+      if (id === "delete-data") return { action: "Deleted a customer's tracking data", area: "Settings" }
+      return { action: "Changed marketing & integrations", area: "Settings" }
     case "checkout-settings":
       return { action: "Changed payments & delivery settings", area: "Settings" }
     case "invoice-settings":

@@ -3,7 +3,7 @@
 import type { HttpTypes } from "@medusajs/types"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useRef, useTransition } from "react"
+import { useEffect, useRef, useTransition } from "react"
 import { removeLine, setLineSelected, updateLine } from "@/lib/cart"
 import { notifyCartChanged } from "@/lib/cart-events"
 import { formatPrice } from "@/lib/format"
@@ -11,6 +11,8 @@ import { useList } from "@/lib/list"
 import { ChevronRightThin } from "./icons"
 import { ListCardView, useListCards, useTossIn } from "./list-cards"
 import { FillMedia } from "./media"
+import { track } from "@/lib/tracking/engine"
+import { cartItems, lineItem } from "@/lib/tracking/items"
 
 type Line = HttpTypes.StoreCartLineItem
 
@@ -78,7 +80,14 @@ function Item({ line, onChange }: { line: Line; onChange: (fn: () => Promise<voi
             </button>
           </div>
           <p className="mt-[10px] flex items-center gap-2 text-[11px] italic lg:text-[13px]">
-            <button type="button" onClick={() => onChange(() => removeLine(line.id))} className="underline underline-offset-2">
+            <button
+              type="button"
+              onClick={() => {
+                track("RemoveFromCart", { value: Number(line.unit_price ?? 0) * line.quantity, currency: "INR", items: [lineItem(line)] })
+                onChange(() => removeLine(line.id))
+              }}
+              className="underline underline-offset-2"
+            >
               Remove
             </button>
             <span aria-hidden="true">•</span>
@@ -86,6 +95,7 @@ function Item({ line, onChange }: { line: Line; onChange: (fn: () => Promise<voi
               type="button"
               onClick={() =>
                 onChange(async () => {
+                  track("RemoveFromCart", { value: Number(line.unit_price ?? 0) * line.quantity, currency: "INR", items: [lineItem(line)] })
                   list.add(line.product_id!, line.variant_id ?? null)
                   await removeLine(line.id)
                 })
@@ -192,6 +202,12 @@ function PriceTotal({ lines }: { lines: Line[] }) {
 }
 
 export function Backpack({ cart }: { cart: HttpTypes.StoreCart | null }) {
+  // The cart was looked at (once per visit to the page).
+  const cartId = cart?.id
+  useEffect(() => {
+    if (cart?.items?.length) track("ViewCart", { value: Number(cart.total ?? 0), currency: (cart.currency_code ?? "inr").toUpperCase(), items: cartItems(cart) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per cart page view
+  }, [cartId])
   const router = useRouter()
   const [pending, start] = useTransition()
   const lines = [...(cart?.items ?? [])].sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))

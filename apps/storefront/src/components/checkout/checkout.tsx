@@ -19,6 +19,8 @@ import { formatPrice } from "@/lib/format"
 import { CheckoutSteps } from "../checkout-steps"
 import { FillMedia } from "../media"
 import { Field, PrimaryButton, STATES, SelectField, matchState } from "./fields"
+import { track } from "@/lib/tracking/engine"
+import { cartItems } from "@/lib/tracking/items"
 
 type Cart = HttpTypes.StoreCart
 type Customer = HttpTypes.StoreCustomer | null
@@ -211,6 +213,7 @@ export function Checkout({ config, customer }: { config: CheckoutConfig; custome
       setCart(cart)
       setForm(start)
       setPhase("address")
+      track("InitiateCheckout", { value: cart.total ?? 0, currency: cart.currency_code, items: cartItems(cart), cart_id: cart.id })
       if (/^[1-9]\d{5}$/.test(start.pincode)) {
         lookUp(start.pincode)
       }
@@ -270,6 +273,7 @@ export function Checkout({ config, customer }: { config: CheckoutConfig; custome
     }
     setCart(res.cart)
     setPhase("payment")
+    track("AddPaymentInfo", { value: res.cart.total ?? 0, currency: res.cart.currency_code, items: cartItems(res.cart), cart_id: res.cart.id })
     scrollTop()
   }
 

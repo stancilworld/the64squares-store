@@ -10,7 +10,7 @@ import { notifyVariantSelected } from "@/lib/product-events"
 import { arrivalDate, formatArrival, formatShortDate, indiaToday } from "@/lib/delivery-date"
 import { useSwatch } from "./colours-provider"
 import { formatPrice } from "@/lib/format"
-import { trackAddToCart } from "@/lib/track"
+import { track } from "@/lib/tracking/engine"
 
 type Variant = HttpTypes.StoreProductVariant
 
@@ -95,6 +95,18 @@ export function ProductOptions({ product, info }: { product: HttpTypes.StoreProd
     [...new Set(variants.map((v) => valueOf(v, title)).filter((x): x is string => !!x))]
 
   // Photos linked to this variant in the admin are shown when it is chosen.
+  // One product view per product (not again for each option the shopper clicks).
+  useEffect(() => {
+    const v = product.variants?.find((x) => x.id === selected?.id) ?? product.variants?.[0]
+    const price = v?.calculated_price?.calculated_amount ?? null
+    track("ViewContent", {
+      value: price,
+      currency: v?.calculated_price?.currency_code ?? "INR",
+      items: [{ product_id: product.id, variant_id: v?.id ?? null, sku: v?.sku ?? null, name: product.title, variant: v?.title ?? null, category: product.categories?.[0]?.name ?? null, price, quantity: 1 }],
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per product
+  }, [product.id])
+
   useEffect(() => {
     if (selected?.id) {
       notifyVariantSelected(selected.id)
@@ -121,7 +133,12 @@ export function ProductOptions({ product, info }: { product: HttpTypes.StoreProd
       try {
         await addToCart(selected.id, quantity, engravingOn ? text : null, engravingOn && (engraving?.fee ?? 0) > 0)
         notifyCartChanged()
-        trackAddToCart({ id: product.id, name: product.title, price: selected.calculated_price?.calculated_amount ?? null })
+        const unit = (selected.calculated_price?.calculated_amount ?? 0) + (engravingOn ? (engraving?.fee ?? 0) : 0)
+        track("AddToCart", {
+          value: unit * quantity,
+          currency: selected.calculated_price?.currency_code ?? "INR",
+          items: [{ product_id: product.id, variant_id: selected.id, sku: selected.sku ?? null, name: product.title, variant: selected.title ?? null, category: product.categories?.[0]?.name ?? null, price: unit, quantity }],
+        })
         if (thenOpenBackpack) {
           router.push("/cart")
         } else {

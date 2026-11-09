@@ -476,3 +476,123 @@ export const PersonalisedItemBody = z.object({
   text: z.string().max(400),
 })
 export type PersonalisedItemBodyType = z.infer<typeof PersonalisedItemBody>
+
+// ---------------------------------------------------------------- Marketing & integrations
+
+const MARKETING_EVENTS = ["PageView", "ViewContent", "Search", "AddToCart", "RemoveFromCart", "ViewCart", "InitiateCheckout", "AddPaymentInfo", "Purchase", "CompleteRegistration", "Lead", "Refund"] as const
+const MARKETING_PLATFORMS = ["meta_pixel", "meta_capi", "ga4", "ga4_mp", "google_ads", "gtm", "clarity"] as const
+const mText = (max: number) => z.string().max(max)
+
+// Events from the website (POST /store/marketing/events).
+export const CollectBody = z.object({
+  consent: z.object({ analytics: z.boolean(), marketing: z.boolean() }),
+  visitor: z
+    .object({
+      fbp: mText(120).regex(/^fb\.\d\.\d+\.\d+$/).nullable().optional(),
+      fbc: mText(500).regex(/^fb\.\d\.\d+\.[\w.-]+$/).nullable().optional(),
+      ga: mText(80).regex(/^GA\d\.\d\.\d+\.\d+$/).nullable().optional(),
+      page_url: mText(1000).url().nullable().optional(),
+    })
+    .default({}),
+  utm: z
+    .object({ utm_source: mText(200), utm_medium: mText(200), utm_campaign: mText(200), utm_term: mText(200), utm_content: mText(200), gclid: mText(200), fbclid: mText(200) })
+    .partial()
+    .nullable()
+    .optional(),
+  events: z
+    .array(
+      z.object({
+        event_id: z.string().regex(/^[\w.:-]{8,120}$/),
+        name: z.enum(MARKETING_EVENTS),
+        page: mText(1000).nullable().optional(),
+        sent: z.array(z.enum(MARKETING_PLATFORMS)).max(7).default([]),
+        data: z
+          .object({
+            value: z.number().min(0).max(10_000_000).nullable().optional(),
+            currency: z.string().regex(/^[A-Za-z]{3}$/).nullable().optional(),
+            search: mText(100).nullable().optional(),
+            cart_id: z.string().regex(/^cart_[A-Z0-9]+$/).nullable().optional(),
+            items: z
+              .array(
+                z.object({
+                  product_id: z.string().regex(/^prod_[A-Z0-9]+$/),
+                  variant_id: z.string().regex(/^variant_[A-Z0-9]+$/).nullable().optional(),
+                  sku: mText(120).nullable().optional(),
+                  name: mText(200).nullable().optional(),
+                  variant: mText(200).nullable().optional(),
+                  category: mText(120).nullable().optional(),
+                  price: z.number().min(0).max(10_000_000).nullable().optional(),
+                  quantity: z.number().int().min(1).max(1000).nullable().optional(),
+                })
+              )
+              .max(50)
+              .optional(),
+          })
+          .default({}),
+      })
+    )
+    .min(1)
+    .max(20),
+})
+export type CollectBodyType = z.infer<typeof CollectBody>
+
+// The website's report of a tag test (POST /store/marketing/check).
+export const TagCheckBody = z.object({
+  nonce: z.string().regex(/^[a-f0-9]{32}$/),
+  results: z.object({ meta_pixel: z.object({ ok: z.boolean(), detail: mText(300).optional() }), ga4: z.object({ ok: z.boolean(), detail: mText(300).optional() }), google_ads: z.object({ ok: z.boolean(), detail: mText(300).optional() }), gtm: z.object({ ok: z.boolean(), detail: mText(300).optional() }), clarity: z.object({ ok: z.boolean(), detail: mText(300).optional() }) }).partial(),
+})
+export type TagCheckBodyType = z.infer<typeof TagCheckBody>
+
+const optId = (re: RegExp) => z.union([z.literal(""), z.string().regex(re)])
+
+export const MarketingSettingsBody = z.object({
+  consent: z
+    .object({
+      mode: z.enum(["ask", "notice"]),
+      text: mText(400),
+      policy_url: mText(300),
+    })
+    .partial()
+    .optional(),
+  meta_pixel: z.object({ enabled: z.boolean(), pixel_id: optId(/^\d{10,20}$/) }).partial().optional(),
+  meta_capi: z.object({ enabled: z.boolean(), test_event_code: optId(/^TEST\d{3,10}$/), advanced_matching: z.boolean() }).partial().optional(),
+  ga4: z.object({ enabled: z.boolean(), measurement_id: optId(/^G-[A-Z0-9]{4,16}$/), server_enabled: z.boolean() }).partial().optional(),
+  google_ads: z
+    .object({
+      enabled: z.boolean(),
+      conversion_id: optId(/^AW-\d{6,14}$/),
+      purchase_label: optId(/^[\w-]{6,40}$/),
+      lead_label: optId(/^[\w-]{6,40}$/),
+      enhanced_conversions: z.boolean(),
+    })
+    .partial()
+    .optional(),
+  gtm: z.object({ enabled: z.boolean(), container_id: optId(/^GTM-[A-Z0-9]{4,12}$/) }).partial().optional(),
+  clarity: z.object({ enabled: z.boolean(), project_id: optId(/^[a-z0-9]{6,20}$/) }).partial().optional(),
+  content_id: z.enum(["variant", "product", "sku"]).optional(),
+  excluded: z
+    .object({ meta_pixel: z.array(z.enum(MARKETING_EVENTS)), meta_capi: z.array(z.enum(MARKETING_EVENTS)), ga4: z.array(z.enum(MARKETING_EVENTS)), ga4_mp: z.array(z.enum(MARKETING_EVENTS)), google_ads: z.array(z.enum(MARKETING_EVENTS)), gtm: z.array(z.enum(MARKETING_EVENTS)), clarity: z.array(z.enum(MARKETING_EVENTS)) })
+    .partial()
+    .optional(),
+  retention_days: z.number().int().min(7).max(400).optional(),
+})
+export type MarketingSettingsBodyType = z.infer<typeof MarketingSettingsBody>
+
+export const MarketingTestBody = z.object({
+  integration: z.enum(["meta_pixel", "meta_capi", "ga4", "google_ads", "gtm", "clarity"]),
+})
+export type MarketingTestBodyType = z.infer<typeof MarketingTestBody>
+
+export const MarketingRetryBody = z.object({
+  ids: z.array(z.string().regex(/^mdl_[A-Z0-9]+$/)).max(500).optional(),
+  all_failed: z.boolean().optional(),
+})
+export type MarketingRetryBodyType = z.infer<typeof MarketingRetryBody>
+
+export const MarketingDeleteBody = z
+  .object({
+    order_id: z.string().regex(/^order_[A-Z0-9]+$/).optional(),
+    email: z.string().email().max(200).optional(),
+  })
+  .refine((b) => !!b.order_id || !!b.email, { message: "Give an order ID or an email address." })
+export type MarketingDeleteBodyType = z.infer<typeof MarketingDeleteBody>

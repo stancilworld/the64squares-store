@@ -37,6 +37,12 @@ import {
   TournamentRegisterBody,
   FairPlayDecisionBody,
   ChatbotTestBody,
+  CollectBody,
+  TagCheckBody,
+  MarketingSettingsBody,
+  MarketingTestBody,
+  MarketingRetryBody,
+  MarketingDeleteBody,
 } from "./admin/validators"
 import { staffGuard } from "./staff-guard"
 import { activityRecorder, signInRecorder } from "../lib/activity"
@@ -176,6 +182,36 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/mailbox/actions",
       middlewares: [validateAndTransformBody(MailActionBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/marketing/events",
+      middlewares: [validateAndTransformBody(CollectBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/marketing/check",
+      middlewares: [validateAndTransformBody(TagCheckBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/marketing",
+      middlewares: [validateAndTransformBody(MarketingSettingsBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/marketing/test",
+      middlewares: [validateAndTransformBody(MarketingTestBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/marketing/retry",
+      middlewares: [validateAndTransformBody(MarketingRetryBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/marketing/delete-data",
+      middlewares: [validateAndTransformBody(MarketingDeleteBody)],
     },
     {
       method: ["POST"],

@@ -36,10 +36,12 @@ export type KeyName =
   | "GROQ_MODEL"
   | "GEMINI_API_KEY"
   | "GEMINI_MODEL"
+  | "META_CAPI_TOKEN"
+  | "GA4_API_SECRET"
 
 export type KeyDef = {
   name: KeyName
-  group: "razorpay_test" | "razorpay_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai"
+  group: "razorpay_test" | "razorpay_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai" | "marketing"
   label: string
   secret: boolean
   pattern: RegExp
@@ -66,6 +68,8 @@ export const KEY_DEFS: KeyDef[] = [
   { name: "GROQ_MODEL", group: "ai", label: "Groq model", secret: false, pattern: /^[\w./:-]{3,80}$/, hint: "Leave empty for llama-3.3-70b-versatile" },
   { name: "GEMINI_API_KEY", group: "ai", label: "Google Gemini API key (free, spare)", secret: true, pattern: /^[\w-]{30,60}$/, hint: "From aistudio.google.com → Get API key. Starts with AIza" },
   { name: "GEMINI_MODEL", group: "ai", label: "Gemini model", secret: false, pattern: /^[\w./:-]{3,80}$/, hint: "Leave empty for gemini-flash-lite-latest" },
+  { name: "META_CAPI_TOKEN", group: "marketing", label: "Meta Conversions API access token", secret: true, pattern: /^[A-Za-z0-9]{40,400}$/, hint: "From Meta Events Manager → your Pixel → Settings → Conversions API → Generate access token" },
+  { name: "GA4_API_SECRET", group: "marketing", label: "Google Analytics Measurement Protocol API secret", secret: true, pattern: /^[\w-]{10,80}$/, hint: "From Google Analytics → Admin → Data streams → your website → Measurement Protocol API secrets → Create" },
   { name: "DELHIVERY_TOKEN", group: "delhivery", label: "Delhivery API token", secret: true, pattern: /^[A-Za-z0-9]{16,}$/, hint: "From Delhivery One → Settings → API Setup" },
 ]
 
@@ -180,6 +184,9 @@ export type ServiceKeys = {
   mailbox: MailboxCreds | null
   google: { clientId: string; clientSecret: string } | null
   delhiveryToken?: string
+  // Marketing: sent only from this server, never to the website.
+  metaCapiToken?: string
+  ga4ApiSecret?: string
   // The chat bot's AI helpers (free plans), tried in this order.
   ai: { provider: "groq" | "gemini"; key: string; model: string }[]
 }
@@ -223,6 +230,8 @@ export const keysFromStored = (stored: Stored): ServiceKeys => {
     })(),
     google: clientId && clientSecret ? { clientId, clientSecret } : null,
     delhiveryToken: get("DELHIVERY_TOKEN"),
+    metaCapiToken: get("META_CAPI_TOKEN"),
+    ga4ApiSecret: get("GA4_API_SECRET"),
     ai: [
       ...(get("GROQ_API_KEY") ? [{ provider: "groq" as const, key: get("GROQ_API_KEY")!, model: get("GROQ_MODEL") || "llama-3.3-70b-versatile" }] : []),
       ...(get("GEMINI_API_KEY") ? [{ provider: "gemini" as const, key: get("GEMINI_API_KEY")!, model: get("GEMINI_MODEL") || "gemini-flash-lite-latest" }] : []),

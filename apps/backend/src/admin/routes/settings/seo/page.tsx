@@ -2,6 +2,7 @@ import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Badge, Button, Container, Heading, Input, Label, Text, Textarea, toast } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { sdk } from "../../../lib/sdk"
 
 type Settings = { ga4_id: string; meta_pixel_id: string; google_verification: string; default_description: string }
@@ -25,8 +26,8 @@ const Field = ({ id, label, hint, children, on }: { id: string; label: string; h
   </div>
 )
 
-// Settings → SEO & analytics: Google Analytics, Meta Pixel, Search Console and the site's
-// description. Each product's own search title and description are on the product form.
+// Settings → SEO & analytics: Search Console and the site's description (analytics and ad
+// tags are in Settings → Marketing & integrations). Each product's own search title and description are on the product form.
 const SeoPage = () => {
   const qc = useQueryClient()
   const { data } = useQuery({ queryKey: ["seo-settings"], queryFn: () => sdk.client.fetch<{ settings: Settings }>("/admin/seo-settings") })
@@ -72,22 +73,15 @@ const SeoPage = () => {
           onChange={(e) => set("default_description", e.target.value)}
         />
       </Field>
-      <Field
-        id="seo-ga"
-        label="Google Analytics"
-        on={!!form.ga4_id.trim()}
-        hint="Measurement ID from Google Analytics → Admin → Data streams → your website. Looks like G-ABC123XYZ9."
-      >
-        <Input id="seo-ga" value={form.ga4_id} placeholder="G-XXXXXXXXXX" onChange={(e) => set("ga4_id", e.target.value.trim())} />
-      </Field>
-      <Field
-        id="seo-pixel"
-        label="Meta Pixel (Facebook & Instagram ads)"
-        on={!!form.meta_pixel_id.trim()}
-        hint="Pixel ID from Meta Events Manager → Data sources. Only digits. Sends page views, add-to-cart and purchases, so ads can be measured."
-      >
-        <Input id="seo-pixel" value={form.meta_pixel_id} inputMode="numeric" placeholder="123456789012345" onChange={(e) => set("meta_pixel_id", e.target.value.trim())} />
-      </Field>
+      <div className="px-6 py-4">
+        <Text size="small" className="text-ui-fg-subtle">
+          Google Analytics, the Meta Pixel and other ad tags are now in{" "}
+          <Link to="/settings/marketing" className="text-ui-fg-interactive hover:underline">
+            Settings → Marketing &amp; integrations
+          </Link>
+          , with a test for each, the cookie banner and the Event Manager.
+        </Text>
+      </div>
       <Field
         id="seo-gsc"
         label="Google Search Console verification"

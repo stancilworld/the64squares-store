@@ -3,6 +3,7 @@
 import { useState } from "react"
 import type { ContactField, ContactPage } from "@/lib/types"
 import { SendIcon } from "./icons"
+import { track } from "@/lib/tracking/engine"
 
 // The Contact page form. Its questions are set in the admin (Website → Contact page).
 type Value = string | boolean | string[]
@@ -52,6 +53,7 @@ export function ContactForm({ page }: { page: ContactPage }) {
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string; errors?: Record<string, string> }
       if (res.ok && json.ok) {
         setState("sent")
+        track("Lead")
         window.scrollTo({ top: 0, behavior: "smooth" })
         return
       }

@@ -3,8 +3,8 @@ import type { Metadata } from "next"
 import "@fontsource-variable/archivo/wdth.css"
 import "./globals.css"
 import { ColoursProvider } from "@/components/colours-provider"
-import { Analytics } from "@/components/analytics"
-import { getColourPalette, getSiteConfig } from "@/lib/data"
+import { Tracking } from "@/components/tracking/tracking"
+import { getColourPalette, getMarketingConfig, getSiteConfig } from "@/lib/data"
 import { ListProvider } from "@/lib/list"
 import { SITE_URL } from "@/lib/site"
 
@@ -35,7 +35,7 @@ const BASE_METADATA: Metadata = {
 }
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const [palette, config] = await Promise.all([getColourPalette(), getSiteConfig()])
+  const [palette, marketing] = await Promise.all([getColourPalette(), getMarketingConfig()])
   return (
     <html lang="en-IN" className="antialiased">
       <body className="flex min-h-screen flex-col">
@@ -44,11 +44,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </ListProvider>
         </ColoursProvider>
-        {(config.ga4_id || config.meta_pixel_id) && (
-          <Suspense fallback={null}>
-            <Analytics ga4={config.ga4_id} pixel={config.meta_pixel_id} />
-          </Suspense>
-        )}
+        <Suspense fallback={null}>
+          <Tracking config={marketing} />
+        </Suspense>
       </body>
     </html>
   )

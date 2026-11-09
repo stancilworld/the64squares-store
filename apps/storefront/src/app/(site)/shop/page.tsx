@@ -1,3 +1,4 @@
+import { TrackSearch } from "@/components/tracking/track-search"
 import type { Metadata } from "next"
 import { Suspense } from "react"
 import { ProductGrid } from "@/components/product-grid"
@@ -72,6 +73,7 @@ async function Shop({ searchParams }: { searchParams: Promise<Search> }) {
 
   return (
     <>
+      {q && <TrackSearch q={String(sp.q).trim().slice(0, 100)} />}
       <div className="board-wash bg-ink text-white">
         <div className="mx-auto max-w-[1440px] px-6 py-10 lg:px-10 lg:py-14">
           <h1 className="font-display h-page">{title}</h1>

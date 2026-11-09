@@ -66,6 +66,7 @@ export const PERMISSIONS: Permission[] = [
   // Settings
   { key: "settings.branding", group: "Settings", label: "Branding, SEO & upload limits", description: "The admin sign-in logo, SEO & analytics, and the file size limits.", default: false },
   { key: "settings.shipping", group: "Settings", label: "Shipping & locations", description: "Shipping options and profiles, stock locations, delivery areas.", default: false },
+  { key: "settings.marketing", group: "Settings", label: "Marketing & integrations", description: "Ad and analytics tags (Meta, Google, Clarity), cookie consent, and the Event Manager. Secret keys still need the main admin.", default: false },
   { key: "settings.store", group: "Settings", label: "Store, payments & tax", description: "Store details, Payments & delivery (Cash on Delivery, online payment), regions, currencies, tax, sales channels, return and refund reasons.", default: false },
 ]
 
@@ -151,6 +152,7 @@ const RULES: Rule[] = [
   r("write", /^\/posts(\/|$)/, "content.blog"),
   r("write", /^\/upload-limits(\/|$)/, "settings.branding"),
   r("write", /^\/seo-settings(\/|$)/, "settings.branding"),
+  r("any", /^\/marketing(\/|$)/, "settings.marketing"),
   r("write", /^\/checkout-settings(\/|$)/, "settings.store"),
   r("write", /^\/invoice-settings(\/|$)/, "settings.store"),
   r("write", /^\/invoices(\/|$)/, "orders.edit"),

@@ -195,7 +195,7 @@ export type AccountOrder = {
   step: "placed" | "packed" | "shipped" | "delivered" | "canceled"
   payment_method: string
   paid: boolean
-  items: { id: string; title: string; variant_title: string | null; engraving?: string | null; handle: string | null; thumbnail: string | null; quantity: number; total: number }[]
+  items: { id: string; title: string; variant_title: string | null; engraving?: string | null; handle: string | null; thumbnail: string | null; quantity: number; total: number; product_id?: string | null; variant_id?: string | null; sku?: string | null; unit_price?: number }[]
   shipping_address: {
     first_name?: string | null
     last_name?: string | null

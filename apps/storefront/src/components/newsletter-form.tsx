@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { track } from "@/lib/tracking/engine"
 
 export function NewsletterForm({ label }: { label: string }) {
   const [open, setOpen] = useState(false)
@@ -17,6 +18,7 @@ export function NewsletterForm({ label }: { label: string }) {
         body: JSON.stringify({ email }),
       })
       setState(res.ok ? "done" : "error")
+      if (res.ok) track("Lead")
     } catch {
       setState("error")
     }

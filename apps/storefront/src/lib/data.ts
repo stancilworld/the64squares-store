@@ -1,4 +1,5 @@
 import { cacheLife, cacheTag } from "next/cache"
+import { type MarketingConfig, NO_TRACKING } from "./tracking/types"
 import { badgeOf, byShopOrder } from "./badges"
 import type { HttpTypes } from "@medusajs/types"
 import { sdk } from "./medusa"
@@ -374,6 +375,18 @@ export async function getSiteConfig(): Promise<SiteConfig> {
     return { ...NO_CONFIG, ...(await sdk.client.fetch<Partial<SiteConfig>>("/store/site-config")) }
   } catch {
     return NO_CONFIG
+  }
+}
+
+// Tags and cookie banner (admin → Settings → Marketing & integrations).
+export async function getMarketingConfig(): Promise<MarketingConfig> {
+  "use cache"
+  cacheLife("minutes")
+  cacheTag("marketing-config")
+  try {
+    return { ...NO_TRACKING, ...(await sdk.client.fetch<Partial<MarketingConfig>>("/store/marketing/config")) }
+  } catch {
+    return NO_TRACKING
   }
 }
 
