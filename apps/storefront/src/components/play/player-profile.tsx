@@ -56,11 +56,12 @@ export function PlayerProfile({ username, meId }: { username: string; meId: stri
             </p>
             <div className="mt-2 flex items-center gap-2">
               <LevelBadge level={p.level} />
+              {p.house && <span className="rounded-sm bg-[var(--g-panel-3)] px-2 py-0.5 text-[12px] font-bold text-[var(--g-accent)]">House Player</span>}
               <span className={`text-[12px] font-semibold ${p.online ? "text-[var(--g-good)]" : "g-muted"}`}>{p.online ? "● Online" : "Offline"}</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            {!meId ? (
+            {p.house ? null : !meId ? (
               <Link href="/account?next=/play/friends" className="g-btn text-[14px]">
                 Sign in to add friends
               </Link>
@@ -95,6 +96,11 @@ export function PlayerProfile({ username, meId }: { username: string; meId: stri
         <p className="border-t border-[var(--g-line)] bg-[#3a1d1a] px-6 py-3 text-[14px] text-[var(--g-bad)]">This account was closed for rated play after a fair-play review.</p>
       )}
       {p.bio && <p className="border-t border-[var(--g-line)] px-6 py-4 text-[15px]">{p.bio}</p>}
+      {p.house && (
+        <p className="g-muted border-t border-[var(--g-line)] px-6 py-3 text-[13px]">
+          House Players are The 64 Squares&apos; computer opponents. They play like people, at every level, so there&apos;s always someone to play when nobody else is online. Games against them count for rating and XP as usual.
+        </p>
+      )}
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-[1fr_1fr]">

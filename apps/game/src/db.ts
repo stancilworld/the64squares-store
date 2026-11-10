@@ -205,6 +205,7 @@ export const leaderboard = async (speed: Speed, limit = 50) => {
   const { rows } = await pool.query(
     `select * from play.rating where speed = $1 and games > 0
         and player_id not in (select player_id from play.ban)
+        and player_id not like 'house\_%'
       order by (rd > $3) asc, rating desc limit $2`,
     [speed, limit, PROVISIONAL_RD]
   )

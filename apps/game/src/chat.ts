@@ -33,6 +33,14 @@ export const dropChat = (gameId: string) => history.delete(gameId)
 
 let seq = 0
 
+// A quick message from a House Player (only the fixed quick messages).
+export const postQuick = (io: Server, gameId: string, from: "w" | "b", name: string, text: (typeof QUICK)[number]) => {
+  const now = Date.now()
+  const msg: Msg = { id: `${now.toString(36)}${(seq++).toString(36)}`, from, name, kind: "quick", text, at: now }
+  history.set(gameId, [...chatHistory(gameId), msg].slice(-30))
+  io.to(`game:${gameId}`).emit("game:chat", { game: gameId, ...msg })
+}
+
 export const registerChat = (io: Server, socket: Socket, manager: GameManager, me: () => Player | null) => {
   const sent: number[] = []
   socket.on("game:chat", async (input: { id?: unknown; kind?: unknown; text?: unknown }, ack: unknown) => {

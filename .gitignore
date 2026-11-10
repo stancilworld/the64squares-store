@@ -61,3 +61,6 @@ Thumbs.db
 apps/backend/.medusa/
 dump.rdb
 apps/backend/static/
+
+# Player pictures uploaded on a running game server
+apps/game/uploads/

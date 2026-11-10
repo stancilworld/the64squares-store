@@ -6,9 +6,15 @@ import { isGuest, parseTimeControl, type Player } from "./game.js"
 import { PROVISIONAL_RD, speedOf } from "./glicko.js"
 import type { GameManager } from "./manager.js"
 import { pickPairs } from "./seek-rules.js"
+import { isHouse } from "./house/persona.js"
+import { pickHouse } from "./house/store.js"
+import { getProfile, publicProfile } from "./profiles.js"
+import { houseWaitMs, targetRating } from "./house/matching.js"
 
 // "Play online": players wait in a pool per time control and are paired with someone close
 // in rating. The allowed gap widens the longer they wait, so nobody waits forever.
+// When no person is found within 15–30 seconds, the player is told so and offered one of the
+// House Players (computer opponents at their level); people are always paired first.
 
 export const SEEK_TIME_CONTROLS = ["1+0", "2+1", "3+0", "3+2", "5+0", "5+3", "10+0", "10+5", "15+10", "30+0", "30+20"]
 
@@ -20,13 +26,42 @@ type Seek = {
   increment_ms: number
   rating: number
   since: number
+  // When to offer a House Player, and the offer on the table.
+  houseAt: number
+  offer: { house_id: string; expires: number } | null
 }
+
+// How long an offer stays open (the page starts the game by itself after a short countdown).
+const OFFER_MS = 15_000
 
 const seeks = new Map<string, Seek>() // by player id
 let matching = false
 
+// House Players currently in a game or offered to someone.
+const busyHouse = (manager: GameManager) => {
+  const busy = new Set<string>()
+  for (const g of manager.liveGames()) for (const p of [g.r.white, g.r.black]) if (p && isHouse(p.id)) busy.add(p.id)
+  for (const s of seeks.values()) if (s.offer) busy.add(s.offer.house_id)
+  return busy
+}
+
+const offerHouse = async (io: Server, manager: GameManager, id: string, s: Seek, now: number) => {
+  const speed = speedOf(s.initial_ms, s.increment_ms)
+  const target = await targetRating(s.player.id, speed, s.rating)
+  const houseId = await pickHouse({ forPlayer: s.player.id, speed, target, busy: busyHouse(manager) })
+  // Still waiting, and nobody else claimed them meanwhile?
+  if (!houseId || seeks.get(id) !== s) return
+  const [profile, r] = await Promise.all([getProfile(houseId), getRating(houseId, speed)])
+  if (!profile) return
+  s.offer = { house_id: houseId, expires: now + OFFER_MS }
+  io.to(`player:${id}`).emit("seek:house", {
+    opponent: { ...publicProfile(profile), rating: Math.round(r.rating), house: true },
+    expires_in: OFFER_MS,
+  })
+}
+
 const match = async (io: Server, manager: GameManager) => {
-  if (matching || seeks.size < 2) return
+  if (matching || seeks.size === 0) return
   matching = true
   try {
     const now = Date.now()
@@ -39,6 +74,18 @@ const match = async (io: Server, manager: GameManager) => {
         const [white, black] = crypto.randomInt(2) ? [a, b] : [b, a]
         const g = await manager.createPaired(white.player, black.player, a.initial_ms, a.increment_ms, { mode: "online" })
         io.to(`player:${a.id}`).to(`player:${b.id}`).emit("seek:paired", { game_id: g.r.id })
+      }
+    }
+    // Nobody found in time: offer a House Player (an unanswered offer lapses and comes back later).
+    for (const [id, s] of seeks) {
+      if (s.offer && s.offer.expires < now) {
+        s.offer = null
+        s.houseAt = now + 20_000
+        io.to(`player:${id}`).emit("seek:house-withdrawn", {})
+      }
+      if (!s.offer && now >= s.houseAt) {
+        s.houseAt = now + 20_000
+        await offerHouse(io, manager, id, s, now)
       }
     }
   } catch (e) {
@@ -73,9 +120,43 @@ export const registerSeek = (io: Server, socket: Socket, manager: GameManager, m
     const live = manager.liveFor(player.id)
     if (live.length) return reply({ ok: false, error: "in-game", game_id: live[0] })
     const r = await getRating(player.id, speedOf(parsed.initial_ms, parsed.increment_ms))
-    seeks.set(player.id, { player, socketId: socket.id, tc, ...parsed, rating: r.rating, since: Date.now() })
+    const since = Date.now()
+    seeks.set(player.id, { player, socketId: socket.id, tc, ...parsed, rating: r.rating, since, houseAt: since + houseWaitMs(), offer: null })
     reply({ ok: true, rating: Math.round(r.rating), provisional: r.rd > PROVISIONAL_RD, guest: isGuest(player.id), waiting: seekCounts()[tc] ?? 1 })
     void match(io, manager)
+  })
+
+  // The player takes the House Player they were offered.
+  socket.on("seek:house-accept", async (_: unknown, ack: unknown) => {
+    if (typeof ack !== "function" || limited(socket)) return
+    const reply = ack as Ack
+    const player = me()
+    const s = player ? seeks.get(player.id) : null
+    if (!player || !s || s.socketId !== socket.id || !s.offer || s.offer.expires < Date.now() - 2000) return reply({ ok: false, error: "no-offer" })
+    const houseId = s.offer.house_id
+    if (manager.liveFor(houseId).length || manager.liveFor(player.id).length) {
+      s.offer = null
+      s.houseAt = Date.now()
+      return reply({ ok: false, error: "gone" })
+    }
+    seeks.delete(player.id)
+    const profile = await getProfile(houseId)
+    const house = { id: houseId, name: profile?.display_name ?? "Player" }
+    const [white, black] = crypto.randomInt(2) ? [player, house] : [house, player]
+    const g = await manager.createPaired(white, black, s.initial_ms, s.increment_ms, { mode: "online" })
+    reply({ ok: true, game_id: g.r.id })
+    io.to(`player:${player.id}`).emit("seek:paired", { game_id: g.r.id })
+  })
+
+  // "Keep waiting for a person": no offer for another minute.
+  socket.on("seek:house-later", (_: unknown, ack: unknown) => {
+    const player = me()
+    const s = player ? seeks.get(player.id) : null
+    if (s && s.socketId === socket.id) {
+      s.offer = null
+      s.houseAt = Date.now() + 60_000
+    }
+    if (typeof ack === "function") (ack as Ack)({ ok: true })
   })
 
   socket.on("seek:leave", (_: unknown, ack: unknown) => {

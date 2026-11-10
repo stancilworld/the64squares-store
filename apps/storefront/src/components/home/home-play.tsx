@@ -32,7 +32,7 @@ export function HomePlay({ event }: { event: HomeEvent | null }) {
       .catch(() => {})
     fetch(`${GAME_URL}/game/lobby`)
       .then((r) => r.json())
-      .then((d) => live && setOnline((d.online ?? 0) + (d.playing ?? 0) * 2))
+      .then((d) => live && setOnline(d.online ?? 0))
       .catch(() => {})
     return () => {
       live = false
@@ -51,7 +51,7 @@ export function HomePlay({ event }: { event: HomeEvent | null }) {
               The board is set. Play free.
             </h2>
             <p className="mt-3 max-w-[520px] text-[16px] leading-[1.6] text-white/70">
-              Live games against players of your level, eight computer opponents, daily puzzles and arena tournaments. No download.
+              Live games against players of your level (or a House Player when nobody is free), eight computer opponents, daily puzzles and arena tournaments. No download.
             </p>
           </div>
           {online != null && online > 1 && (

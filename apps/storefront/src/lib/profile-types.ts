@@ -13,6 +13,8 @@ export type PublicProfile = {
   online: boolean
   // Only on a game's two players: their record against people.
   record?: Results
+  // One of the site's House Players (computer opponents that play like people).
+  house?: boolean
 }
 
 export type Results = { games: number; wins: number; draws: number; losses: number }

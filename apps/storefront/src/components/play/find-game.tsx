@@ -7,6 +7,7 @@ import { io, type Socket } from "socket.io-client"
 import { Avatar } from "@/components/play/avatar"
 import { GAME_URL, SPEED_LABEL, TIME_CONTROLS, speedOf } from "@/lib/game-types"
 import type { PlayPass } from "@/lib/play"
+import type { PublicProfile } from "@/lib/profile-types"
 import { ScreenHeader, useLobby, useMyProfile } from "./menu/screen"
 import { TimeCards } from "./menu/time-cards"
 import { usePlayPass } from "./use-play-pass"
@@ -21,6 +22,11 @@ const TIPS = [
 ]
 
 const valid = (tc: string | null) => (tc && TIME_CONTROLS.some((t) => t.tc === tc) ? tc : null)
+
+type HouseOffer = { opponent: PublicProfile & { rating: number; house: true; country?: string }; until: number }
+
+// Seconds the notice shows before the game starts by itself.
+const HOUSE_COUNTDOWN = 6
 
 // Play online: choose a time control, then wait in the pool for a player of similar rating.
 export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
@@ -37,6 +43,24 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
   const [error, setError] = useState<{ text: string; game?: string } | null>(null)
   const profile = useMyProfile(meId)
   const lobby = useLobby()
+  // Nobody at this level found in time: one of the House Players is offered instead.
+  const [offer, setOffer] = useState<HouseOffer | null>(null)
+  const [starting, setStarting] = useState(false)
+
+  const acceptHouse = useCallback(() => {
+    setStarting(true)
+    socket.current?.emit("seek:house-accept", null, (res: { ok: boolean; game_id?: string }) => {
+      if (res.ok && res.game_id) router.push(`/play/${res.game_id}`)
+      else {
+        setStarting(false)
+        setOffer(null)
+      }
+    })
+  }, [router])
+  const keepWaiting = () => {
+    socket.current?.emit("seek:house-later", null, () => {})
+    setOffer(null)
+  }
 
   const join = useCallback((which: string) => {
     socket.current?.emit("seek:join", { tc: which }, (res: { ok: boolean; error?: string; game_id?: string; rating?: number; provisional?: boolean }) => {
@@ -55,7 +79,12 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
     const s = io(GAME_URL, { path: "/game/socket.io", auth: { token }, transports: ["websocket", "polling"] })
     socket.current = s
     s.on("seek:paired", (p: { game_id: string }) => router.push(`/play/${p.game_id}`))
-    s.on("disconnect", () => setSeeking(null))
+    s.on("seek:house", (o: { opponent: HouseOffer["opponent"] }) => setOffer({ opponent: o.opponent, until: Date.now() + HOUSE_COUNTDOWN * 1000 }))
+    s.on("seek:house-withdrawn", () => setOffer(null))
+    s.on("disconnect", () => {
+      setSeeking(null)
+      setOffer(null)
+    })
     // Came from a quick-play button: start looking straight away.
     // (Once connected: in development React mounts twice and the first socket never connects.)
     s.once("connect", () => {
@@ -78,9 +107,18 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
     setError(null)
     join(tc)
   }
+  // The offer starts by itself after the countdown, unless the player chose to keep waiting.
+  useEffect(() => {
+    if (!offer || starting) return
+    const left = offer.until - Date.now()
+    const t = setTimeout(acceptHouse, Math.max(0, left))
+    return () => clearTimeout(t)
+  }, [offer, starting, acceptHouse])
+
   const cancel = () => {
     socket.current?.emit("seek:leave", null, () => {})
     setSeeking(null)
+    setOffer(null)
     router.replace("/play/online")
   }
 
@@ -88,6 +126,38 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
   const label = TIME_CONTROLS.find((t) => t.tc === tc)?.detail ?? tc
   const [m, inc] = tc.split("+").map(Number)
   const speed = speedOf(m * 60000, inc * 1000)
+
+  if (seeking && offer) {
+    const o = offer.opponent
+    const secs = Math.max(0, Math.ceil((offer.until - now) / 1000))
+    return (
+      <div className="menu-stage mx-auto flex min-h-[calc(100dvh-170px)] max-w-[560px] flex-col items-center justify-center py-6 text-center lg:min-h-[calc(100dvh-80px)]">
+        <h1 className="menu-rise text-[24px] font-extrabold leading-tight sm:text-[28px]">No one at your level is online right now.</h1>
+        <p className="g-muted menu-rise mt-2 text-[15px]">You&apos;ll play one of our House Players: computer opponents built to play like people.</p>
+        <div className="menu-card menu-rise mt-8 flex w-full items-center gap-4 p-4 text-left">
+          <Avatar url={o.avatar_url} name={o.display_name} size={64} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[18px] font-bold">{o.display_name}</p>
+            <p className="g-muted truncate text-[13px]">
+              @{o.username}
+              {o.city ? ` · ${o.city}` : ""}
+            </p>
+            <p className="mt-1 text-[13px]">
+              <span className="rounded-sm bg-[var(--g-panel-3)] px-2 py-0.5 font-bold text-[var(--g-accent)]">House Player</span>{" "}
+              <span className="font-mono font-bold">{o.rating}</span>
+            </p>
+          </div>
+        </div>
+        <p className="g-muted mt-3 text-[13px]">Rated as usual: your rating and XP change like in any game.</p>
+        <button type="button" disabled={starting} onClick={acceptHouse} className="menu-play mt-8 flex h-[56px] w-full max-w-[320px] items-center justify-center text-[18px] font-extrabold">
+          {starting ? "Starting…" : `Play now (${secs})`}
+        </button>
+        <button type="button" disabled={starting} onClick={keepWaiting} className="g-btn mt-3 h-[46px] w-full max-w-[320px]">
+          Keep waiting for a person
+        </button>
+      </div>
+    )
+  }
 
   if (seeking) {
     const waited = Math.max(0, Math.floor((now - seeking.since) / 1000))
@@ -135,7 +205,7 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
         title="Play Online"
         subtitle={
           <>
-            Rated games against a player of similar strength.
+            Rated games against a player of similar strength. If nobody at your level is free, a House Player steps in.
             {lobby ? (
               <>
                 {" "}

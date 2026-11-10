@@ -24,9 +24,13 @@ export class Engine {
   private lines: ((line: string) => void)[] = []
   private ready: Promise<void>
 
-  constructor() {
+  // One request at a time: later ones wait their turn.
+  private chain: Promise<unknown> = Promise.resolve()
+
+  // background: runs at low priority (game checks); House Players play at normal priority.
+  constructor(opts: { background?: boolean } = {}) {
     const [cmd, args] = command()
-    const nice = fs.existsSync("/usr/bin/nice")
+    const nice = (opts.background ?? true) && fs.existsSync("/usr/bin/nice")
     this.proc = nice ? spawn("/usr/bin/nice", ["-n", "15", cmd, ...args]) : spawn(cmd, args)
     readline.createInterface({ input: this.proc.stdout }).on("line", (l) => {
       for (const f of [...this.lines]) f(l)
@@ -76,6 +80,38 @@ export class Engine {
     }
     const best = /^bestmove (\S+)/.exec(out[out.length - 1])?.[1] ?? null
     return { cp: Math.max(-1000, Math.min(1000, cp)), best: best === "(none)" ? null : best }
+  }
+
+  // The best few moves of a position with their scores for the side to move (mate = ±10000).
+  candidates(fen: string, depth: number, multipv: number): Promise<{ uci: string; cp: number }[]> {
+    const run = async () => {
+      await this.ready
+      const out = await this.until("bestmove", () => {
+        this.send(`setoption name MultiPV value ${multipv}`)
+        this.send(`position fen ${fen}`)
+        this.send(`go depth ${depth}`)
+      })
+      const byPv = new Map<number, { uci: string; cp: number; depth: number }>()
+      for (const l of out) {
+        const m = /^info depth (\d+).* multipv (\d+) score (cp|mate) (-?\d+).* pv (\S+)/.exec(l)
+        if (!m) continue
+        const d = Number(m[1])
+        const k = Number(m[2])
+        const v = Number(m[4])
+        const cp = m[3] === "cp" ? v : v > 0 ? 10000 - v * 10 : -10000 - v * 10
+        const prev = byPv.get(k)
+        if (!prev || d >= prev.depth) byPv.set(k, { uci: m[5], cp, depth: d })
+      }
+      const list = [...byPv.entries()].sort((a, b) => a[0] - b[0]).map(([, v]) => ({ uci: v.uci, cp: v.cp }))
+      if (!list.length) {
+        const best = /^bestmove (\S+)/.exec(out[out.length - 1])?.[1]
+        if (best && best !== "(none)") list.push({ uci: best, cp: 0 })
+      }
+      return list
+    }
+    const p = this.chain.then(run, run)
+    this.chain = p.catch(() => {})
+    return p
   }
 
   stop() {

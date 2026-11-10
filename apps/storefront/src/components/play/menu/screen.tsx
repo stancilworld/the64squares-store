@@ -50,7 +50,7 @@ export function useMyProfile(meId: string | null) {
   return profile
 }
 
-export type Lobby = { playing: number; online?: number; seeking?: Record<string, number> }
+export type Lobby = { playing: number; online?: number; seeking?: Record<string, number>; house_ready?: number }
 
 export function useLobby() {
   const [lobby, setLobby] = useState<Lobby | null>(null)

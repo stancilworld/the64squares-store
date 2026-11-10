@@ -1,3 +1,4 @@
+import { isHouse } from "./house/persona.js"
 import { Chess } from "chess.js"
 import type { Server, Socket } from "socket.io"
 import { pool } from "./db.js"
@@ -113,7 +114,8 @@ const checkGame = async (gameId: string) => {
   const f = takeFocus(gameId)
   for (const colour of ["w", "b"] as const) {
     const playerId: string | null = colour === "w" ? g.white_id : g.black_id
-    if (!playerId || isGuest(playerId)) continue
+    // House Players are computers by design: only their opponents are checked.
+    if (!playerId || isGuest(playerId) || isHouse(playerId)) continue
     const a = analysePlayer(evals, uci, colour, g.move_ms ?? [])
     const rating = (colour === "w" ? g.white_rating : g.black_rating) ?? 1500
     const { risk, reasons } = gameRisk({ ...a, rating, focus_losses: f[colour].losses, away_ms: f[colour].away })

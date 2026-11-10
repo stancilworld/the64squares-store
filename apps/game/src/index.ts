@@ -15,6 +15,9 @@ import { migrateFriends, registerFriends } from "./friends.js"
 import { xpForGame } from "./levels.js"
 import { addXp, ensureProfile, getProfile, getProfiles, migrateProfiles, publicProfile, readAvatar, removeAvatar, searchProfiles, setAvatar, updateProfile } from "./profiles.js"
 import { registerSeek, SEEK_TIME_CONTROLS, seekCounts, startSeeking } from "./seek.js"
+import { HouseDriver } from "./house/driver.js"
+import { isHouse } from "./house/persona.js"
+import { houseCount, migrateHouse, personaOf, seedHouse } from "./house/store.js"
 
 type Ack = (res: Record<string, unknown>) => void
 
@@ -54,7 +57,10 @@ const fullProfile = async (idOrUsername: string) => {
   if (!p) return null
   const [ratings, stats] = await Promise.all([ratingsFor(p.player_id), playerStats(p.player_id)])
   const ban = await banOf(p.player_id)
-  return { ...publicProfile(p), ratings, stats, online: online.has(p.player_id), fair_play_closed: !!ban }
+  const house = isHouse(p.player_id)
+  // A House Player is "online" while it's in a game.
+  const on = house ? manager.liveFor(p.player_id).length > 0 : online.has(p.player_id)
+  return { ...publicProfile(p), ratings, stats, online: on, fair_play_closed: !!ban, house }
 }
 
 // Plain web endpoints: a health check, a game's PGN, and a player's recent games.
@@ -87,11 +93,11 @@ const server = http.createServer(async (req, res) => {
       return p ? json(res, 200, { profile: p }, origin) : json(res, 404, { error: "not-found" }, origin)
     }
     if (path === "/profiles" && req.method === "GET") {
-      const ids = (url.searchParams.get("ids") ?? "").split(",").filter((x) => /^(cus|guest)_[A-Za-z0-9]{6,40}$/.test(x)).slice(0, 50)
+      const ids = (url.searchParams.get("ids") ?? "").split(",").filter((x) => /^(cus|guest|house)_[A-Za-z0-9]{4,40}$/.test(x)).slice(0, 50)
       const rows = await getProfiles(ids)
       // For a game's two players, their record against people too (shown in the match intro).
       const records = ids.length <= 2 ? await Promise.all(rows.map((p) => playerStats(p.player_id).then((s) => s.people))) : []
-      return json(res, 200, { profiles: rows.map((p, i) => ({ ...publicProfile(p), online: online.has(p.player_id), record: records[i] })) }, origin)
+      return json(res, 200, { profiles: rows.map((p, i) => ({ ...publicProfile(p), online: isHouse(p.player_id) ? manager.liveFor(p.player_id).length > 0 : online.has(p.player_id), record: records[i], house: isHouse(p.player_id) })) }, origin)
     }
     const puzzles = await puzzleRoute(req.method ?? "GET", path, url.searchParams, path.startsWith("/puzzles") ? await playerFromToken(bearer(req)) : null, async () => {
       const raw = await readBody(req, 10_000)
@@ -137,7 +143,7 @@ const server = http.createServer(async (req, res) => {
       const v = g.view(Date.now())
       return send(res, 200, JSON.stringify({ id: v.id, status: v.status, mode: v.mode, white: v.white, black: v.black }), "application/json", origin)
     }
-    m = /^\/players\/(cus_[A-Za-z0-9]{6,40})\/games$/.exec(path)
+    m = /^\/players\/((?:cus|house)_[A-Za-z0-9]{4,40})\/games$/.exec(path)
     if (m && req.method === "GET") {
       const before = url.searchParams.get("before")
       const when = before && !Number.isNaN(Date.parse(before)) ? new Date(before) : undefined
@@ -148,7 +154,7 @@ const server = http.createServer(async (req, res) => {
     if (m && req.method === "GET") {
       return send(res, 200, JSON.stringify({ games: await liveGamesFor(m[1]) }), "application/json", origin)
     }
-    m = /^\/players\/(cus_[A-Za-z0-9]{6,40})\/ratings$/.exec(path)
+    m = /^\/players\/((?:cus|house)_[A-Za-z0-9]{4,40})\/ratings$/.exec(path)
     if (m && req.method === "GET") {
       return send(res, 200, JSON.stringify({ ratings: await ratingsFor(m[1]) }), "application/json", origin)
     }
@@ -158,7 +164,15 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, JSON.stringify({ speed, players: await leaderboard(speed) }), "application/json", origin)
     }
     if (path === "/lobby" && req.method === "GET") {
-      return send(res, 200, JSON.stringify({ playing: manager.liveCount(), online: online.size, seeking: seekCounts(), time_controls: SEEK_TIME_CONTROLS }), "application/json", origin)
+      // online: people connected right now. house_ready: House Players free to play.
+      const busyHouse = manager.liveGames().filter((g) => isHouse(g.r.white?.id) || isHouse(g.r.black?.id)).length
+      return send(
+        res,
+        200,
+        JSON.stringify({ playing: manager.liveCount(), online: online.size, seeking: seekCounts(), time_controls: SEEK_TIME_CONTROLS, house_ready: Math.max(0, houseTotal - busyHouse) }),
+        "application/json",
+        origin
+      )
     }
     send(res, 404, JSON.stringify({ error: "not-found" }), "application/json", origin)
   } catch (e) {
@@ -184,6 +198,10 @@ const manager = new GameManager((view) => {
   }
 })
 
+// House Players' moves, chat, draw answers and rematches.
+const house = new HouseDriver(io, manager)
+let houseTotal = 0
+
 // Rematch offers on finished games: game id → the player who offered.
 const rematches = new Map<string, string>()
 
@@ -200,6 +218,8 @@ const signalOf = (rtt: number | null) => (rtt == null ? 4 : rtt < 150 ? 4 : rtt 
 const presenceView = (g: Game, now = Date.now()) => {
   const p = presence.get(g.r.id)
   const seat = (c: Color) => {
+    // House Players are always at the board.
+    if (isHouse((c === "w" ? g.r.white : g.r.black)?.id)) return { online: true, gone_ms: null, signal: 4 }
     const s = p?.[c]
     const online = !!s && s.sockets.size > 0
     const since = s?.goneAt ?? g.r.started_at ?? now
@@ -341,6 +361,22 @@ io.on("connection", (socket) => {
     rematches.set(id, player.id)
     io.to(room(id)).emit("game:rematch", { id, by: player.id })
     ack({ ok: true })
+    // Against a House Player: it answers after a moment.
+    const other = g.colorOf(player.id) === "w" ? g.r.black! : g.r.white!
+    if (isHouse(other.id)) {
+      const persona = await personaOf(other.id)
+      const answer = persona ? house.rematchAnswer(persona) : { accept: false, after: 2000 }
+      setTimeout(async () => {
+        if (rematches.get(id) !== player.id) return
+        rematches.delete(id)
+        if (!answer.accept || manager.liveFor(player.id).length || manager.liveFor(other.id).length) {
+          io.to(room(id)).emit("game:rematch", { id, by: null, declined: true })
+          return
+        }
+        const next = await manager.createPaired(g.r.black!, g.r.white!, g.r.initial_ms, g.r.increment_ms, { mode: g.r.mode, rated: g.r.rated })
+        io.to(room(id)).emit("game:rematch", { id, game_id: next.r.id })
+      }, answer.after).unref?.()
+    }
   })
 
   socket.on("computer:save", async (input: { colour?: unknown; level?: unknown; moves?: unknown; resigned?: unknown }, ack: unknown) => {
@@ -440,6 +476,7 @@ const main = async () => {
   await migrateFairPlay()
   await migratePuzzles()
   await migrateMissions()
+  await migrateHouse()
   startFairPlay(manager)
   // Experience for both players when a game against a person ends.
   manager.whenGameEnds(async (g) => {
@@ -454,9 +491,30 @@ const main = async () => {
   await startArenas(io, manager)
   startSeeking(io, manager)
   const restored = await manager.restore()
+  house.restore()
+  // When a person leaves a game against a House Player and doesn't come back, the House
+  // Player claims it, as a person would.
+  setInterval(() => {
+    for (const g of manager.liveGames()) {
+      const hc = isHouse(g.r.white?.id) ? "w" : isHouse(g.r.black?.id) ? "b" : null
+      if (!hc || g.ply < 2) continue
+      const opp = presenceView(g)[hc === "w" ? "b" : "w"]
+      if (!opp.online && (opp.gone_ms ?? 0) >= claimAfterMs(g) + 5000) {
+        const botId = (hc === "w" ? g.r.white : g.r.black)!.id
+        void manager.act(g.r.id, (game, now) => game.claim(botId, "win", now))
+      }
+    }
+  }, 5000).unref()
   server.listen(config.port, () => {
     console.log(`Game server on :${config.port} (${restored} live games restored)`)
   })
+  // The House Player roster is made once, the first time (takes a little while).
+  seedHouse()
+    .then(async (made) => {
+      houseTotal = await houseCount()
+      if (made) console.log(`House Players: ${made} added (${houseTotal} in all)`)
+    })
+    .catch((e) => console.error("house seeding failed", e))
 }
 
 main().catch((e) => {

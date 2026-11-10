@@ -43,11 +43,22 @@ export class GameManager {
   private games = new Map<string, Game>()
   private timers = new Map<string, NodeJS.Timeout>()
   private onEnd: Listener[] = []
+  private onChange: Listener[] = []
 
   constructor(private publish: (view: View) => void) {}
 
   whenGameEnds(fn: Listener) {
     this.onEnd.push(fn)
+  }
+
+  // Every saved change to a game (moves, offers, the end).
+  whenGameChanges(fn: Listener) {
+    this.onChange.push(fn)
+  }
+
+  // Games being played right now.
+  liveGames() {
+    return [...this.games.values()].filter((g) => g.r.status === "active")
   }
 
   async restore() {
@@ -120,6 +131,13 @@ export class GameManager {
     }
     await saveGame(g.r, over ? g.pgn() : null)
     this.publish(g.view(Date.now()))
+    for (const fn of this.onChange) {
+      try {
+        await fn(g)
+      } catch (e) {
+        console.error("game change listener failed", e)
+      }
+    }
     if (over) {
       clearTimeout(this.timers.get(g.r.id))
       this.timers.delete(g.r.id)

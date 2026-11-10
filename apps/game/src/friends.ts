@@ -1,3 +1,4 @@
+import { isHouse } from "./house/persona.js"
 import type { Server, Socket } from "socket.io"
 import { online } from "./arena.js"
 import { banOf } from "./fairplay.js"
@@ -86,6 +87,8 @@ export const registerFriends = (io: Server, socket: Socket, manager: GameManager
     if (!p) return reply({ ok: false, error: "sign-in" })
     const target = await getProfile(to)
     if (!target || target.player_id === p.id) return reply({ ok: false, error: "not-found" })
+    // House Players are computer opponents: they can't be added as friends.
+    if (isHouse(target.player_id)) return reply({ ok: false, error: "house-player" })
     const rel = await relation(p.id, target.player_id)
     const [a, b] = pair(p.id, target.player_id)
     if (rel === "incoming") {
