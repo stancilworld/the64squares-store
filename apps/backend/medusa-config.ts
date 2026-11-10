@@ -109,7 +109,7 @@ module.exports = defineConfig({
       },
     },
     {
-      // Payments: Razorpay (UPI, cards, net banking, wallets). Cash on Delivery uses
+      // Payments: Razorpay and PayU (UPI, cards, net banking, wallets). Cash on Delivery uses
       // Medusa's built-in "system" provider, which is always available.
       resolve: "@medusajs/medusa/payment",
       options: {
@@ -119,6 +119,12 @@ module.exports = defineConfig({
             id: "razorpay",
             // Keys come from the admin or .env (src/lib/service-keys.ts).
             options: { api_base: process.env.RAZORPAY_API_BASE },
+          },
+          {
+            // PayU (hosted payment page). Keys from the admin; see src/modules/payu.
+            resolve: "./src/modules/payu",
+            id: "payu",
+            options: {},
           },
         ],
       },

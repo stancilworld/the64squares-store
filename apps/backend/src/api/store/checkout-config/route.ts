@@ -11,6 +11,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   res.json({
     online: s.online_enabled && !!keys.razorpay,
     razorpay_key_id: keys.razorpay?.keyId ?? null,
+    payu: s.payu_enabled && !!keys.payu,
     cod: s.cod_enabled,
     cod_max: s.cod_max,
     delivery_text: s.delivery_text,

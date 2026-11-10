@@ -22,6 +22,10 @@ export type KeyName =
   | "RAZORPAY_LIVE_KEY_ID"
   | "RAZORPAY_LIVE_KEY_SECRET"
   | "RAZORPAY_LIVE_WEBHOOK_SECRET"
+  | "PAYU_TEST_KEY"
+  | "PAYU_TEST_SALT"
+  | "PAYU_LIVE_KEY"
+  | "PAYU_LIVE_SALT"
   | "RESEND_API_KEY"
   | "EMAIL_FROM"
   | "EMAIL_REPLY_TO"
@@ -50,7 +54,7 @@ export type KeyName =
 
 export type KeyDef = {
   name: KeyName
-  group: "razorpay_test" | "razorpay_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai" | "marketing"
+  group: "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai" | "marketing"
   label: string
   secret: boolean
   pattern: RegExp
@@ -64,6 +68,10 @@ export const KEY_DEFS: KeyDef[] = [
   { name: "RAZORPAY_LIVE_KEY_ID", group: "razorpay_live", label: "Live Key Id", secret: false, pattern: /^rzp_live_[A-Za-z0-9]+$/, hint: "Starts with rzp_live_" },
   { name: "RAZORPAY_LIVE_KEY_SECRET", group: "razorpay_live", label: "Live Key Secret", secret: true, pattern: /^[\w-]{10,}$/, hint: "Shown once by Razorpay when the key is made" },
   { name: "RAZORPAY_LIVE_WEBHOOK_SECRET", group: "razorpay_live", label: "Live webhook secret", secret: true, pattern: /^.{8,200}$/, hint: "The secret you typed in Razorpay's Live Mode webhook" },
+  { name: "PAYU_TEST_KEY", group: "payu_test", label: "Test Merchant Key", secret: false, pattern: /^[A-Za-z0-9]{4,20}$/, hint: "PayU Dashboard (Test mode) → Developers → API Keys: the Key" },
+  { name: "PAYU_TEST_SALT", group: "payu_test", label: "Test Salt", secret: true, pattern: /^[A-Za-z0-9+/=_-]{8,300}$/, hint: "Shown next to the Test Key (Salt v1 or v2)" },
+  { name: "PAYU_LIVE_KEY", group: "payu_live", label: "Live Merchant Key", secret: false, pattern: /^[A-Za-z0-9]{4,20}$/, hint: "PayU Dashboard (Live mode) → Developers → API Keys: the Key" },
+  { name: "PAYU_LIVE_SALT", group: "payu_live", label: "Live Salt", secret: true, pattern: /^[A-Za-z0-9+/=_-]{8,300}$/, hint: "Shown next to the Live Key (Salt v1 or v2)" },
   { name: "RESEND_API_KEY", group: "resend", label: "Resend API key", secret: true, pattern: /^re_[A-Za-z0-9_]{8,}$/, hint: "Starts with re_" },
   { name: "EMAIL_FROM", group: "resend", label: "Send emails from", secret: false, pattern: /^[^<>]{0,60}<?[^\s<>@]+@[^\s<>@]+\.[a-z]{2,}>?$/i, hint: "e.g. The 64 Squares <orders@the64squares.in>, on the domain added in Resend" },
   { name: "EMAIL_REPLY_TO", group: "resend", label: "Customer replies go to", secret: false, pattern: /^[^\s<>@]+@[^\s<>@]+\.[a-z]{2,}$/i, hint: "A real inbox, e.g. info@the64squares.in. When a customer presses Reply on any email, it goes here." },
@@ -96,6 +104,7 @@ export type Stored = {
   // deleted entry would come back.
   values?: Partial<Record<KeyName, { enc: string; last4: string; updated_at: string } | null>>
   razorpay_mode?: "test" | "live"
+  payu_mode?: "test" | "live"
   log?: { at: string; by: string; what: string }[]
 }
 
@@ -179,6 +188,7 @@ const resolveName = (stored: Stored, name: KeyName): string | undefined => {
 }
 
 export type RazorpayCreds = { mode: "test" | "live"; keyId: string; keySecret: string }
+export type PayuCreds = { mode: "test" | "live"; key: string; salt: string }
 
 export type MailServer = { host: string; port: number; secure: boolean }
 export type MailboxCreds = { email: string; password: string; imap: MailServer; smtp: MailServer }
@@ -196,6 +206,9 @@ export type ServiceKeys = {
   razorpay: RazorpayCreds | null
   razorpayFor: (mode: "test" | "live") => RazorpayCreds | null
   razorpayWebhookSecrets: string[]
+  payuMode: "test" | "live"
+  payu: PayuCreds | null
+  payuFor: (mode: "test" | "live") => PayuCreds | null
   resendKey?: string
   emailFrom?: string
   emailReplyTo?: string
@@ -224,6 +237,13 @@ export const keysFromStored = (stored: Stored): ServiceKeys => {
   }
   const envMode = (process.env.RAZORPAY_KEY_ID || "").startsWith("rzp_live_") ? "live" : "test"
   const razorpayMode = stored.razorpay_mode ?? envMode
+  const payuFor = (mode: "test" | "live"): PayuCreds | null => {
+    const M = mode === "live" ? "LIVE" : "TEST"
+    const key = get(`PAYU_${M}_KEY` as KeyName)
+    const salt = get(`PAYU_${M}_SALT` as KeyName)
+    return key && salt ? { mode, key, salt } : null
+  }
+  const payuMode = stored.payu_mode ?? "test"
   const clientId = get("GOOGLE_CLIENT_ID")
   const clientSecret = get("GOOGLE_CLIENT_SECRET")
   return {
@@ -233,6 +253,9 @@ export const keysFromStored = (stored: Stored): ServiceKeys => {
     razorpayWebhookSecrets: [get("RAZORPAY_TEST_WEBHOOK_SECRET"), get("RAZORPAY_LIVE_WEBHOOK_SECRET")].filter(
       (s): s is string => !!s
     ),
+    payuMode,
+    payu: payuFor(payuMode),
+    payuFor,
     resendKey: get("RESEND_API_KEY"),
     emailFrom: get("EMAIL_FROM"),
     emailReplyTo: get("EMAIL_REPLY_TO"),
@@ -267,6 +290,7 @@ export const describeServiceKeys = async (container: MedusaContainer) => {
     razorpay_mode: (stored.razorpay_mode ?? ((process.env.RAZORPAY_KEY_ID || "").startsWith("rzp_live_") ? "live" : "test")) as
       | "test"
       | "live",
+    payu_mode: stored.payu_mode ?? "test",
     keys: KEY_DEFS.map((d) => {
       const saved = stored.values?.[d.name]
       const plain = saved ? decrypt(saved.enc) : null
@@ -294,7 +318,8 @@ export const applyChanges = (
   stored: Stored,
   changes: Partial<Record<KeyName, string | null>>,
   mode: "test" | "live" | undefined,
-  by: string
+  by: string,
+  payuMode?: "test" | "live"
 ): { next: Stored; changed: string[] } => {
   const values = { ...(stored.values ?? {}) }
   const changed: string[] = []
@@ -318,7 +343,10 @@ export const applyChanges = (
   } else if (mode) {
     razorpay_mode = mode
   }
+  let payu_mode = stored.payu_mode
+  if (payuMode && payuMode !== (stored.payu_mode ?? "test")) changed.push(`PayU switched to ${payuMode === "live" ? "Live" : "Test"} mode`)
+  if (payuMode) payu_mode = payuMode
   const at = new Date().toISOString()
   const log = [...changed.map((what) => ({ at, by, what })), ...(stored.log ?? [])].slice(0, 50)
-  return { next: { values, razorpay_mode, log }, changed }
+  return { next: { values, razorpay_mode, payu_mode, log }, changed }
 }

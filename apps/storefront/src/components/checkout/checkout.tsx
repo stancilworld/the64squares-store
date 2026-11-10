@@ -2,7 +2,7 @@
 
 import type { HttpTypes } from "@medusajs/types"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { notifyCartChanged } from "@/lib/cart-events"
 import {
@@ -186,7 +186,9 @@ export function Checkout({ config, customer }: { config: CheckoutConfig; custome
   const [pin, setPin] = useState<PincodeInfo | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [picked, setMethod] = useState<"online" | "cod" | null>(null)
+  const [picked, setMethod] = useState<"online" | "payu" | "cod" | null>(null)
+  // Back from PayU without an order: say what happened.
+  const back = useSearchParams().get("payment")
   const top = useRef<HTMLDivElement>(null)
 
   const lookUp = useCallback(async (pincode: string) => {
@@ -239,18 +241,12 @@ export function Checkout({ config, customer }: { config: CheckoutConfig; custome
     return null
   }, [config.cod, config.cod_max, total, pin, form.pincode])
   const onlineBlocked = config.online ? null : "Not available right now."
+  const payuBlocked = config.payu ? null : "Not available right now."
 
-  // Online payment is preselected when available; a blocked choice falls back to the other.
-  const method =
-    picked === "online" && !onlineBlocked
-      ? "online"
-      : picked === "cod" && !codBlocked
-        ? "cod"
-        : !onlineBlocked
-          ? "online"
-          : !codBlocked
-            ? "cod"
-            : null
+  // Online payment is preselected when available; a blocked choice falls back to another.
+  const allowed = { online: !onlineBlocked, payu: !payuBlocked, cod: !codBlocked }
+  const method: "online" | "payu" | "cod" | null =
+    picked && allowed[picked] ? picked : allowed.online ? "online" : allowed.payu ? "payu" : allowed.cod ? "cod" : null
 
   const scrollTop = () => top.current?.scrollIntoView({ behavior: "smooth", block: "start" })
 
@@ -300,6 +296,22 @@ export function Checkout({ config, customer }: { config: CheckoutConfig; custome
     }
     if (started.method === "cod") {
       await finish()
+      return
+    }
+    if (started.method === "payu") {
+      // To PayU's secure page; it sends the shopper back to /checkout/payu/return.
+      const f = document.createElement("form")
+      f.method = "POST"
+      f.action = started.action
+      for (const [name, value] of Object.entries(started.form)) {
+        const input = document.createElement("input")
+        input.type = "hidden"
+        input.name = name
+        input.value = value
+        f.appendChild(input)
+      }
+      document.body.appendChild(f)
+      f.submit()
       return
     }
     if (!(await loadRazorpay()) || !window.Razorpay) {
@@ -363,6 +375,13 @@ export function Checkout({ config, customer }: { config: CheckoutConfig; custome
   return (
     <div ref={top} className="scroll-mt-[90px] lg:scroll-mt-[150px]">
       <CheckoutSteps current={phase === "address" ? "Addresses" : "Payment"} />
+      {back && (
+        <p role="status" className={`mt-6 rounded-md px-4 py-3 text-[15px] ${back === "checking" ? "bg-black/5" : "bg-red-50 text-red-800"}`}>
+          {back === "checking"
+            ? "PayU is still confirming your payment. If it went through, your order is placed automatically within a few minutes and you'll get an email. Please don't pay again."
+            : "The payment wasn't completed, so no order was placed. If money was taken, PayU returns it automatically. You can try again below."}
+        </p>
+      )}
       <div className={`mt-10 lg:mt-14 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-[96px] ${busy ? "opacity-80" : ""}`}>
         <div>
           {phase === "address" ? (
@@ -452,13 +471,24 @@ export function Checkout({ config, customer }: { config: CheckoutConfig; custome
               </div>
               <fieldset className="mt-7 space-y-4">
                 <legend className="sr-only">Choose how to pay</legend>
-                <PayOption
-                  checked={method === "online"}
-                  onSelect={() => setMethod("online")}
-                  title="Pay online"
-                  text="UPI, cards, net banking and wallets, through Razorpay."
-                  disabled={onlineBlocked}
-                />
+                {(config.online || !config.payu) && (
+                  <PayOption
+                    checked={method === "online"}
+                    onSelect={() => setMethod("online")}
+                    title={config.payu ? "Pay with Razorpay" : "Pay online"}
+                    text="UPI, cards, net banking and wallets, through Razorpay."
+                    disabled={onlineBlocked}
+                  />
+                )}
+                {config.payu && (
+                  <PayOption
+                    checked={method === "payu"}
+                    onSelect={() => setMethod("payu")}
+                    title={config.online ? "Pay with PayU" : "Pay online"}
+                    text="UPI, cards, net banking and wallets, on PayU's secure page."
+                    disabled={payuBlocked}
+                  />
+                )}
                 <PayOption
                   checked={method === "cod"}
                   onSelect={() => setMethod("cod")}
@@ -469,7 +499,7 @@ export function Checkout({ config, customer }: { config: CheckoutConfig; custome
               </fieldset>
               {error && <p className="mt-5 text-[15px] text-red-700" role="alert">{error}</p>}
               <PrimaryButton type="button" disabled={busy || !method} onClick={pay} className="mt-8 lg:max-w-[400px]">
-                {busy ? "Placing your order…" : method === "online" ? `Pay ${formatPrice(total)}` : "Place Order"}
+                {busy ? (method === "payu" ? "Opening PayU…" : "Placing your order…") : method === "online" || method === "payu" ? `Pay ${formatPrice(total)}` : "Place Order"}
               </PrimaryButton>
               <p className="mt-3 text-[13px] text-black/60 lg:text-[14px]">
                 By placing the order you agree to our{" "}

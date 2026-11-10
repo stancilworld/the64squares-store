@@ -23,6 +23,7 @@ const webhookUrl = (req: AuthenticatedMedusaRequest) =>
 const view = async (req: AuthenticatedMedusaRequest) => ({
   ...(await describeServiceKeys(req.scope)),
   webhook_url: webhookUrl(req),
+  payu_webhook_url: webhookUrl(req).replace("razorpay_razorpay", "payu_payu"),
   google_redirect_url: `${storeUrl()}/account/google`,
 })
 
@@ -36,6 +37,7 @@ type Body = {
   password?: string
   values?: Partial<Record<KeyName, string | null>>
   razorpay_mode?: "test" | "live"
+  payu_mode?: "test" | "live"
 }
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!)
@@ -72,9 +74,13 @@ export const POST = async (req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
 
   clearServiceKeyCache()
   const stored = await loadStored(req.scope)
-  const { next, changed } = applyChanges(stored, changes, mode, by)
+  const payuMode = body.payu_mode === "live" || body.payu_mode === "test" ? body.payu_mode : undefined
+  const { next, changed } = applyChanges(stored, changes, mode, by, payuMode)
   if (mode === "live" && !keysFromStored(next).razorpayFor("live")) {
     throw new MedusaError(MedusaError.Types.INVALID_DATA, "Add the Live Key Id and Live Key Secret before switching to Live mode.")
+  }
+  if (payuMode === "live" && !keysFromStored(next).payuFor("live")) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, "Add the PayU Live Merchant Key and Live Salt before switching PayU to Live mode.")
   }
   if (changed.length) {
     await saveSettingWorkflow(req.scope).run({

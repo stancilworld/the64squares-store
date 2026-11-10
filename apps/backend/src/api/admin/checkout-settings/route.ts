@@ -4,6 +4,7 @@ import {
   loadCheckoutSettings,
   resolveCheckoutSettings,
 } from "../../../lib/checkout-settings"
+import { loadPayuStatus } from "../../../lib/payu-status"
 import { getServiceKeys } from "../../../lib/service-keys"
 import { saveSettingWorkflow } from "../../../workflows/setting"
 import type { CheckoutSettingsBodyType } from "../validators"
@@ -12,7 +13,14 @@ import type { CheckoutSettingsBodyType } from "../validators"
 // under Keys on the same page).
 const keys = async (req: AuthenticatedMedusaRequest) => {
   const k = await getServiceKeys(req.scope)
+  const backend = (process.env.MEDUSA_BACKEND_URL || `${req.protocol}://${req.get("host")}`).replace(/\/$/, "")
+  const payu = await loadPayuStatus()
   return {
+    payu: !!k.payu,
+    payu_test_mode: k.payuMode === "test",
+    payu_webhook_at: payu.last_webhook_at ?? null,
+    payu_webhook_url: `${backend}/hooks/payment/payu_payu`,
+    payu_checked_at: payu.last_check_at ?? null,
     razorpay: !!k.razorpay,
     razorpay_webhook: k.razorpayWebhookSecrets.length > 0,
     razorpay_test_mode: k.razorpayMode === "test",

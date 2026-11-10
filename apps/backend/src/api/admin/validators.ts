@@ -126,6 +126,7 @@ export const CheckoutSettingsBody = z.object({
   cod_enabled: z.boolean().optional(),
   cod_max: z.number().min(1).max(10_000_000).nullable().optional(),
   online_enabled: z.boolean().optional(),
+  payu_enabled: z.boolean().optional(),
   delivery_text: z.string().max(200).optional(),
   order_alert_email: z.union([z.string().email(), z.literal("")]).optional(),
   dispatch_days: z.number().int().min(0).max(60).optional(),

@@ -9,7 +9,7 @@ import { sdk } from "./sdk"
 
 type KeyRow = {
   name: string
-  group: "razorpay_test" | "razorpay_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai"
+  group: "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai"
   label: string
   secret: boolean
   hint: string
@@ -20,12 +20,14 @@ type KeyRow = {
 }
 type View = {
   razorpay_mode: "test" | "live"
+  payu_mode: "test" | "live"
   keys: KeyRow[]
   log: { at: string; by: string; what: string }[]
   webhook_url: string
+  payu_webhook_url: string
   google_redirect_url: string
 }
-type TestService = "razorpay_test" | "razorpay_live" | "resend" | "delhivery" | "mailbox" | "ai"
+type TestService = "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "delhivery" | "mailbox" | "ai"
 
 const QUERY = ["service-keys"]
 
@@ -117,6 +119,42 @@ function TestButton({ service, label }: { service: TestService; label: string })
   )
 }
 
+// Test / Live switch for a payment gateway.
+function ModeSwitch({ current, saved, liveReady, onPick }: { current: "test" | "live"; saved: "test" | "live"; liveReady: boolean; onPick: (m: "test" | "live") => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <Text size="small" weight="plus">
+        Mode
+      </Text>
+      <div className="flex rounded-full bg-ui-bg-subtle p-0.5 shadow-borders-base">
+        {(["test", "live"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => onPick(m)}
+            disabled={m === "live" && !liveReady}
+            className={`txt-compact-small-plus rounded-full px-4 py-1 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+              current === m ? (m === "live" ? "bg-ui-tag-green-bg text-ui-tag-green-text shadow-borders-base" : "bg-ui-bg-base shadow-borders-base") : "text-ui-fg-subtle"
+            }`}
+          >
+            {m === "test" ? "Test" : "Live"}
+          </button>
+        ))}
+      </div>
+      {current !== saved && (
+        <Text size="small" className="text-ui-tag-orange-text">
+          Switches to {current === "live" ? "Live (real money)" : "Test"} when you save.
+        </Text>
+      )}
+      {!liveReady && (
+        <Text size="xsmall" className="text-ui-fg-subtle">
+          Add the Live keys to switch to Live.
+        </Text>
+      )}
+    </div>
+  )
+}
+
 function Block({ title, intro, children }: { title: string; intro?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-y-4 px-6 py-5">
@@ -157,6 +195,7 @@ export function KeysEditor() {
   const [values, setValues] = useState<Record<string, string>>({})
   const [removals, setRemovals] = useState<Record<string, boolean>>({})
   const [mode, setMode] = useState<"test" | "live" | null>(null)
+  const [payuMode, setPayuMode] = useState<"test" | "live" | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [password, setPassword] = useState("")
   const [formError, setFormError] = useState<string | null>(null)
@@ -170,6 +209,7 @@ export function KeysEditor() {
       setValues({})
       setRemovals({})
       setMode(null)
+      setPayuMode(null)
       setPassword("")
       setConfirming(false)
       setFormError(null)
@@ -204,7 +244,9 @@ export function KeysEditor() {
   const pending: Record<string, string | null> = {}
   for (const [k, v] of Object.entries(values)) if (v.trim()) pending[k] = v
   for (const [k, on] of Object.entries(removals)) if (on) pending[k] = null
-  const dirty = Object.keys(pending).length > 0 || (mode !== null && mode !== data.razorpay_mode)
+  const payuCurrent = payuMode ?? data.payu_mode
+  const payuLiveReady = rows("payu_live").every((r) => r.source || values[r.name]?.trim())
+  const dirty = Object.keys(pending).length > 0 || (mode !== null && mode !== data.razorpay_mode) || (payuMode !== null && payuMode !== data.payu_mode)
   const liveReady = rows("razorpay_live").filter((r) => !r.name.includes("WEBHOOK")).every((r) => r.source || values[r.name]?.trim())
 
   const submit = () =>
@@ -212,6 +254,7 @@ export function KeysEditor() {
       password,
       values: pending,
       ...(mode && mode !== data.razorpay_mode ? { razorpay_mode: mode } : {}),
+      ...(payuMode && payuMode !== data.payu_mode ? { payu_mode: payuMode } : {}),
     })
 
   return (
@@ -278,6 +321,35 @@ export function KeysEditor() {
             <TestButton service="razorpay_live" label="Test the Live keys" />
           </div>
         </div>
+      </Block>
+
+      <Block
+        title="PayU"
+        intro="Paste the Merchant Key and Salt from PayU (Dashboard → Developers → API Keys), save, then press Test. Shoppers pay on PayU's secure page and come back to the store; each payment is confirmed directly with PayU before the order is made."
+      >
+        <ModeSwitch current={payuCurrent} saved={data.payu_mode} liveReady={payuLiveReady} onPick={setPayuMode} />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <div className="flex flex-col gap-y-4 rounded-lg p-4 shadow-borders-base">
+            <Text size="small" weight="plus">
+              Test keys
+            </Text>
+            {rows("payu_test").map(field)}
+            <TestButton service="payu_test" label="Test the Test keys" />
+          </div>
+          <div className="flex flex-col gap-y-4 rounded-lg p-4 shadow-borders-base">
+            <Text size="small" weight="plus">
+              Live keys
+            </Text>
+            {rows("payu_live").map(field)}
+            <TestButton service="payu_live" label="Test the Live keys" />
+          </div>
+        </div>
+        <CopyLine label="Webhook URL (optional, for both Test and Live)" value={data.payu_webhook_url} />
+        <Text size="xsmall" className="text-ui-fg-subtle">
+          Optional: in PayU Dashboard → Developers → Webhooks, add this address for &ldquo;Successful payment&rdquo; and &ldquo;Failed payment&rdquo;. Without it, the store still checks
+          waiting PayU payments with PayU every 5 minutes, so an order is never lost if a shopper closes the page after paying. The return address after payment is sent with
+          each payment; nothing to set in PayU for it.
+        </Text>
       </Block>
 
       <Block title="Emails (Resend)" intro="Order confirmations, shipping updates, sign-in codes and these alerts.">

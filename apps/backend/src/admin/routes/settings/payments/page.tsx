@@ -10,6 +10,7 @@ type Settings = {
   cod_enabled: boolean
   cod_max: number | null
   online_enabled: boolean
+  payu_enabled: boolean
   delivery_text: string
   order_alert_email: string
   dispatch_days: number
@@ -20,6 +21,11 @@ type Settings = {
   in_carts_min: number
 }
 type Keys = {
+  payu: boolean
+  payu_test_mode: boolean
+  payu_webhook_at: string | null
+  payu_webhook_url: string
+  payu_checked_at: string | null
   razorpay: boolean
   razorpay_webhook: boolean
   razorpay_test_mode: boolean
@@ -91,7 +97,8 @@ const PaymentsPage = () => {
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) => setForm({ ...form, [key]: value })
   const codMaxNumber = codMax.trim() ? Number(codMax) : null
   const codMaxBad = codMax.trim() !== "" && (!Number.isFinite(codMaxNumber) || (codMaxNumber ?? 0) < 1)
-  const noMethod = !form.cod_enabled && !(form.online_enabled && k.razorpay)
+  const noMethod = !form.cod_enabled && !(form.online_enabled && k.razorpay) && !(form.payu_enabled && k.payu)
+  const ago = (iso: string | null) => (iso ? new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : null)
 
   return (
     <div className="flex flex-col gap-y-3">
@@ -122,6 +129,26 @@ const PaymentsPage = () => {
             />
           </div>
         </Row>
+        <Row
+          title="Online payment (PayU)"
+          hint={
+            k.payu
+              ? `${k.payu_test_mode ? "Test mode: payments are pretend. Switch to live keys before launch. " : "UPI, cards, net banking and wallets on PayU's secure page. "}${
+                  k.payu_webhook_at ? `Webhook working (last ${ago(k.payu_webhook_at)}).` : "Payments are confirmed with PayU directly; the optional webhook isn't set up yet."
+                }`
+              : "Add the PayU Merchant Key and Salt under Keys below to switch this on."
+          }
+        >
+          <div className="flex items-center gap-x-3">
+            <Status on={k.payu} onText={k.payu_test_mode ? "Test mode" : "Live"} />
+            <Switch checked={form.payu_enabled} onCheckedChange={(v) => set("payu_enabled", v)} disabled={!k.payu} aria-label="PayU" />
+          </div>
+        </Row>
+        {form.online_enabled && k.razorpay && form.payu_enabled && k.payu && (
+          <Text size="small" className="px-6 py-3 text-ui-fg-subtle">
+            Both gateways are on: checkout offers &ldquo;Pay with Razorpay&rdquo; and &ldquo;Pay with PayU&rdquo;. Switch one off to offer a single &ldquo;Pay online&rdquo;.
+          </Text>
+        )}
         <Row title="Cash on Delivery" hint="Shoppers pay the delivery person. Mark the order as paid in Orders once the cash arrives.">
           <Switch checked={form.cod_enabled} onCheckedChange={(v) => set("cod_enabled", v)} aria-label="Cash on Delivery" />
         </Row>
@@ -263,6 +290,9 @@ const PaymentsPage = () => {
           hint="Lets an order go through even if the shopper closes the page right after paying."
         >
           <Status on={k.razorpay_webhook} />
+        </Row>
+        <Row title="PayU" hint="Online payments.">
+          <Status on={k.payu} />
         </Row>
         <Row title="Emails (Resend)" hint={`Order confirmations, shipping updates and sign-in codes. Sent from ${k.email_from}. ${k.email_reply_to ? `Customer replies go to ${k.email_reply_to}.` : "Customer replies go nowhere yet: set \"Customer replies go to\" in Keys."}`}>
           <Status on={k.resend} />

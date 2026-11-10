@@ -4,9 +4,10 @@ import { sendEmail } from "../../../../lib/emails"
 import { testMailbox } from "../../../../lib/mailbox"
 import { requireOwner } from "../../../../lib/owner-check"
 import { OWNER_EMAIL } from "../../../../lib/permissions"
+import { verifyPayments } from "../../../../modules/payu/payu"
 import { clearServiceKeyCache, getServiceKeys } from "../../../../lib/service-keys"
 
-type Service = "razorpay_test" | "razorpay_live" | "resend" | "delhivery" | "mailbox" | "ai"
+type Service = "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "delhivery" | "mailbox" | "ai"
 
 const timeout = (ms: number) => {
   const c = new AbortController()
@@ -39,6 +40,26 @@ export const POST = async (req: AuthenticatedMedusaRequest<{ service: Service }>
           ? { ok: true, message: `Razorpay accepted the ${mode === "live" ? "Live" : "Test"} keys.` }
           : { ok: false, message: r.status === 401 ? "Razorpay rejected these keys. Check the Key Id and Key Secret." : `Razorpay answered with an error (${r.status}).` }
       )
+    }
+    if (service === "payu_test" || service === "payu_live") {
+      const mode = service === "payu_live" ? "live" : "test"
+      const creds = keys.payuFor(mode)
+      if (!creds) {
+        return res.json({ ok: false, message: `Add the ${mode === "live" ? "Live" : "Test"} Merchant Key and Salt first, then Save.` })
+      }
+      // Asks PayU about a payment that doesn't exist: right keys get "not found", wrong ones an error.
+      try {
+        await verifyPayments(creds, [`t64check${Date.now().toString(36)}`])
+        return res.json({ ok: true, message: `PayU accepted the ${mode === "live" ? "Live" : "Test"} Merchant Key and Salt.` })
+      } catch (e) {
+        const msg = (e as Error).message
+        return res.json({
+          ok: false,
+          message: /hash|key|invalid/i.test(msg)
+            ? `PayU rejected these keys (${msg.replace(/^PayU:\s*/, "")}). Check the Merchant Key and Salt, and that they're the ${mode === "live" ? "Live" : "Test"} ones.`
+            : `PayU didn't answer properly: ${msg}`,
+        })
+      }
     }
     if (service === "resend") {
       if (!keys.resendKey) {

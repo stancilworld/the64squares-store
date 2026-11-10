@@ -17,6 +17,7 @@ const FIELDS =
 export type CheckoutConfig = {
   online: boolean
   razorpay_key_id: string | null
+  payu?: boolean
   cod: boolean
   cod_max: number | null
   delivery_text: string
@@ -224,10 +225,11 @@ export async function saveAddress(a: Address): Promise<Result<{ cart: HttpTypes.
 export type PaymentStart =
   | { ok: true; method: "cod" }
   | { ok: true; method: "online"; razorpay_order_id: string; amount: number; currency: string; key_id: string }
+  | { ok: true; method: "payu"; action: string; form: Record<string, string> }
   | { ok: false; error: string }
 
 // Makes the payment session for the chosen method. Online: returns what Razorpay's window needs.
-export async function startPayment(method: "cod" | "online"): Promise<PaymentStart> {
+export async function startPayment(method: "cod" | "online" | "payu"): Promise<PaymentStart> {
   const id = await checkoutId()
   if (!id) {
     return { ok: false, error: "Your checkout expired. Please go back to your cart." }
@@ -238,10 +240,24 @@ export async function startPayment(method: "cod" | "online"): Promise<PaymentSta
     if (!cart) {
       return { ok: false, error: "Your checkout expired. Please go back to your cart." }
     }
-    const provider_id = method === "cod" ? "pp_system_default" : "pp_razorpay_razorpay"
-    const { payment_collection } = await sdk.store.payment.initiatePaymentSession(cart, { provider_id }, {}, headers)
+    const provider_id = method === "cod" ? "pp_system_default" : method === "payu" ? "pp_payu_payu" : "pp_razorpay_razorpay"
+    // PayU's page shows the shopper's name, email and phone; the server signs the form.
+    const a = cart.shipping_address
+    const payuData =
+      method === "payu"
+        ? { firstname: a?.first_name ?? "", email: cart.email ?? "", phone: (a?.phone ?? "").replace(/\D/g, "").slice(-10), cart_id: cart.id }
+        : undefined
+    const { payment_collection } = await sdk.store.payment.initiatePaymentSession(cart, { provider_id, ...(payuData ? { data: payuData } : {}) }, {}, headers)
     if (method === "cod") {
       return { ok: true, method: "cod" }
+    }
+    if (method === "payu") {
+      const session = payment_collection.payment_sessions?.find((s) => s.provider_id === provider_id)
+      const d = (session?.data ?? {}) as { action?: string; form?: Record<string, string> }
+      if (!d.action || !d.form?.hash) {
+        return { ok: false, error: "PayU couldn't start. Please try again or choose another way to pay." }
+      }
+      return { ok: true, method: "payu", action: d.action, form: d.form }
     }
     const session = payment_collection.payment_sessions?.find((s) => s.provider_id === provider_id)
     const data = (session?.data ?? {}) as { razorpay_order_id?: string; amount?: number; currency?: string; key_id?: string }
@@ -263,8 +279,9 @@ export async function startPayment(method: "cod" | "online"): Promise<PaymentSta
 
 // Places the order. For online payment this runs after Razorpay's window says "paid"; the
 // server checks with Razorpay itself before accepting.
-export async function placeOrder(): Promise<Result<{ orderId: string }>> {
-  const id = await checkoutId()
+export async function placeOrder(cartId?: string): Promise<Result<{ orderId: string }>> {
+  // After PayU, the cart id comes back with the shopper.
+  const id = cartId ?? (await checkoutId())
   if (!id) {
     return { ok: false, error: "Your checkout expired. Please go back to your cart." }
   }
@@ -276,7 +293,7 @@ export async function placeOrder(): Promise<Result<{ orderId: string }>> {
     }
     const order = res.order
     const jar = await cookies()
-    jar.delete(CHECKOUT)
+    if (jar.get(CHECKOUT)?.value === id) jar.delete(CHECKOUT)
     // Take the bought items out of the backpack.
     const backpackId = jar.get(CART)?.value
     if (backpackId) {

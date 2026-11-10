@@ -1,6 +1,6 @@
 import type { MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { loadCheckoutSettings, razorpayReady } from "../../lib/checkout-settings"
+import { loadCheckoutSettings, payuReady, razorpayReady } from "../../lib/checkout-settings"
 
 // Before a payment session is made at checkout: applies the admin's Payments & delivery
 // settings (Cash on Delivery on/off and its order limit, online payment on/off).
@@ -24,6 +24,9 @@ export async function paymentMethodGuard(req: MedusaRequest, res: MedusaResponse
   }
   if (provider === "pp_razorpay_razorpay" && !(settings.online_enabled && (await razorpayReady(req.scope)))) {
     return res.status(400).json({ type: "not_allowed", message: "Online payment isn't available right now. Please choose Cash on Delivery." })
+  }
+  if (provider === "pp_payu_payu" && !(settings.payu_enabled && (await payuReady(req.scope)))) {
+    return res.status(400).json({ type: "not_allowed", message: "PayU isn't available right now. Please choose another way to pay." })
   }
   next()
 }
