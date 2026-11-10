@@ -42,6 +42,41 @@ const PREVIEW = [
   ["wK", "wB", "wP", "wR"],
 ]
 
+// A small corner of a board to show what a "Last move" or "Legal moves" choice looks like.
+const MINI = [
+  [null, "bB", "bR"],
+  ["bP", "bP", "bP"],
+  [null, "bN", null],
+  [null, null, null],
+]
+function MiniPreview({ kind, light, dark, set }: { kind: "none" | "highlight" | "arrow" | "dots"; light: string; dark: string; set: Parameters<typeof pieceSrc>[0] }) {
+  // The knight came from the top-left square to the middle.
+  const lit = (r: number, c: number) => kind === "highlight" && ((r === 0 && c === 0) || (r === 2 && c === 1))
+  return (
+    <span className="relative grid aspect-[3/4] w-full grid-cols-3 overflow-hidden rounded">
+      {MINI.flatMap((row, r) =>
+        row.map((p, c) => (
+          <span key={`${r}${c}`} className="relative" style={{ background: lit(r, c) ? "#e8c45c" : (r + c) % 2 ? dark : light }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {p && <img src={pieceSrc(set, p)} alt="" className="absolute inset-[6%] h-[88%] w-[88%] object-contain" />}
+            {kind === "dots" && r === 0 && c === 0 && <span className="absolute left-1/2 top-1/2 h-[26%] w-[26%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/30" />}
+          </span>
+        ))
+      )}
+      {kind === "arrow" && (
+        <svg viewBox="0 0 3 4" className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden="true">
+          <defs>
+            <marker id="mini-head" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M0 0 L10 5 L0 10 z" fill="rgba(20,20,20,0.85)" />
+            </marker>
+          </defs>
+          <line x1="0.5" y1="0.5" x2="1.38" y2="2.3" stroke="rgba(20,20,20,0.85)" strokeWidth="0.05" markerEnd="url(#mini-head)" />
+        </svg>
+      )}
+    </span>
+  )
+}
+
 export function BoardSettingsModal() {
   const isOpen = useSyncExternalStore(subscribe, () => open, () => false)
   const s = useBoardSettings()
@@ -132,10 +167,39 @@ export function BoardSettingsModal() {
             </button>
           ))}
         </div>
+        <p className="mt-5 text-[12px] font-semibold text-[var(--g-muted)]">Last move</p>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {(["none", "highlight", "arrow"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              aria-pressed={s.lastMove === k}
+              onClick={() => setBoardSettings({ lastMove: k })}
+              className="g-choice flex flex-col items-center gap-1.5 p-1.5 text-[12px] font-semibold"
+            >
+              <MiniPreview kind={k} light={theme.light} dark={theme.dark} set={s.pieces} />
+              {k === "none" ? "None" : k === "highlight" ? "Highlight" : "Arrow"}
+            </button>
+          ))}
+        </div>
+        <p className="mt-5 text-[12px] font-semibold text-[var(--g-muted)]">Legal moves</p>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {([false, true] as const).map((on) => (
+            <button
+              key={String(on)}
+              type="button"
+              aria-pressed={s.legalMoves === on}
+              onClick={() => setBoardSettings({ legalMoves: on })}
+              className="g-choice flex flex-col items-center gap-1.5 p-1.5 text-[12px] font-semibold"
+            >
+              <MiniPreview kind={on ? "dots" : "none"} light={theme.light} dark={theme.dark} set={s.pieces} />
+              {on ? "Dots" : "None"}
+            </button>
+          ))}
+        </div>
         <div className="mt-4 border-t border-[var(--g-line)] pt-2">
-          {toggle("Sounds", s.sound, () => setBoardSettings({ sound: !s.sound }))}
-          {toggle("Show legal moves", s.legalMoves, () => setBoardSettings({ legalMoves: !s.legalMoves }))}
-          {toggle("Premoves (move while your opponent thinks)", s.premove, () => setBoardSettings({ premove: !s.premove }))}
+          {toggle("Sounds (wooden pieces)", s.sound, () => setBoardSettings({ sound: !s.sound }))}
+          {toggle("Premoves (queue moves while your opponent thinks)", s.premove, () => setBoardSettings({ premove: !s.premove }))}
           {toggle("Chat during games", s.chat, () => setBoardSettings({ chat: !s.chat }))}
           <div className="flex items-center justify-between py-2 text-[15px]">
             Piece animation

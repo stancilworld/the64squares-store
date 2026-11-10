@@ -4,16 +4,21 @@ import { getBoardSettings } from "./settings"
 
 export type SoundName = "move" | "capture" | "check" | "castle" | "start" | "end" | "lowtime" | "illegal"
 
-const cache = new Map<SoundName, HTMLAudioElement>()
+const cache = new Map<string, HTMLAudioElement>()
+
+// Wooden pieces on a wooden board (made by scripts/wood-sounds.py). A move has three slightly
+// different knocks, picked at random, so repeated moves don't sound mechanical.
+const MOVE_VARIANTS = ["move", "move2", "move3"]
 
 export const playSound = (name: SoundName) => {
   if (typeof window === "undefined" || !getBoardSettings().sound) return
   try {
-    let a = cache.get(name)
+    const file = name === "move" ? MOVE_VARIANTS[Math.floor(Math.random() * MOVE_VARIANTS.length)] : name
+    let a = cache.get(file)
     if (!a) {
-      a = new Audio(`/sounds/${name}.mp3`)
+      a = new Audio(`/sounds/${file}.mp3`)
       a.preload = "auto"
-      cache.set(name, a)
+      cache.set(file, a)
     }
     const play = a.cloneNode(true) as HTMLAudioElement
     play.volume = name === "start" || name === "end" ? 0.5 : 0.8

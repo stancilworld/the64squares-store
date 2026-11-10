@@ -49,7 +49,17 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
 
   const acceptHouse = useCallback(() => {
     setStarting(true)
+    let answered = false
+    // No answer (connection dropped, server busy): don't stay on "Starting…"; go back to
+    // looking for a game, which brings a new offer.
+    const giveUp = setTimeout(() => {
+      if (answered) return
+      setStarting(false)
+      setOffer(null)
+    }, 8000)
     socket.current?.emit("seek:house-accept", null, (res: { ok: boolean; game_id?: string }) => {
+      answered = true
+      clearTimeout(giveUp)
       if (res.ok && res.game_id) router.push(`/play/${res.game_id}`)
       else {
         setStarting(false)

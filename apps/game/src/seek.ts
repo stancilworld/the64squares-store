@@ -140,12 +140,19 @@ export const registerSeek = (io: Server, socket: Socket, manager: GameManager, m
       return reply({ ok: false, error: "gone" })
     }
     seeks.delete(player.id)
-    const profile = await getProfile(houseId)
-    const house = { id: houseId, name: profile?.display_name ?? "Player" }
-    const [white, black] = crypto.randomInt(2) ? [player, house] : [house, player]
-    const g = await manager.createPaired(white, black, s.initial_ms, s.increment_ms, { mode: "online" })
-    reply({ ok: true, game_id: g.r.id })
-    io.to(`player:${player.id}`).emit("seek:paired", { game_id: g.r.id })
+    try {
+      const profile = await getProfile(houseId)
+      const house = { id: houseId, name: profile?.display_name ?? "Player" }
+      const [white, black] = crypto.randomInt(2) ? [player, house] : [house, player]
+      const g = await manager.createPaired(white, black, s.initial_ms, s.increment_ms, { mode: "online" })
+      reply({ ok: true, game_id: g.r.id })
+      io.to(`player:${player.id}`).emit("seek:paired", { game_id: g.r.id })
+    } catch (e) {
+      // Always answer, so the page never waits forever; the player goes back to the pool.
+      console.error("house game failed to start", e)
+      seeks.set(player.id, { ...s, offer: null, houseAt: Date.now() + 3000 })
+      reply({ ok: false, error: "failed" })
+    }
   })
 
   // "Keep waiting for a person": no offer for another minute.

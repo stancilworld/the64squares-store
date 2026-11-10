@@ -67,14 +67,15 @@ export function GameView({ id, initialPass }: Props) {
   const [muted, setMuted] = useState(false)
   const settings = useBoardSettings()
 
-  // A move queued while the opponent thinks; played as soon as it's our turn, if still legal.
-  const [premove, setPremoveState] = useState<Premove | null>(null)
-  const premoveRef = useRef<Premove | null>(null)
+  // Moves queued while the opponent thinks; one is played each turn, as soon as it's ours,
+  // if still legal (otherwise the whole queue is dropped).
+  const [premoves, setPremoveState] = useState<Premove[]>([])
+  const premoveRef = useRef<Premove[]>([])
   const meRef = useRef(meId)
   useEffect(() => {
     meRef.current = meId
   }, [meId])
-  const setPremove = useCallback((p: Premove | null) => {
+  const setPremoves = useCallback((p: Premove[]) => {
     premoveRef.current = p
     setPremoveState(p)
   }, [])
@@ -117,23 +118,24 @@ export function GameView({ id, initialPass }: Props) {
       setReceivedAt(t)
       setNow(t)
       setPending(null)
-      const pm = premoveRef.current
+      const [pm, ...rest] = premoveRef.current
       if (!pm) return
       const mine = g.white?.id === meRef.current ? "w" : g.black?.id === meRef.current ? "b" : null
-      if (g.status !== "active" || !mine) return setPremove(null)
+      if (g.status !== "active" || !mine) return setPremoves([])
       if (g.turn !== mine) return
-      setPremove(null)
       try {
         const c = new Chess(g.fen)
         const piece = c.get(pm.from)
         const promotion = piece?.type === "p" && (pm.to[1] === "8" || pm.to[1] === "1") ? "q" : undefined
         c.move({ from: pm.from, to: pm.to, promotion })
+        setPremoves(rest)
         sendMove(g, { ...pm, promotion })
       } catch {
-        // No longer legal: the premove is simply dropped.
+        // No longer legal: the queue is dropped.
+        setPremoves([])
       }
     },
-    [sendMove, setPremove]
+    [sendMove, setPremoves]
   )
 
   useEffect(() => {
@@ -318,7 +320,7 @@ export function GameView({ id, initialPass }: Props) {
 
   const onMove = (from: Square, to: Square, promotion?: "q" | "r" | "b" | "n") => {
     if (!game) return false
-    setPremove(null)
+    setPremoves([])
     sendMove(game, { from, to, promotion })
     return true
   }
@@ -647,8 +649,8 @@ export function GameView({ id, initialPass }: Props) {
           onMove={onMove}
           overlay={overlay}
           premoveFor={following && active && myColour && (!myTurn || pending) ? myColour : null}
-          premove={active ? premove : null}
-          onPremove={setPremove}
+          premoves={active ? premoves : undefined}
+          onPremoves={setPremoves}
         />
       }
       panel={

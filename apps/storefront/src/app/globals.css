@@ -4,10 +4,10 @@
    highlighted square), neutral greys, and square corners everywhere: the shop and the game
    area share the same type, shapes and accent. */
 @theme {
-  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
   /* Ratings, clocks and move lists: the same face with figures of equal width. */
-  --font-mono: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
 
   --color-ink: #111111;
   --color-ink-soft: #1c1c1c;

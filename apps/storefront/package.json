@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@fontsource-variable/archivo": "^5.3.0",
     "@medusajs/js-sdk": "^2.21.2",
     "@medusajs/types": "^2.21.2",
     "chess.js": "^1.4.0",

@@ -90,10 +90,10 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
   const inflight = useRef<string | null>(null)
   const [intro, setIntro] = useState(false)
   const [burst, setBurst] = useState(false)
-  // A move queued while the computer thinks.
-  const [premove, setPremoveState] = useState<Premove | null>(null)
-  const premoveRef = useRef<Premove | null>(null)
-  const setPremove = useCallback((p: Premove | null) => {
+  // Moves queued while the computer thinks (one played per turn).
+  const [premoves, setPremoveState] = useState<Premove[]>([])
+  const premoveRef = useRef<Premove[]>([])
+  const setPremoves = useCallback((p: Premove[]) => {
     premoveRef.current = p
     setPremoveState(p)
   }, [])
@@ -133,13 +133,14 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
       if (wait > 0) await new Promise((r) => setTimeout(r, wait))
       if (inflight.current !== key || !uci) return
       inflight.current = null
-      const queued = premoveRef.current
+      let left = premoveRef.current
       {
         const g = game
         let moves = [...g.moves, uci!]
         let { chess: after } = build(moves)
         // Play the queued premove straight away if it's still legal.
-        const pm = premoveRef.current
+        const [pm, ...rest] = premoveRef.current
+        if (outcome(after, g.colour)) left = []
         if (pm && !outcome(after, g.colour)) {
           try {
             const piece = after.get(pm.from)
@@ -147,7 +148,10 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
             after.move({ from: pm.from, to: pm.to, promotion: promo || undefined })
             moves = [...moves, `${pm.from}${pm.to}${promo}`]
             after = build(moves).chess
-          } catch {}
+            left = rest
+          } catch {
+            left = []
+          }
         }
         const next = { ...g, moves, result: outcome(after, g.colour) }
         keep(next)
@@ -155,9 +159,9 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
         setGame(next)
         if (next.result) setBurst(true)
       }
-      if (queued) setPremove(null)
+      if (left !== premoveRef.current) setPremoves(left)
     })()
-  }, [game, thinking, chess, level, setPremove])
+  }, [game, thinking, chess, level, setPremoves])
 
   // Finished games go into the player's history (when signed in).
   useEffect(() => {
@@ -203,7 +207,7 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
     setViewPly(null)
     setFlipped(false)
     setSaveNote(null)
-    setPremove(null)
+    setPremoves([])
     update({ level: lvl, colour: c, moves: [], result: null, savedId: null })
     setBurst(false)
     setIntro(true)
@@ -225,7 +229,7 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
     if (!game || game.savedId) return
     engine.current?.stop()
     inflight.current = null
-    setPremove(null)
+    setPremoves([])
     const moves = [...game.moves]
     // Back to the player's own turn, undoing their last move.
     do moves.pop()
@@ -398,8 +402,8 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
             ) : null
           }
           premoveFor={following && thinking ? game!.colour : null}
-          premove={thinking ? premove : null}
-          onPremove={setPremove}
+          premoves={thinking ? premoves : undefined}
+          onPremoves={setPremoves}
         />
       }
       panel={panel}

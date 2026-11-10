@@ -259,10 +259,16 @@ export function ProductGallery({
     return () => window.removeEventListener(VARIANT_SELECTED, onVariant)
   }, [images, variantImages])
 
-  // Keep the chosen small photo visible in the strip.
+  // Keep the chosen small photo visible in the strip. Only the strip scrolls sideways: the
+  // page itself never moves (scrollIntoView would also scroll the page up or down).
   useEffect(() => {
-    const thumb = strip.current?.children[selected] as HTMLElement | undefined
-    thumb?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: reduceMotion() ? "auto" : "smooth" })
+    const row = strip.current
+    const thumb = row?.children[selected] as HTMLElement | undefined
+    if (!row || !thumb) return
+    const left = thumb.offsetLeft - row.offsetLeft
+    if (left < row.scrollLeft || left + thumb.offsetWidth > row.scrollLeft + row.clientWidth) {
+      row.scrollTo({ left: Math.max(0, left - (row.clientWidth - thumb.offsetWidth) / 2), behavior: reduceMotion() ? "auto" : "smooth" })
+    }
   }, [selected])
 
   if (!count) {
@@ -273,7 +279,7 @@ export function ProductGallery({
   const shown = preview ?? selected
 
   return (
-    <div className="grid min-w-0 gap-4">
+    <div className="grid min-w-0 gap-2.5">
       <div
         className="group relative aspect-square overflow-hidden rounded-md bg-placeholder"
         role="region"
@@ -336,7 +342,7 @@ export function ProductGallery({
       {count > 1 && (
         <div
           ref={strip}
-          className="flex gap-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex gap-2.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           onMouseLeave={() => setPreview(null)}
         >
           {images.map((img, i) => (
@@ -352,7 +358,7 @@ export function ProductGallery({
                 setSelected(i)
                 setPreview(null)
               }}
-              className="relative aspect-square shrink-0 basis-[calc((100%-48px)/4)] overflow-hidden rounded-md bg-placeholder transition-opacity hover:opacity-90"
+              className="relative aspect-square shrink-0 basis-[calc((100%-30px)/4)] overflow-hidden rounded-md bg-placeholder transition-opacity hover:opacity-90"
             >
               <Image src={img.url} alt="" fill sizes="160px" className="object-cover" />
               {i === selected && (

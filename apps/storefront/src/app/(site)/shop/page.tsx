@@ -74,15 +74,14 @@ async function Shop({ searchParams }: { searchParams: Promise<Search> }) {
   return (
     <>
       {q && <TrackSearch q={String(sp.q).trim().slice(0, 100)} />}
-      <div className="board-wash bg-ink text-white">
-        <div className="mx-auto max-w-[1440px] px-6 py-10 lg:px-10 lg:py-14">
-          <h1 className="font-display h-page">{title}</h1>
-          <p className="mt-2 text-[15px] text-white/60">
-            {filtered.length} {filtered.length === 1 ? "product" : "products"}
-          </p>
-        </div>
+      {/* A slim title line, so the products start near the top of the screen. */}
+      <div className="mx-auto flex max-w-[1440px] items-baseline gap-3 border-b border-rule px-6 pb-3 pt-5 lg:px-10 lg:pt-6">
+        <h1 className="text-[22px] font-bold leading-tight tracking-[-0.02em] lg:text-[26px]">{title}</h1>
+        <p className="text-[14px] text-muted">
+          {filtered.length} {filtered.length === 1 ? "product" : "products"}
+        </p>
       </div>
-      <div className="mx-auto max-w-[1440px] px-6 pb-20 pt-8 lg:grid lg:grid-cols-[220px_1fr] lg:gap-10 lg:px-10 lg:pb-28 lg:pt-10">
+      <div className="mx-auto max-w-[1440px] px-6 pb-20 pt-5 lg:grid lg:grid-cols-[220px_1fr] lg:gap-10 lg:px-10 lg:pb-28 lg:pt-6">
         <div className="mb-8 lg:mb-0">
           <ShopFilters groups={groups} />
         </div>

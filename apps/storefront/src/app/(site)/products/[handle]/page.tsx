@@ -108,7 +108,7 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
           </>
         )}
       </nav>
-      <div className="mt-5 grid gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-16">
+      <div className="mt-4 grid gap-7 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-10">
         <ProductGallery
           title={product.title}
           images={images.map((i) => ({ id: i.id, url: i.url }))}
@@ -126,7 +126,7 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
               {badge.text}
             </span>
           )}
-          <h1 className="font-display h-page">{product.title}</h1>
+          <h1 className="text-[24px] font-bold leading-tight tracking-[-0.02em] lg:text-[30px]">{product.title}</h1>
           {summary.count > 0 && (
             <a href="#reviews" className="mt-2 inline-flex items-center gap-2 text-[14px] text-muted hover:underline">
               <Stars value={summary.average} size={16} />

@@ -39,9 +39,11 @@ export type BoardSettings = {
   animation: "off" | "fast" | "normal"
   premove: boolean
   chat: boolean
+  // How the last move is shown: coloured squares, a thin arrow, or not at all.
+  lastMove: "highlight" | "arrow" | "none"
 }
 
-const DEFAULTS: BoardSettings = { theme: "walnut", pieces: "wood3d", sound: true, legalMoves: true, animation: "normal", premove: true, chat: true }
+const DEFAULTS: BoardSettings = { theme: "walnut", pieces: "wood3d", sound: true, legalMoves: true, animation: "normal", premove: true, chat: true, lastMove: "highlight" }
 // v4: new defaults (walnut board, 3D wood pieces) for everyone.
 const KEY = "t64:board:v4"
 const listeners = new Set<() => void>()
@@ -56,6 +58,7 @@ const read = (): BoardSettings => {
   const s = { ...DEFAULTS, ...saved }
   if (!(s.theme in BOARD_THEMES)) s.theme = DEFAULTS.theme
   if (!(s.pieces in PIECE_SETS)) s.pieces = DEFAULTS.pieces
+  if (!["highlight", "arrow", "none"].includes(s.lastMove)) s.lastMove = DEFAULTS.lastMove
   current = s
   return s
 }

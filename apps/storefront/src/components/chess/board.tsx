@@ -3,7 +3,7 @@
 import { Chess, type Square } from "chess.js"
 import { type ReactNode, useMemo, useState } from "react"
 import { Chessboard, type PieceRenderObject } from "react-chessboard"
-import { premoveTargets } from "@/lib/chess/premove"
+import { premoveTargets, withPremoves } from "@/lib/chess/premove"
 import { playSound } from "@/lib/chess/sounds"
 import { animationMs, BOARD_THEMES, boardPiece, PIECE_SETS, pieceSrc, useBoardSettings } from "@/lib/chess/settings"
 
@@ -31,10 +31,11 @@ type Props = {
   arrows?: BoardArrow[]
   // Return false when the move isn't accepted (the piece goes back).
   onMove?: (from: Square, to: Square, promotion?: "q" | "r" | "b" | "n") => boolean | void
-  // Premoves: the player's colour while the opponent is thinking, the queued move, and a setter.
+  // Premoves: the player's colour while the opponent is thinking, the queued moves (as many as
+  // wanted, played one per turn), and a setter.
   premoveFor?: Colour | null
-  premove?: Premove | null
-  onPremove?: (p: Premove | null) => void
+  premoves?: Premove[]
+  onPremoves?: (p: Premove[]) => void
   // Drawn over the board (match intro, result).
   overlay?: ReactNode
   // Extra square colours (puzzle hints, right/wrong moves).
@@ -87,9 +88,37 @@ const pieceImages = (set: keyof typeof PIECE_SETS, upright = false): PieceRender
     })
   )
 
+// The last move as a thin arrow over the board (one of the "Last move" settings).
+function LastMoveArrow({ from, to, orientation }: { from: string; to: string; orientation: "white" | "black" }) {
+  const at = (sq: string) => {
+    const f = sq.charCodeAt(0) - 97
+    const r = Number(sq[1]) - 1
+    return orientation === "white" ? { x: f + 0.5, y: 7 - r + 0.5 } : { x: 7 - f + 0.5, y: r + 0.5 }
+  }
+  const a = at(from)
+  const b = at(to)
+  const len = Math.hypot(b.x - a.x, b.y - a.y) || 1
+  // Stop short of the centre so the head doesn't cover the piece's face.
+  const end = { x: b.x - ((b.x - a.x) / len) * 0.22, y: b.y - ((b.y - a.y) / len) * 0.22 }
+  return (
+    <svg viewBox="0 0 8 8" className="pointer-events-none absolute inset-0 z-[3] h-full w-full" aria-hidden="true">
+      <defs>
+        <marker id="t64-last-head" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="rgba(20,20,20,0.82)" />
+        </marker>
+      </defs>
+      <line x1={a.x} y1={a.y} x2={end.x} y2={end.y} stroke="rgba(20,20,20,0.82)" strokeWidth={0.055} strokeLinecap="round" markerEnd="url(#t64-last-head)" />
+    </svg>
+  )
+}
+
 // The chessboard everywhere on the site: legal-move dots, highlights, drag or click to move,
 // a piece picker for promotions, and the person's chosen board and pieces.
-export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove, premoveFor, premove, onPremove, overlay, marks, compact }: Props) {
+// Premoves kept at most (one per turn).
+const MAX_PREMOVES = 40
+const NONE: Premove[] = []
+
+export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove, premoveFor, premoves = NONE, onPremoves, overlay, marks, compact }: Props) {
   const settings = useBoardSettings()
   const theme = BOARD_THEMES[settings.theme]
   const [picked, setSelected] = useState<Square | null>(null)
@@ -110,17 +139,24 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
     setPromotion(null)
   }
   const canMove = !!movable && chess.turn() === movable
-  const canPremove = !canMove && !!premoveFor && !!onPremove && settings.premove && chess.turn() !== premoveFor
+  const canPremove = !canMove && !!premoveFor && !!onPremoves && settings.premove && chess.turn() !== premoveFor
   const selected = canMove || canPremove ? picked : null
+  // With premoves queued, the board shows where the pieces will be after them.
+  const queued = canPremove ? premoves : NONE
+  const virtual = useMemo(() => withPremoves(fen, queued), [fen, queued])
+  const shownFen = queued.length ? virtual.fen : fen
+  const addPremove = (from: Square, to: Square) => {
+    if (queued.length < MAX_PREMOVES) onPremoves?.([...queued, { from, to }])
+  }
   const targets = useMemo(
     () => (selected && canMove ? chess.moves({ square: selected, verbose: true }) : []),
     [chess, selected, canMove]
   )
   const preTargets = useMemo(() => {
     if (!selected || !canPremove) return []
-    const p = chess.get(selected)
+    const p = virtual.at(selected)
     return p && p.color === premoveFor ? premoveTargets(selected, p.type, p.color) : []
-  }, [chess, selected, canPremove, premoveFor])
+  }, [virtual, selected, canPremove, premoveFor])
 
   const attempt = (from: Square, to: Square): boolean => {
     if (!canMove || !onMove) return false
@@ -136,13 +172,14 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
   const clickSquare = (square: Square) => {
     if (promotion) return setPromotion(null)
     if (canPremove) {
-      const piece = chess.get(square)
+      const piece = virtual.at(square)
       if (selected && preTargets.includes(square)) {
-        onPremove?.({ from: selected, to: square })
+        addPremove(selected, square)
         return setSelected(null)
       }
       if (piece && piece.color === premoveFor) return setSelected(selected === square ? null : square)
-      onPremove?.(null)
+      // A click anywhere else cancels all premoves.
+      if (queued.length) onPremoves?.([])
       return setSelected(null)
     }
     if (!canMove) return
@@ -161,7 +198,7 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
   const squareStyles = useMemo(() => {
     const st: Record<string, React.CSSProperties> = {}
     const add = (sq: string, s: React.CSSProperties) => (st[sq] = { ...st[sq], ...s })
-    if (lastMove) {
+    if (lastMove && settings.lastMove === "highlight") {
       add(lastMove.from, { backgroundColor: LAST_MOVE })
       add(lastMove.to, { backgroundColor: LAST_MOVE })
     }
@@ -172,9 +209,9 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
         .find((p) => p && p.type === "k" && p.color === chess.turn())
       if (king) add(king.square, { backgroundImage: CHECK })
     }
-    if (premove) {
-      add(premove.from, { backgroundColor: PREMOVE })
-      add(premove.to, { backgroundColor: PREMOVE })
+    for (const pm of queued) {
+      add(pm.from, { backgroundColor: PREMOVE })
+      add(pm.to, { backgroundColor: PREMOVE })
     }
     if (selected && canPremove) {
       add(selected, { backgroundColor: PREMOVE })
@@ -188,7 +225,7 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
     }
     for (const [sq, colour] of Object.entries(marks ?? {})) add(sq, { backgroundColor: colour })
     return st
-  }, [lastMove, chess, selected, targets, settings.legalMoves, premove, canPremove, preTargets, marks])
+  }, [lastMove, settings.lastMove, chess, selected, targets, settings.legalMoves, queued, canPremove, preTargets, marks])
 
   const pieces = useMemo(() => pieceImages(settings.pieces, !!compact), [settings.pieces, compact])
   const standing = !compact && boardPiece(settings.pieces, "wK").tall > 1
@@ -207,19 +244,25 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
       <Chessboard
         options={{
           id,
-          position: fen,
+          position: shownFen,
           boardOrientation: orientation,
           pieces,
           allowDragging: canMove || canPremove,
           showNotation: !compact,
+          // A tap must move a few pixels before it counts as a drag: on phones, tiny finger
+          // movements otherwise start a drag that can leave the piece dimmed and stuck.
+          dragActivationDistance: 6,
           canDragPiece: ({ piece }) => (canMove && piece.pieceType[0] === movable) || (canPremove && piece.pieceType[0] === premoveFor),
           onPieceDrag: ({ square }) => square && setSelected(square as Square),
           onPieceDrop: ({ sourceSquare, targetSquare }) => {
             if (!targetSquare || targetSquare === sourceSquare) return false
             if (canPremove) {
-              const p = chess.get(sourceSquare as Square)
+              const p = virtual.at(sourceSquare)
               if (p && premoveTargets(sourceSquare as Square, p.type, p.color).includes(targetSquare as Square)) {
-                onPremove?.({ from: sourceSquare as Square, to: targetSquare as Square })
+                addPremove(sourceSquare as Square, targetSquare as Square)
+                setSelected(null)
+                // Accepted: the piece stays where it was dropped (the board shows the queue).
+                return true
               }
               setSelected(null)
               return false
@@ -251,6 +294,7 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
           clearArrowsOnPositionChange: true,
         }}
       />
+      {lastMove && settings.lastMove === "arrow" && !compact && <LastMoveArrow from={lastMove.from} to={lastMove.to} orientation={orientation} />}
       {promotion && promoBox && (
         <>
           <button type="button" aria-label="Cancel promotion" className="absolute inset-0 z-10 bg-black/30" onClick={() => setPromotion(null)} />
