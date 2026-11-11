@@ -40,6 +40,20 @@ export type PostSummary = {
 
 export type Post = PostSummary & { body: string }
 
+// News (admin → Website → News). The body is HTML from the admin's editor, cleaned on save.
+export type NewsSummary = {
+  title: string
+  handle: string
+  excerpt: string | null
+  cover_url: string | null
+  topic: string
+  author: string
+  featured: boolean
+  published_at: string | null
+}
+export type NewsArticle = NewsSummary & { body_html: string }
+export type NewsTopic = { name: string; count: number }
+
 export type SitePage = { handle: string; title: string; body: string }
 
 // A face in "Meet our team" (About us). Pictures share one group canvas; box/mask are in

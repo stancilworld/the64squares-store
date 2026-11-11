@@ -78,6 +78,22 @@ export const UpdatePostBody = PostBody.partial()
 export type PostBodyType = z.infer<typeof PostBody>
 export type UpdatePostBodyType = z.infer<typeof UpdatePostBody>
 
+export const NewsBody = z.object({
+  title: z.string().min(1),
+  handle,
+  excerpt: nullableText,
+  body_html: z.string().max(2_000_000).optional(),
+  cover_url: nullableText,
+  topic: z.string().max(40).optional(),
+  author: z.string().min(1).optional(),
+  featured: z.boolean().optional(),
+  status: z.enum(["draft", "published"]).optional(),
+  published_at: z.coerce.date().nullable().optional(),
+})
+export const UpdateNewsBody = NewsBody.partial()
+export type NewsBodyType = z.infer<typeof NewsBody>
+export type UpdateNewsBodyType = z.infer<typeof UpdateNewsBody>
+
 // Upload limits in MB per file type, e.g. { png: 10, mp4: 50 }. Up to 100 MB (the server cap).
 export const UploadLimitsBody = z.object({
   limits: z.partialRecord(z.enum(FILE_TYPE_KEYS), z.number().min(0.1).max(MAX_ALLOWED_MB)),

@@ -24,6 +24,9 @@ const paths: Record<string, string> = {
   swap: "M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3",
   mute: "M4 9v6h4l5 4V5L8 9zM17 9l4 6m0-6-4 6",
   sound: "M4 9v6h4l5 4V5L8 9zM16.5 8.5a5 5 0 0 1 0 7",
+  board: "M4 4h16v16H4zM4 12h16M12 4v16M4 4h8v8H4zm8 8h8v8h-8z",
+  focus: "M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5",
+  more: "M12 6.5v.01M12 12v.01M12 17.5v.01",
   user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7.5 8c.8-3.6 3.8-6 7.5-6s6.7 2.4 7.5 6",
 }
 

@@ -128,3 +128,66 @@ export function ResultBurst({ outcome, title, detail, king, onDone }: { outcome:
     </div>
   )
 }
+
+// After the result burst: a card over the board with the result, a picture, the rating
+// change and what to do next (rematch, a new opponent, the review). Closes with ✕.
+export function ResultCard({
+  outcome,
+  title,
+  detail,
+  king,
+  diff,
+  moves,
+  actions,
+  onClose,
+}: {
+  outcome: Outcome
+  title: string
+  detail?: string
+  king?: "w" | "b"
+  diff?: number | null
+  moves?: number
+  actions: React.ReactNode
+  onClose: () => void
+}) {
+  const art = outcome === "draw" || !king ? null : `/play-art/${king}K.webp`
+  return (
+    <div className="absolute inset-0 z-[31] grid place-items-center bg-black/35 p-3" role="dialog" aria-label={title}>
+      <div className="result-card relative w-full max-w-[380px] rounded-2xl bg-[var(--g-panel)] px-6 pb-6 pt-7 text-center shadow-2xl">
+        <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-[var(--g-muted)] hover:bg-[var(--g-panel-2)] hover:text-white">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+        <p className="result-title text-[40px] font-extrabold uppercase leading-[0.95] tracking-[-0.045em] sm:text-[48px]">{title}</p>
+        {detail && <p className="mt-2 text-[14px] text-[var(--g-text)]">{detail}</p>}
+        <div className="relative mx-auto mt-5 grid h-[150px] w-[180px] place-items-center" aria-hidden="true">
+          <span className={`absolute h-[124px] w-[124px] rounded-full ${outcome === "win" ? "bg-[var(--g-accent)]" : outcome === "loss" ? "bg-[var(--g-panel-3)]" : "bg-[#3a6ea5]"}`} />
+          {art ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={art} alt="" className={`result-art relative h-[150px] w-auto object-contain drop-shadow-xl ${outcome === "loss" ? "-rotate-[78deg] translate-y-6" : ""}`} />
+          ) : (
+            <span className="relative flex items-end">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/play-art/wK.webp" alt="" className="result-art h-[130px] w-auto -rotate-6 object-contain drop-shadow-xl" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/play-art/bK.webp" alt="" className="result-art -ml-8 h-[130px] w-auto rotate-6 object-contain drop-shadow-xl" />
+            </span>
+          )}
+          {outcome === "win" && <span className="absolute right-1 top-2 grid h-9 w-9 place-items-center rounded-full bg-[#22c3e6] text-[15px] font-black text-black">!!</span>}
+          {outcome === "loss" && <span className="absolute right-1 top-2 grid h-9 w-9 place-items-center rounded-full bg-[#ffd23f] text-[14px] font-black text-black">?!</span>}
+        </div>
+        {(diff != null || moves) && (
+          <p className="mt-3 flex items-center justify-center gap-4 text-[13px] text-[var(--g-muted)]">
+            {diff != null && (
+              <span className={`font-bold ${diff >= 0 ? "text-[var(--g-good)]" : "text-[var(--g-bad)]"}`}>
+                Rating {diff >= 0 ? "+" : ""}
+                {diff}
+              </span>
+            )}
+            {moves ? <span>{moves} {moves === 1 ? "move" : "moves"}</span> : null}
+          </p>
+        )}
+        <div className="mt-5 flex flex-col gap-2">{actions}</div>
+      </div>
+    </div>
+  )
+}

@@ -15,6 +15,8 @@ import {
 } from "../lib/permissions"
 import { BLOG_MODULE } from "../modules/blog"
 import BlogModuleService from "../modules/blog/service"
+import { NEWS_MODULE } from "../modules/news"
+import NewsModuleService from "../modules/news/service"
 import { CONTENT_MODULE } from "../modules/content"
 import ContentModuleService from "../modules/content/service"
 
@@ -115,6 +117,20 @@ export async function staffGuard(
     }
     if (live && !staff.permissions.includes("content.blog_publish")) {
       return deny(res, permissionLabel("content.blog_publish"))
+    }
+  }
+
+  // News: the same rule with "Publish news".
+  if (write && /^\/news(\/|$)/.test(path)) {
+    const id = path.split("/")[2]
+    let live = body.status === "published" || method === "DELETE"
+    if (id && !live) {
+      const news: NewsModuleService = req.scope.resolve(NEWS_MODULE)
+      const [article] = await news.listNewsArticles({ id })
+      live = article?.status === "published"
+    }
+    if (live && !staff.permissions.includes("content.news_publish")) {
+      return deny(res, permissionLabel("content.news_publish"))
     }
   }
 

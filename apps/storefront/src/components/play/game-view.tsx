@@ -7,7 +7,9 @@ import { useRouter } from "next/navigation"
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { io, type Socket } from "socket.io-client"
 import { Board, type Colour, type Premove } from "@/components/chess/board"
-import { type Fighter, MatchIntro, type Outcome, ResultBurst } from "@/components/chess/match-overlays"
+import { type Fighter, MatchIntro, type Outcome, ResultBurst, ResultCard } from "@/components/chess/match-overlays"
+import { GameTools } from "@/components/chess/game-tools"
+import { BoardTool } from "@/components/chess/play-layout"
 import { material } from "@/components/chess/material"
 import { MovePanel } from "@/components/chess/move-panel"
 import { PlayerBar } from "@/components/chess/player-bar"
@@ -95,6 +97,8 @@ export function GameView({ id, initialPass }: Props) {
   // seen live (not when opening a game that already started or finished).
   const [intro, setIntro] = useState(false)
   const [burst, setBurst] = useState(false)
+  // After the burst, the result card (until closed).
+  const [card, setCard] = useState(false)
   const lastStatus = useRef<string | null>(null)
 
   const apply = useCallback(
@@ -113,6 +117,11 @@ export function GameView({ id, initialPass }: Props) {
       if (before === "active" && g.status === "finished") {
         setIntro(false)
         setBurst(true)
+      }
+      // A game called off before it got going: straight to the "Cancelled" card.
+      if (before === "active" && g.status === "aborted") {
+        setIntro(false)
+        setCard(true)
       }
       setGame(g)
       setReceivedAt(t)
@@ -632,11 +641,97 @@ export function GameView({ id, initialPass }: Props) {
     const winner: Colour | null = game.result === "1-0" ? "w" : game.result === "0-1" ? "b" : null
     const outcome: Outcome = !winner ? "draw" : myColour ? (winner === myColour ? "win" : "loss") : "neutral"
     const title = outcome === "win" ? "Victory" : outcome === "loss" ? "Defeat" : outcome === "draw" ? "Draw" : `${(winner === "w" ? game.white : game.black)?.name ?? "Winner"} wins`
-    overlay = <ResultBurst outcome={outcome === "neutral" ? "win" : outcome} king={outcome === "loss" ? myColour ?? undefined : winner ?? undefined} title={title} detail={resultText(game)} onDone={() => setBurst(false)} />
+    overlay = (
+      <ResultBurst
+        outcome={outcome === "neutral" ? "win" : outcome}
+        king={outcome === "loss" ? myColour ?? undefined : winner ?? undefined}
+        title={title}
+        detail={resultText(game)}
+        onDone={() => {
+          setBurst(false)
+          setCard(true)
+        }}
+      />
+    )
+  } else if (card && over) {
+    const winner: Colour | null = game.result === "1-0" ? "w" : game.result === "0-1" ? "b" : null
+    const outcome: Outcome = game.status !== "finished" ? "draw" : !winner ? "draw" : myColour ? (winner === myColour ? "win" : "loss") : "win"
+    const title = game.status !== "finished" ? "Cancelled" : outcome === "draw" ? "Draw" : myColour ? (outcome === "win" ? "Victory" : "Defeat") : `${winner === "w" ? "White" : "Black"} wins`
+    const mine = myColour ? game[myColour === "w" ? "white" : "black"] : null
+    overlay = (
+      <ResultCard
+        outcome={outcome}
+        title={title}
+        detail={resultText(game)}
+        king={outcome === "loss" ? myColour ?? undefined : winner ?? undefined}
+        diff={game.rated ? mine?.diff ?? null : null}
+        moves={Math.ceil(game.moves.length / 2) || undefined}
+        onClose={() => setCard(false)}
+        actions={
+          <>
+            {myColour && game.status === "finished" && (game.mode === "online" || game.mode === "friend") && (
+              <button
+                type="button"
+                disabled={rematch?.by === meId}
+                className="g-btn g-btn-primary h-[48px] text-[16px] font-extrabold uppercase tracking-[-0.01em] disabled:opacity-60"
+                onClick={async () => {
+                  const res = await emit<{ ok: boolean; error?: string }>("game:rematch", { id, action: "offer" })
+                  if (!res.ok) setNotice(res.error === "in-game" ? "One of you is already in another game." : "Rematch isn't available.")
+                }}
+              >
+                {rematch?.by === meId ? "Rematch offered…" : rematch?.by ? "Accept rematch" : "Rematch"}
+              </button>
+            )}
+            <div className="grid grid-cols-2 gap-2">
+              {game.mode === "arena" && game.tournament_id ? (
+                <Link href={`/play/arena/${game.tournament_id}`} className="g-btn">
+                  Standings
+                </Link>
+              ) : (
+                <Link href={game.mode === "computer" ? "/play/computer" : "/play/online"} className="g-btn">
+                  New opponent
+                </Link>
+              )}
+              {game.status === "finished" && game.moves.length >= 2 ? (
+                <Link href={`/play/analysis/${id}`} className="g-btn">
+                  Game review
+                </Link>
+              ) : (
+                <Link href="/play" className="g-btn">
+                  Menu
+                </Link>
+              )}
+            </div>
+          </>
+        }
+      />
+    )
   }
 
   return (
     <PlayLayout
+      tools={
+        <GameTools
+          onFlip={() => setFlipped((f) => !f)}
+          focusExtras={
+            active && myColour ? (
+              <>
+                <BoardTool icon={<span className="text-[24px] font-bold leading-[26px]">½</span>} label={game.draw_offer === myColour ? "Offered" : "Draw"} onClick={() => emit("game:draw", { id, action: "offer" })} />
+                <BoardTool
+                  icon={<GIcon name="flag" size={26} />}
+                  label={confirmResign ? "Sure? Tap" : "Resign"}
+                  active={confirmResign}
+                  onClick={() => {
+                    if (!confirmResign) return setConfirmResign(true)
+                    void emit("game:resign", id)
+                    setConfirmResign(false)
+                  }}
+                />
+              </>
+            ) : null
+          }
+        />
+      }
       top={bar(top)}
       bottom={bar(bottom)}
       board={

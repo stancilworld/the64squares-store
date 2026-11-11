@@ -8,8 +8,9 @@ import { Avatar } from "@/components/play/avatar"
 import { GAME_URL, SPEED_LABEL, TIME_CONTROLS, speedOf } from "@/lib/game-types"
 import type { PlayPass } from "@/lib/play"
 import type { PublicProfile } from "@/lib/profile-types"
-import { ScreenHeader, useLobby, useMyProfile } from "./menu/screen"
-import { TimeCards } from "./menu/time-cards"
+import { useLobby, useMyProfile } from "./menu/screen"
+import { GIcon } from "@/components/play-shell/icons"
+import { OpponentBoard } from "./menu/opponent-board"
 import { usePlayPass } from "./use-play-pass"
 
 const TIPS = [
@@ -133,7 +134,6 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
   }
 
   const ratings = Object.fromEntries((profile?.ratings ?? []).map((r) => [r.speed, `${r.rating}${r.provisional ? "?" : ""}`]))
-  const label = TIME_CONTROLS.find((t) => t.tc === tc)?.detail ?? tc
   const [m, inc] = tc.split("+").map(Number)
   const speed = speedOf(m * 60000, inc * 1000)
 
@@ -210,42 +210,67 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
   }
 
   return (
-    <div className="menu-stage mx-auto flex max-w-[980px] flex-col gap-6 pb-24 lg:pb-4">
-      <ScreenHeader
-        title="Play Online"
-        subtitle={
-          <>
-            Rated games against a player of similar strength. If nobody at your level is free, a House Player steps in.
-            {lobby ? (
-              <>
-                {" "}
-                <span className="text-[var(--g-good)]">●</span> {lobby.playing} {lobby.playing === 1 ? "game" : "games"} on now.
-              </>
-            ) : null}
-          </>
-        }
-      />
-      <TimeCards value={tc} onChange={setTc} ratings={ratings} seeking={lobby?.seeking} />
-      <div className="fixed inset-x-0 bottom-[62px] z-20 bg-gradient-to-t from-[var(--g-bg)] via-[var(--g-bg)]/95 to-transparent px-3 pb-3 pt-6 lg:static lg:bg-none lg:p-0">
-        <div className="mx-auto flex max-w-[980px] flex-col items-center gap-3 sm:flex-row">
-          <button type="button" onClick={play} disabled={!token} className="menu-play flex h-[60px] w-full items-center justify-center gap-3 sm:w-[320px]">
-            <span className="relative text-[20px] font-extrabold tracking-tight">Play {label}</span>
+    <div className="menu-stage mx-auto flex max-w-[1240px] flex-col gap-8 pb-24 lg:pb-6">
+      <div className="menu-rise">
+        <h1 className="lobby-title">Choose an opponent</h1>
+        <p className="g-muted mt-2 text-[14px]">
+          Players waiting right now. Pick one to play them, or choose a time below and start.
+          {lobby ? (
+            <>
+              {" "}
+              <span className="text-[var(--g-good)]">●</span> {lobby.playing} {lobby.playing === 1 ? "game" : "games"} on now.
+            </>
+          ) : null}
+        </p>
+      </div>
+      <OpponentBoard seekers={lobby?.seekers ?? []} onPick={(t) => join(t)} disabled={!token} />
+
+      <section className="menu-rise [animation-delay:120ms]">
+        <h2 className="mb-3 text-[22px] font-semibold tracking-[-0.02em]">Start your game</h2>
+        <div className="start-bar">
+          <div className="start-modes">
+            <span className="start-mode" aria-current="true">
+              <GIcon name="user" size={18} /> Human
+            </span>
+            <Link href="/play/computer" className="start-mode">
+              <GIcon name="cpu" size={18} /> Computer
+            </Link>
+            <Link href="/play/friend" className="start-mode">
+              <GIcon name="link" size={18} /> Friend
+            </Link>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="start-kind">
+              {pass?.me.guest ? (
+                <>
+                  Casual (guest) ·{" "}
+                  <Link href="/account?next=/play/online" className="text-[var(--g-accent)] underline underline-offset-2">
+                    sign up for a rating
+                  </Link>
+                </>
+              ) : (
+                <>
+                  Rated · your {SPEED_LABEL[speed].toLowerCase()} rating {ratings[speed] ?? "1500? (new)"}
+                </>
+              )}
+            </p>
+            <div className="start-times" role="radiogroup" aria-label="Time control">
+              {TIME_CONTROLS.map((t) => {
+                const [min, inc] = t.tc.split("+")
+                return (
+                  <button key={t.tc} type="button" role="radio" aria-checked={tc === t.tc} onClick={() => setTc(t.tc)} className="start-time">
+                    <span className="text-[22px] font-semibold leading-none">{min}</span>
+                    <span className="mt-1 text-[11px] text-[var(--g-muted)]">{inc === "0" ? "min" : `+${inc}`}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <button type="button" onClick={play} disabled={!token} className="start-go">
+            Start
+            <br />
+            game
           </button>
-          <p className="g-muted text-center text-[13px] sm:text-left">
-            {pass?.me.guest ? (
-              <>
-                Playing as <b className="text-[var(--g-text)]">{pass.me.name}</b> · casual.{" "}
-                <Link href="/account?next=/play/online" className="text-[var(--g-accent)] underline underline-offset-2">
-                  Sign up
-                </Link>{" "}
-                for a rating.
-              </>
-            ) : (
-              <>
-                {SPEED_LABEL[speed]} · your rating {ratings[speed] ?? "1500? (new)"}
-              </>
-            )}
-          </p>
         </div>
         {error && (
           <p className="mt-3 text-center text-[14px] text-[var(--g-bad)] sm:text-left">
@@ -257,7 +282,7 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
             )}
           </p>
         )}
-      </div>
+      </section>
     </div>
   )
 }

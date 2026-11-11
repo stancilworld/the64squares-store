@@ -155,6 +155,50 @@ export const liveGamesFor = async (playerId: string) => {
   return rows
 }
 
+// What a player is in right now: games being played, and tournaments they've signed up for
+// that haven't finished (online arenas and events at a venue).
+export const activeFor = async (playerId: string) => {
+  const games = await pool.query(
+    `select id, mode, white_id, black_id, white_name, black_name, white_rating, black_rating, initial_ms, increment_ms, started_at, tournament_id
+       from play.game where (white_id = $1 or black_id = $1) and status in ('active', 'waiting') order by started_at desc limit 10`,
+    [playerId]
+  )
+  let tournaments: Record<string, unknown>[] = []
+  if (playerId.startsWith("cus_")) {
+    try {
+      const t = await pool.query(
+        `select t.id, t.title, t.handle, t.format, t.mode, t.time_control, t.starts_at, t.ends_at, t.status, r.code
+           from public.tournament_registration r join public.tournament t on t.id = r.tournament_id
+          where r.customer_id = $1 and r.status = 'confirmed' and r.deleted_at is null and t.deleted_at is null and t.status <> 'draft'
+            and coalesce(t.ends_at, t.starts_at + interval '6 hours') > now()
+          order by t.starts_at asc limit 10`,
+        [playerId]
+      )
+      tournaments = t.rows
+    } catch {
+      // The store's tables may not exist on a fresh database: no tournaments then.
+      tournaments = []
+    }
+  }
+  return {
+    games: games.rows.map((g) => {
+      const white = g.white_id === playerId
+      return {
+        id: g.id,
+        mode: g.mode,
+        colour: white ? "w" : "b",
+        opponent: (white ? g.black_name : g.white_name) ?? "Waiting for an opponent",
+        opponent_rating: white ? g.black_rating : g.white_rating,
+        initial_ms: g.initial_ms,
+        increment_ms: g.increment_ms,
+        started_at: g.started_at,
+        tournament_id: g.tournament_id,
+      }
+    }),
+    tournaments,
+  }
+}
+
 export const gamePgn = async (id: string) => {
   const { rows } = await pool.query("select pgn from play.game where id = $1", [id])
   return (rows[0]?.pgn as string | null) ?? null

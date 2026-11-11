@@ -26,9 +26,10 @@ async function Account() {
 }
 
 async function Side() {
-  const nav = await getSiteNavigation()
+  const [nav, pass] = await Promise.all([getSiteNavigation(), getPlayPass()])
   return (
     <SideNav
+      pass={pass}
       showSwitch={nav.experience?.show_switch !== false}
       account={
         <Suspense fallback={null}>
@@ -44,8 +45,8 @@ async function Live() {
 }
 
 async function Top() {
-  const nav = await getSiteNavigation()
-  return <MobileBar showSwitch={nav.experience?.show_switch !== false} />
+  const [nav, pass] = await Promise.all([getSiteNavigation(), getPlayPass()])
+  return <MobileBar pass={pass} showSwitch={nav.experience?.show_switch !== false} />
 }
 
 const navFallback = <aside className="hidden w-[212px] shrink-0 bg-[var(--g-side)] lg:block" />
@@ -61,7 +62,7 @@ export default function PlayLayout({ children }: { children: React.ReactNode }) 
         <Suspense fallback={<div className="h-[52px] bg-[var(--g-side)] lg:hidden" />}>
           <Top />
         </Suspense>
-        <main className="flex-1 px-3 pb-[78px] pt-3 sm:px-5 lg:px-8 lg:pb-6 lg:pt-6">{children}</main>
+        <main className="play-main flex-1 px-3 pb-[78px] pt-3 sm:px-5 lg:px-8 lg:pb-6 lg:pt-6">{children}</main>
         <Suspense fallback={null}>
           <MobileTabs />
         </Suspense>

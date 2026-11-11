@@ -5,6 +5,8 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { GearIcon, openBoardSettings } from "@/components/chess/board-settings"
 import { ExperienceSwitch } from "@/components/experience-switch"
+import type { PlayPass } from "@/lib/play"
+import { ActiveGames } from "./active-games"
 import { GIcon } from "./icons"
 
 export const PLAY_NAV = [
@@ -36,10 +38,10 @@ const titleFor = (path: string) => {
 }
 
 // Desktop: a side menu, like a game's main menu.
-export function SideNav({ account, showSwitch = true }: { account: React.ReactNode; showSwitch?: boolean }) {
+export function SideNav({ account, showSwitch = true, pass = null }: { account: React.ReactNode; showSwitch?: boolean; pass?: PlayPass | null }) {
   const path = usePathname()
   return (
-    <aside className="sticky top-0 hidden h-dvh w-[212px] shrink-0 flex-col border-r border-[var(--g-line)] bg-[var(--g-side)] lg:flex">
+    <aside className="play-side sticky top-0 hidden h-dvh w-[212px] shrink-0 flex-col border-r border-[var(--g-line)] bg-[var(--g-side)] lg:flex">
       <Link href="/play" className="flex items-center px-5 pb-3 pt-5">
         <Image src="/brand/logo-footer.webp" alt="The 64 Squares" width={388} height={160} className="h-[44px] w-auto" priority />
       </Link>
@@ -60,6 +62,7 @@ export function SideNav({ account, showSwitch = true }: { account: React.ReactNo
             </Link>
           )
         })}
+        <ActiveGames pass={pass} />
       </nav>
       <div className="mt-auto flex flex-col gap-1 border-t border-[var(--g-line)] p-3">
         <button
@@ -81,11 +84,11 @@ export function SideNav({ account, showSwitch = true }: { account: React.ReactNo
 }
 
 // Phones: a slim top bar with a back arrow, and tabs at the bottom.
-export function MobileBar({ showSwitch = true }: { showSwitch?: boolean }) {
+export function MobileBar({ showSwitch = true, pass = null }: { showSwitch?: boolean; pass?: PlayPass | null }) {
   const path = usePathname()
   const home = path === "/play"
   return (
-    <header className="sticky top-0 z-30 flex h-[52px] items-center gap-2 border-b border-[var(--g-line)] bg-[var(--g-side)] px-2 lg:hidden">
+    <header className="play-topbar sticky top-0 z-30 flex h-[52px] items-center gap-2 border-b border-[var(--g-line)] bg-[var(--g-side)] px-2 lg:hidden">
       {home ? (
         showSwitch ? (
           <ExperienceSwitch active="play" dark />
@@ -101,6 +104,7 @@ export function MobileBar({ showSwitch = true }: { showSwitch?: boolean }) {
         </Link>
       )}
       <p className={`flex-1 truncate text-center text-[16px] font-bold ${home && showSwitch ? "invisible" : ""}`}>{titleFor(path)}</p>
+      <ActiveGames pass={pass} compact />
       <button type="button" aria-label="Board settings" onClick={openBoardSettings} className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--g-muted)]">
         <GearIcon size={22} />
       </button>
@@ -113,7 +117,7 @@ export function MobileTabs() {
   // While playing, the board and its buttons get the whole screen.
   if (/^\/play\/[A-Za-z0-9]{10}$/.test(path) || path === "/play/computer" || /^\/play\/(puzzles|analysis)\/.+/.test(path)) return null
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 grid h-[62px] grid-cols-5 border-t border-[var(--g-line)] bg-[var(--g-side)] pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav className="play-tabs fixed inset-x-0 bottom-0 z-30 grid h-[62px] grid-cols-5 border-t border-[var(--g-line)] bg-[var(--g-side)] pb-[env(safe-area-inset-bottom)] lg:hidden">
       {MOBILE_TABS.map((href) => {
         const n = PLAY_NAV.find((x) => x.href === href)!
         const on = isActive(path, href)

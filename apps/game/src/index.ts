@@ -5,7 +5,7 @@ import { migratePuzzles, puzzleRoute } from "./puzzles.js"
 import { chatHistory, dropChat, registerChat } from "./chat.js"
 import { migrateMissions, missionRoute } from "./missions.js"
 import { config } from "./config.js"
-import { gamePgn, leaderboard, liveGamesFor, migrate, playerStats, pool, ratingsFor, recentGamesFor } from "./db.js"
+import { activeFor, gamePgn, leaderboard, liveGamesFor, migrate, playerStats, pool, ratingsFor, recentGamesFor } from "./db.js"
 import { type Color, type Game, isGuest, type Player } from "./game.js"
 import { speedOf, type Speed } from "./glicko.js"
 import { GameManager } from "./manager.js"
@@ -14,7 +14,7 @@ import { banOf, migrateFairPlay, registerFairPlay, startFairPlay } from "./fairp
 import { migrateFriends, registerFriends } from "./friends.js"
 import { xpForGame } from "./levels.js"
 import { addXp, ensureProfile, getProfile, getProfiles, migrateProfiles, publicProfile, readAvatar, removeAvatar, searchProfiles, setAvatar, updateProfile } from "./profiles.js"
-import { registerSeek, SEEK_TIME_CONTROLS, seekCounts, startSeeking } from "./seek.js"
+import { registerSeek, SEEK_TIME_CONTROLS, seekCounts, seekList, startSeeking } from "./seek.js"
 import { HouseDriver } from "./house/driver.js"
 import { isHouse } from "./house/persona.js"
 import { houseCount, migrateHouse, personaOf, seedHouse } from "./house/store.js"
@@ -74,6 +74,12 @@ const server = http.createServer(async (req, res) => {
     if (a && req.method === "GET") {
       const img = await readAvatar(a[1])
       return img ? send(res, 200, img, "image/webp", origin, "public, max-age=31536000, immutable") : send(res, 404, "Not found", "text/plain", origin)
+    }
+    // The signed-in (or guest) player's games in progress and tournaments they've joined.
+    if (path === "/me/active" && req.method === "GET") {
+      const player = await playerFromToken(bearer(req))
+      if (!player) return json(res, 401, { error: "sign-in" }, origin)
+      return json(res, 200, await activeFor(player.id), origin)
     }
     if (path === "/profile/avatar" && (req.method === "POST" || req.method === "DELETE")) {
       const player = await playerFromToken(bearer(req))
@@ -169,7 +175,14 @@ const server = http.createServer(async (req, res) => {
       return send(
         res,
         200,
-        JSON.stringify({ playing: manager.liveCount(), online: online.size, seeking: seekCounts(), time_controls: SEEK_TIME_CONTROLS, house_ready: Math.max(0, houseTotal - busyHouse) }),
+        JSON.stringify({
+          playing: manager.liveCount(),
+          online: online.size,
+          seeking: seekCounts(),
+          seekers: await seekList(),
+          time_controls: SEEK_TIME_CONTROLS,
+          house_ready: Math.max(0, houseTotal - busyHouse),
+        }),
         "application/json",
         origin
       )

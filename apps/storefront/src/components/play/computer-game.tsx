@@ -13,6 +13,7 @@ import { material } from "@/components/chess/material"
 import { MovePanel } from "@/components/chess/move-panel"
 import { PlayerBar } from "@/components/chess/player-bar"
 import { PlayLayout } from "@/components/chess/play-layout"
+import { GameTools } from "@/components/chess/game-tools"
 import { Engine, LEVELS } from "@/lib/chess/engine"
 import { START_FEN } from "@/lib/chess/replay"
 import { playSound, soundForSan } from "@/lib/chess/sounds"
@@ -372,6 +373,7 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
   return (
     <PlayLayout
       boardOnPhones
+      tools={game ? <GameTools onFlip={() => setFlipped((f) => !f)} /> : undefined}
       top={bar(top)}
       bottom={bar(bottom)}
       board={

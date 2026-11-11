@@ -9,6 +9,9 @@ import type {
   ChatbotConfig,
   ContactPage,
   ContentBlock,
+  NewsArticle,
+  NewsSummary,
+  NewsTopic,
   Post,
   PostSummary,
   ProductCard,
@@ -164,6 +167,32 @@ export async function getPost(handle: string): Promise<Post | null> {
   cacheTag("posts")
   const res = await orNull(sdk.client.fetch<{ post: Post }>(`/store/posts/${handle}`, { headers: await previewHeaders() }))
   return res?.post ?? null
+}
+
+// News, newest first, optionally one topic. Also the topics in use, for the topic list.
+export async function getNews(
+  limit: number,
+  topic?: string | null
+): Promise<{ articles: NewsSummary[]; topics: NewsTopic[]; count: number }> {
+  "use cache"
+  cacheLife("minutes")
+  cacheTag("news")
+  try {
+    return await sdk.client.fetch<{ articles: NewsSummary[]; topics: NewsTopic[]; count: number }>("/store/news", {
+      query: { limit, offset: 0, ...(topic ? { topic } : {}) },
+      headers: await previewHeaders(),
+    })
+  } catch {
+    return { articles: [], topics: [], count: 0 }
+  }
+}
+
+export async function getNewsArticle(handle: string): Promise<NewsArticle | null> {
+  "use cache"
+  cacheLife("minutes")
+  cacheTag("news")
+  const res = await orNull(sdk.client.fetch<{ article: NewsArticle }>(`/store/news/${handle}`, { headers: await previewHeaders() }))
+  return res?.article ?? null
 }
 
 export async function getSitePage(handle: string): Promise<SitePage | null> {

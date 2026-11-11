@@ -105,6 +105,23 @@ export const seekCounts = () => {
   return counts
 }
 
+// Who's waiting right now, for the lobby board: time control, rating and picture only (no
+// names), so a visitor can pick a waiting player's time control and be paired with them.
+const pictures = new Map<string, { url: string | null; at: number }>()
+export const seekList = async () => {
+  const out: { tc: string; rating: number; avatar_url: string | null; guest: boolean; since: number }[] = []
+  for (const s of [...seeks.values()].slice(0, 60)) {
+    let pic = pictures.get(s.player.id)
+    if (!pic || Date.now() - pic.at > 10 * 60_000) {
+      const p = isGuest(s.player.id) ? null : await getProfile(s.player.id).catch(() => null)
+      pic = { url: p ? publicProfile(p).avatar_url : null, at: Date.now() }
+      pictures.set(s.player.id, pic)
+    }
+    out.push({ tc: s.tc, rating: Math.round(s.rating), avatar_url: pic.url, guest: isGuest(s.player.id), since: s.since })
+  }
+  return out
+}
+
 type Ack = (res: Record<string, unknown>) => void
 
 export const registerSeek = (io: Server, socket: Socket, manager: GameManager, me: () => Player | null, limited: (s: Socket) => boolean) => {

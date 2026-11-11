@@ -50,7 +50,8 @@ export function useMyProfile(meId: string | null) {
   return profile
 }
 
-export type Lobby = { playing: number; online?: number; seeking?: Record<string, number>; house_ready?: number }
+export type Seeker = { tc: string; rating: number; avatar_url: string | null; guest: boolean; since: number }
+export type Lobby = { playing: number; online?: number; seeking?: Record<string, number>; seekers?: Seeker[]; house_ready?: number }
 
 export function useLobby() {
   const [lobby, setLobby] = useState<Lobby | null>(null)
@@ -62,7 +63,7 @@ export function useLobby() {
         .then((d) => live && setLobby(d))
         .catch(() => {})
     load()
-    const t = setInterval(load, 20_000)
+    const t = setInterval(load, 8_000)
     return () => {
       live = false
       clearInterval(t)

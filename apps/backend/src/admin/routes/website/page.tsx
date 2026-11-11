@@ -4,6 +4,7 @@ import {
   BarsThree,
   ChatBubbleLeftRight,
   ComputerDesktop,
+  DocumentText,
   Envelope,
   House,
   Lifebuoy,
@@ -51,6 +52,14 @@ const SECTIONS: Section[] = [
     sitePath: "/blog",
     icon: Newspaper,
     permission: "content.blog",
+  },
+  {
+    title: "News",
+    description: "News articles with a full editor: headings, pictures, tables, videos. Shown at /news.",
+    to: "/website/news",
+    sitePath: "/news",
+    icon: DocumentText,
+    permission: "content.news",
   },
   {
     title: "Help pages",

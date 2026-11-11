@@ -8,9 +8,11 @@ import {
   ContentBlockBody,
   NewsletterBody,
   PageBody,
+  NewsBody,
   PostBody,
   UpdateContentBlockBody,
   UpdatePageBody,
+  UpdateNewsBody,
   UpdatePostBody,
   UploadLimitsBody,
   TeamMemberBody,
@@ -119,6 +121,16 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/posts/:id",
       middlewares: [validateAndTransformBody(UpdatePostBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/news",
+      middlewares: [validateAndTransformBody(NewsBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/news/:id",
+      middlewares: [validateAndTransformBody(UpdateNewsBody)],
     },
     {
       method: ["POST"],

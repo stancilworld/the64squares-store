@@ -212,11 +212,12 @@ body {
 
 /* ---------- Play: the game area (dark, app-like) ---------- */
 .play-ui {
-  --g-bg: #151515;
-  --g-side: #0c0c0c;
-  --g-panel: #1e1e1e;
-  --g-panel-2: #282828;
-  --g-panel-3: #343434;
+  /* Flat and calm: one charcoal for the page and the menu, slightly lighter panels. */
+  --g-bg: #1b1b1b;
+  --g-side: #1b1b1b;
+  --g-panel: #262626;
+  --g-panel-2: #2f2f2f;
+  --g-panel-3: #3a3a3a;
   --g-line: rgba(255, 255, 255, 0.09);
   --g-text: #f3f2ef;
   --g-muted: #a5a29b;
@@ -230,7 +231,6 @@ body {
 .play-ui .g-panel {
   background: var(--g-panel);
   border-radius: 4px;
-  border: 1px solid var(--g-line);
 }
 .play-ui .g-muted {
   color: var(--g-muted);
@@ -467,4 +467,212 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .menu-rise, .mm-ring, .mm-sweep { animation: none !important; }
   .menu-tile, .menu-tile-art, .tc-cell { transition: none; }
+}
+
+/* ---- Focus mode: only the board, the players and their clocks ---- */
+html[data-focus] .play-side,
+html[data-focus] .play-topbar,
+html[data-focus] .play-tabs,
+html[data-focus] .focus-hide {
+  display: none !important;
+}
+html[data-focus] .play-main {
+  padding-top: 20px;
+}
+
+/* ---- Result card: pops in after the result burst ---- */
+.result-card {
+  animation: result-in 0.38s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+.result-card .result-art {
+  animation: result-art 0.6s 0.1s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes result-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.94);
+  }
+}
+@keyframes result-art {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.85);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .result-card,
+  .result-card .result-art {
+    animation: none;
+  }
+}
+
+/* ---- Play Online lobby: who's waiting, and the start bar ---- */
+.lobby-title {
+  font-size: clamp(38px, 6vw, 76px);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.055em;
+  line-height: 0.9;
+}
+.opp-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+@media (max-width: 767px) {
+  .opp-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+.opp-tile {
+  display: flex;
+  height: 64px;
+  align-items: center;
+  gap: 10px;
+  border-radius: 3px;
+  background: #262626;
+  padding: 0 14px;
+  text-align: left;
+}
+.opp-tile-on {
+  transition: background 0.15s, color 0.15s;
+}
+.opp-tile-on:hover,
+.opp-tile-on:focus-visible {
+  background: var(--g-accent);
+  color: #111;
+}
+.start-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+.start-modes {
+  display: flex;
+  width: 150px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--g-line);
+  border-radius: 3px;
+}
+.start-mode {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  min-height: 44px;
+  font-size: 15px;
+  color: var(--g-muted);
+}
+.start-mode:hover {
+  color: var(--g-text);
+}
+.start-mode[aria-current] {
+  color: var(--g-accent);
+  box-shadow: inset 0 0 0 1px var(--g-accent);
+}
+.start-kind {
+  margin-bottom: 8px;
+  border: 1px solid var(--g-line);
+  border-radius: 3px;
+  padding: 12px 16px;
+  text-align: center;
+  font-size: 15px;
+}
+.start-times {
+  display: flex;
+  overflow-x: auto;
+  border: 1px solid var(--g-line);
+  border-radius: 3px;
+  scrollbar-width: none;
+}
+.start-time {
+  display: flex;
+  min-width: 72px;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 14px 14px 12px;
+}
+.start-time[aria-checked="true"] {
+  background: var(--g-accent);
+  color: #111;
+}
+.start-time[aria-checked="true"] span {
+  color: #111;
+}
+.start-go {
+  width: 150px;
+  border-radius: 3px;
+  background: var(--g-accent);
+  color: #111;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  transition: filter 0.15s;
+}
+.start-go:hover {
+  filter: brightness(1.08);
+}
+.start-go:disabled {
+  opacity: 0.5;
+}
+@media (max-width: 767px) {
+  .start-bar {
+    flex-direction: column;
+  }
+  .start-modes {
+    width: auto;
+    flex-direction: row;
+  }
+  .start-mode {
+    justify-content: center;
+    padding: 0 8px;
+    font-size: 14px;
+  }
+  .start-go {
+    width: auto;
+    min-height: 60px;
+    font-size: 24px;
+  }
+  .start-go br {
+    display: none;
+  }
+}
+
+/* News articles: HTML from the admin's editor (cleaned on save). */
+.news-body {
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--color-ink);
+  overflow-wrap: break-word;
+}
+.news-body > * + * { margin-top: 1.1em; }
+.news-body h2 { margin-top: 1.8em; font-size: 28px; line-height: 1.2; font-weight: 800; letter-spacing: -0.025em; }
+.news-body h3 { margin-top: 1.6em; font-size: 22px; line-height: 1.25; font-weight: 700; letter-spacing: -0.015em; }
+.news-body h4 { margin-top: 1.4em; font-size: 18px; line-height: 1.3; font-weight: 700; }
+.news-body a { text-decoration: underline; text-decoration-color: var(--color-amber); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.news-body a:hover { text-decoration-color: currentColor; }
+.news-body ul { list-style: disc; padding-left: 1.4em; }
+.news-body ol { list-style: decimal; padding-left: 1.4em; }
+.news-body li + li { margin-top: 0.35em; }
+.news-body li > p { margin: 0; }
+.news-body blockquote { border-left: 4px solid var(--color-amber); padding: 0.2em 0 0.2em 1.1em; font-size: 21px; line-height: 1.5; font-weight: 600; letter-spacing: -0.01em; }
+.news-body img { width: 100%; height: auto; border-radius: 6px; }
+.news-body hr { border: 0; border-top: 1px solid var(--color-rule); margin: 2.4em 0; }
+.news-body mark { border-radius: 2px; padding: 0 2px; color: inherit; }
+.news-body code { background: var(--color-chalk); padding: 1px 6px; border-radius: 4px; font-size: 0.88em; }
+.news-body pre { background: var(--color-chalk); padding: 14px 18px; border-radius: 6px; overflow-x: auto; }
+.news-body table { width: 100%; border-collapse: collapse; font-size: 16px; display: block; overflow-x: auto; }
+.news-body th, .news-body td { border: 1px solid var(--color-rule); padding: 8px 12px; text-align: left; vertical-align: top; }
+.news-body th { background: var(--color-chalk); font-weight: 700; }
+.news-body div[data-youtube-video] iframe { width: 100%; height: auto; aspect-ratio: 16 / 9; border: 0; border-radius: 6px; }
+@media (min-width: 1024px) {
+  .news-body { font-size: 19px; }
+  .news-body h2 { font-size: 32px; }
+  .news-body img, .news-body div[data-youtube-video] { width: calc(100% + 120px); max-width: none; margin-left: -60px; }
 }

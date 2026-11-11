@@ -13,12 +13,12 @@ const SECTIONS: SectionConfig[] = [
     help: "The big banner at the top of the homepage.",
     fields: ["title", "body", "image_url", "link_label", "link_url"],
     many: false,
-    labels: { image_url: "Background (picture, GIF or video) filling the whole banner" },
+    labels: { image_url: "Picture, GIF or video beside the heading" },
     hints: { title: HEADING_HINT },
     recommended: {
-      width: 2880,
-      height: 1114,
-      note: "The heading sits on the left, so keep that side calm. Phones show only the middle",
+      width: 1600,
+      height: 1280,
+      note: "Shown at exactly this shape (5:4) on every screen, phones included, so nothing gets cut off",
     },
   },
   {

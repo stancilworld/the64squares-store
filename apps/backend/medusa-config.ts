@@ -88,6 +88,7 @@ module.exports = defineConfig({
     { resolve: "./src/modules/content" },
     { resolve: "./src/modules/newsletter" },
     { resolve: "./src/modules/blog" },
+    { resolve: "./src/modules/news" },
     { resolve: "./src/modules/tournament" },
     { resolve: "./src/modules/activity" },
     { resolve: "./src/modules/review" },
