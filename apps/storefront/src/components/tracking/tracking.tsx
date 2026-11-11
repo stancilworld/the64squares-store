@@ -39,6 +39,16 @@ function Live({ config, stored }: { config: MarketingConfig; stored: Stored | nu
     setupTracking(config, effectiveConsent(config, readConsent()))
   }, [config, stored])
 
+  // A discount code that came with the link (?code=DIWALI10), applied at checkout.
+  useEffect(() => {
+    const code = new URLSearchParams(search).get("code")
+    if (code && /^[\w-]{2,60}$/.test(code)) {
+      try {
+        sessionStorage.setItem("t64:code", code)
+      } catch {}
+    }
+  }, [search])
+
   // A page view for each page, including moves inside the site.
   useEffect(() => {
     const t = setTimeout(() => track("PageView"), 50)

@@ -3,10 +3,12 @@
 import { getToken } from "./auth"
 import { sdk } from "./medusa"
 
+export type ReviewPhoto = { url: string; sig: string }
+
 export type MyReview = {
   signedIn: boolean
   canReview: boolean
-  review: { rating: number; title: string | null; body: string; status: "pending" | "approved" | "hidden" } | null
+  review: { rating: number; title: string | null; body: string; status: "pending" | "approved" | "hidden"; photos?: ReviewPhoto[] } | null
   name: string | null
 }
 
@@ -25,14 +27,14 @@ export async function getMyReview(productId: string): Promise<MyReview> {
   }
 }
 
-export async function submitReview(input: { productId: string; rating: number; title: string; body: string; name: string; city: string }) {
+export async function submitReview(input: { productId: string; rating: number; title: string; body: string; name: string; city: string; photos?: ReviewPhoto[] }) {
   const token = await getToken()
   if (!token) return { ok: false as const, error: "Please sign in first." }
   try {
     await sdk.client.fetch("/store/account/reviews", {
       method: "POST",
       headers: { authorization: `Bearer ${token}` },
-      body: { product_id: input.productId, rating: input.rating, title: input.title, body: input.body, name: input.name, city: input.city },
+      body: { product_id: input.productId, rating: input.rating, title: input.title, body: input.body, name: input.name, city: input.city, ...(input.photos ? { photos: input.photos } : {}) },
     })
     return { ok: true as const }
   } catch (e) {

@@ -26,6 +26,7 @@ const NAV: Record<string, string | string[]> = {
   "/app/messages": ["messages.view", "mailbox.view"],
   "/app/reviews": "reviews.manage",
   "/app/analytics": "analytics.view",
+  "/app/marketing": "settings.marketing",
   "/app/seo": "settings.branding",
   "/app/website": [
     "content.homepage",

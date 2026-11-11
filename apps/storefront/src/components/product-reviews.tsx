@@ -5,7 +5,7 @@ import { Stars } from "./stars"
 const date = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })
 
 // Reviews under a product: the star summary, the reviews, and a form for shoppers who bought it.
-export function ProductReviews({ productId, summary, reviews }: { productId: string; summary: ReviewSummary; reviews: PublicReview[] }) {
+export function ProductReviews({ productId, summary, reviews, photos = false }: { productId: string; summary: ReviewSummary; reviews: PublicReview[]; photos?: boolean }) {
   return (
     <section id="reviews" aria-labelledby="reviews-title" className="mt-20 scroll-mt-24 border-t border-rule pt-12 lg:mt-24">
       <div className="grid gap-10 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-16">
@@ -42,7 +42,7 @@ export function ProductReviews({ productId, summary, reviews }: { productId: str
           ) : (
             <p className="mt-3 text-[15px] text-muted">No reviews yet.</p>
           )}
-          <ReviewForm productId={productId} />
+          <ReviewForm productId={productId} photos={photos} />
         </div>
         <div>
           {reviews.length > 0 ? (
@@ -54,6 +54,18 @@ export function ProductReviews({ productId, summary, reviews }: { productId: str
                     {r.title && <h3 className="text-[16px] font-medium">{r.title}</h3>}
                   </div>
                   <p className="mt-2 whitespace-pre-line text-[15px] leading-[1.7]">{r.body}</p>
+                  {photos && !!r.photos?.length && (
+                    <ul className="mt-3 flex gap-2" aria-label="Photos from the shopper">
+                      {r.photos.map((src, i) => (
+                        <li key={src}>
+                          <a href={src} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-md border border-rule">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={src} alt={`Photo ${i + 1} from ${r.name}`} loading="lazy" className="h-[88px] w-[88px] object-cover transition-transform hover:scale-105" />
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   <p className="mt-2 text-[13px] text-muted">
                     {r.name}
                     {r.city ? `, ${r.city}` : ""} · {date(r.date)}

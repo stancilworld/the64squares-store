@@ -2,6 +2,7 @@ import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Badge, Button, Container, Heading, Input, Label, Select, Switch, Text, Textarea, toast } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { fromLocalInput, toLocalInput } from "../../../lib/dates"
 import { ImageField } from "../../../lib/image-field"
 import { sdk } from "../../../lib/sdk"
@@ -40,18 +41,17 @@ type Features = {
 type Key = keyof Features
 
 const ROWS: { key: Key; title: string; text: string }[] = [
-  { key: "announcement", title: "Announcement bar", text: "A strip across the top of every shop page, with optional start and end dates." },
   { key: "popup", title: "Pop-up", text: "A newsletter sign-up or an offer, shown once per visitor after a few seconds." },
   { key: "countdowns", title: "Sale countdowns", text: "\"Sale ends in 2d 4h\" timers on products whose sale has an end date." },
   { key: "reviews", title: "Reviews", text: "Star ratings on product cards and the reviews section on product pages." },
   { key: "newsletter_footer", title: "Newsletter sign-up in the footer", text: "A small email box at the bottom of every shop page." },
-  { key: "coupon_box", title: "Coupon box at checkout", text: "Shoppers can type a discount code (make codes in Promotions)." },
+  { key: "coupon_box", title: "Coupon box at checkout", text: "Shoppers can type a discount code (make codes in Discounts)." },
   { key: "code_badges", title: "\"Use code\" badges", text: "A small badge on product pages telling shoppers about a code." },
   { key: "back_in_stock", title: "Back-in-stock alerts", text: "A \"Notify me\" button on sold-out products; they get an email when it's back." },
-  { key: "referrals", title: "Refer a friend", text: "Shoppers share a link: their friend gets money off, and they get credit when the friend orders." },
+  { key: "referrals", title: "Invite a friend", text: "Customers share their code from their account page: the friend gets money off, and they get a thank-you code when the friend orders." },
   { key: "breadcrumbs", title: "Breadcrumbs", text: "Shop › Category › Product links at the top of product and category pages (also helps Google)." },
   { key: "faq", title: "FAQ sections", text: "Questions and answers on product pages, where you've added them (shown in Google too)." },
-  { key: "share_buttons", title: "Share buttons", text: "Share on WhatsApp, Facebook and X on products, articles, games and tournament results." },
+  { key: "share_buttons", title: "Share buttons", text: "Share on WhatsApp, Facebook and X on products, blog posts and news." },
   { key: "push", title: "Browser notifications", text: "Asks visitors if they'd like notifications for sales and tournaments." },
   { key: "business_profile", title: "Google Business Profile link", text: "A link to your Google listing in the footer (and your address details for Google)." },
 ]
@@ -172,7 +172,7 @@ function Details({ k, value, onSave, saving }: { k: Key; value: Features[Key]; o
         <div>
           <Label size="small">Photos in reviews</Label>
           <Text size="xsmall" className="text-ui-fg-subtle">
-            Shoppers can add up to 4 photos to a review. Photos are checked with the review before it goes live.
+            Shoppers can add up to 3 photos to a review. Photos are checked with the review before it goes live.
           </Text>
         </div>
         <Switch checked={!!v.photos} onCheckedChange={(x) => set("photos", x)} />
@@ -203,10 +203,10 @@ function Details({ k, value, onSave, saving }: { k: Key; value: Features[Key]; o
   if (k === "referrals")
     body = (
       <div className="grid gap-3 sm:grid-cols-3">
-        <Row label="Friend gets (₹ off first order)">
+        <Row label="Friend gets (₹ off)">
           <Input type="number" min={0} value={num("give_amount")} onChange={(e) => set("give_amount", Number(e.target.value))} />
         </Row>
-        <Row label="Sharer gets (₹ credit code)">
+        <Row label="Customer gets (₹ thank-you code)">
           <Input type="number" min={0} value={num("get_amount")} onChange={(e) => set("get_amount", Number(e.target.value))} />
         </Row>
         <Row label="Minimum order (₹)">
@@ -276,7 +276,15 @@ const FeaturesPage = () => {
           </Badge>
         </div>
         <Text size="small" className="text-ui-fg-subtle">
-          Switch promotional parts of the website on or off. Switching off only hides them; their settings stay saved.
+          Switch promotional parts of the website on or off. Switching off only hides them; their settings stay saved. The announcement bar is in{" "}
+          <Link to="/website/navigation" className="text-ui-fg-interactive hover:underline">
+            Menu &amp; footer
+          </Link>
+          ; emails, notifications and feeds are in{" "}
+          <Link to="/marketing" className="text-ui-fg-interactive hover:underline">
+            Marketing
+          </Link>
+          .
         </Text>
       </div>
       {ROWS.map((r) => {

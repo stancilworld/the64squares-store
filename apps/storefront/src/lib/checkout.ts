@@ -2,9 +2,9 @@
 
 import type { HttpTypes } from "@medusajs/types"
 import { cookies } from "next/headers"
-import { getToken } from "./auth"
+import { getMyInvite, getToken } from "./auth"
 import { getCart } from "./cart"
-import { getRegion } from "./data"
+import { getRegion, getSiteFeatures } from "./data"
 import { sdk } from "./medusa"
 
 // Checkout runs on its own cart, built from the items ticked in the backpack. Unticked
@@ -12,7 +12,7 @@ import { sdk } from "./medusa"
 const CHECKOUT = "t64_checkout"
 const CART = "t64_cart"
 const FIELDS =
-  "id,email,currency_code,total,subtotal,tax_total,shipping_total,item_total,discount_total,completed_at,customer_id,*items,+items.metadata,+items.total,+items.compare_at_unit_price,*items.variant,*shipping_address,*shipping_methods,*payment_collection,*payment_collection.payment_sessions"
+  "id,email,currency_code,total,subtotal,tax_total,shipping_total,item_total,discount_total,completed_at,customer_id,*items,+items.metadata,+items.total,+items.compare_at_unit_price,*items.variant,*shipping_address,*shipping_methods,*payment_collection,*payment_collection.payment_sessions,*promotions"
 
 export type CheckoutConfig = {
   online: boolean
@@ -155,6 +155,63 @@ export async function prepareCheckout(): Promise<{ cart: HttpTypes.StoreCart | n
 }
 
 const checkoutId = async () => (await cookies()).get(CHECKOUT)?.value ?? null
+
+const codesOf = (cart: HttpTypes.StoreCart | null) => (cart?.promotions ?? []).map((p) => p.code).filter((c): c is string => !!c)
+
+// A discount code typed at checkout (made in the admin under Promotions). The store checks
+// it: unknown codes are refused; a code whose conditions the order doesn't meet adds nothing.
+export async function applyCode(input: string): Promise<Result<{ cart: HttpTypes.StoreCart }>> {
+  const code = input.trim().slice(0, 60)
+  if (!/^[\w-]{2,60}$/.test(code)) return { ok: false, error: "Please check the code." }
+  const id = await checkoutId()
+  if (!id) return { ok: false, error: "Your checkout has expired. Please reload the page." }
+  const headers = await auth()
+  const tryCode = async (c: string) => {
+    try {
+      await sdk.client.fetch(`/store/carts/${id}/promotions`, { method: "POST", body: { promo_codes: [c] }, headers })
+      return true
+    } catch {
+      return false
+    }
+  }
+  // Codes are usually made in capitals; accept them typed in any case.
+  const used = (await tryCode(code)) ? code : code !== code.toUpperCase() && (await tryCode(code.toUpperCase())) ? code.toUpperCase() : null
+  if (!used) return { ok: false, error: `"${code}" isn't a valid code.` }
+  let cart = await retrieve(id)
+  if (!cart) return { ok: false, error: "Something went wrong. Please try again." }
+  // A friend's invite code: not your own, and only above the minimum order.
+  if (/^FRIEND-/i.test(used)) {
+    const [features, mine] = await Promise.all([getSiteFeatures(), headers.authorization ? getMyInvite() : null])
+    const min = features.referrals.min_order
+    const reason =
+      mine && mine.code.toUpperCase() === used.toUpperCase()
+        ? "This is your own invite code. Share it with friends instead."
+        : min > 0 && Number(cart.item_total ?? 0) < min
+          ? `This invite code works on orders over ₹${min.toLocaleString("en-IN")}.`
+          : null
+    if (reason) {
+      await sdk.client.fetch(`/store/carts/${id}/promotions`, { method: "DELETE", body: { promo_codes: [used] }, headers }).catch(() => {})
+      cart = (await retrieve(id)) ?? cart
+      return { ok: false, error: reason }
+    }
+  }
+  if (!codesOf(cart).some((c) => c.toUpperCase() === used.toUpperCase())) {
+    return { ok: false, error: `"${code}" can't be used on this order (check its minimum amount or products).` }
+  }
+  return { ok: true, cart }
+}
+
+export async function removeCode(code: string): Promise<Result<{ cart: HttpTypes.StoreCart }>> {
+  const id = await checkoutId()
+  if (!id) return { ok: false, error: "Your checkout has expired. Please reload the page." }
+  try {
+    await sdk.client.fetch(`/store/carts/${id}/promotions`, { method: "DELETE", body: { promo_codes: [code] }, headers: await auth() })
+    const cart = await retrieve(id)
+    return cart ? { ok: true, cart } : { ok: false, error: "Something went wrong. Please try again." }
+  } catch (e) {
+    return fail(e)
+  }
+}
 
 // Saves contact + delivery address and picks the (free) delivery option.
 export async function saveAddress(a: Address): Promise<Result<{ cart: HttpTypes.StoreCart }>> {

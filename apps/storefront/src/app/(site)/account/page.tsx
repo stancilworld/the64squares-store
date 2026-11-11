@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 import { AccountHome } from "@/components/account/account-home"
 import { SignIn } from "@/components/account/sign-in"
-import { getCustomer, getMyOrders } from "@/lib/auth"
+import { getCustomer, getMyInvite, getMyOrders } from "@/lib/auth"
 import { getCheckoutConfig } from "@/lib/checkout"
 import { getMyTickets } from "@/lib/tournament-actions"
 
@@ -16,8 +16,8 @@ async function Account({ searchParams }: PageProps<"/account">) {
     const config = await getCheckoutConfig()
     return <SignIn google={config.google} next={next} />
   }
-  const [orders, tickets] = await Promise.all([getMyOrders(), getMyTickets()])
-  return <AccountHome customer={customer} orders={orders} tickets={tickets} />
+  const [orders, tickets, invite] = await Promise.all([getMyOrders(), getMyTickets(), getMyInvite()])
+  return <AccountHome customer={customer} orders={orders} tickets={tickets} invite={invite} />
 }
 
 export default function AccountPage(props: PageProps<"/account">) {

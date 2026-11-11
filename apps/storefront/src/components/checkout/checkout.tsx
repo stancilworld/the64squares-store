@@ -17,6 +17,7 @@ import {
 } from "@/lib/checkout"
 import { formatPrice } from "@/lib/format"
 import { CheckoutSteps } from "../checkout-steps"
+import { CouponBox } from "./coupon-box"
 import { FillMedia } from "../media"
 import { Field, PrimaryButton, STATES, SelectField, matchState } from "./fields"
 import { track } from "@/lib/tracking/engine"
@@ -89,7 +90,7 @@ const validate = (a: Address, pin: PincodeInfo | null): Errors => {
   return e
 }
 
-function Summary({ cart, config, children }: { cart: Cart; config: CheckoutConfig; children?: React.ReactNode }) {
+function Summary({ cart, config, coupons, onCart, children }: { cart: Cart; config: CheckoutConfig; coupons: boolean; onCart: (c: Cart) => void; children?: React.ReactNode }) {
   const items = [...(cart.items ?? [])]
   const count = items.reduce((n, i) => n + i.quantity, 0)
   const total = cart.total ?? 0
@@ -126,6 +127,7 @@ function Summary({ cart, config, children }: { cart: Cart; config: CheckoutConfi
         <div className="flex justify-between"><dt>GST/Tax (included)</dt><dd>{formatPrice(cart.tax_total ?? 0)}</dd></div>
         <div className="flex justify-between"><dt>Shipping fee</dt><dd>{cart.shipping_total ? formatPrice(cart.shipping_total) : "Free"}</dd></div>
       </dl>
+      {coupons && <CouponBox cart={cart} onCart={onCart} />}
       <div className="mt-5 flex justify-between border-t border-black px-1 pt-5 text-[14px] font-semibold lg:text-[18px]">
         <span>Total</span>
         <span>{formatPrice(total)}</span>
@@ -177,7 +179,7 @@ function PayOption({
   )
 }
 
-export function Checkout({ config, customer }: { config: CheckoutConfig; customer: Customer }) {
+export function Checkout({ config, customer, coupons = true }: { config: CheckoutConfig; customer: Customer; coupons?: boolean }) {
   const router = useRouter()
   const [phase, setPhase] = useState<"loading" | "empty" | "address" | "payment">("loading")
   const [cart, setCart] = useState<Cart | null>(null)
@@ -509,7 +511,7 @@ export function Checkout({ config, customer }: { config: CheckoutConfig; custome
             </div>
           )}
         </div>
-        <Summary cart={cart} config={config} />
+        <Summary cart={cart} config={config} coupons={coupons} onCart={setCart} />
       </div>
     </div>
   )

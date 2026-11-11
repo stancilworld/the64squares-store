@@ -160,6 +160,8 @@ const RULES: Rule[] = [
   r("write", /^\/seo(\/|$)/, "settings.branding"),
   r("any", /^\/marketing(\/|$)/, "settings.marketing"),
   r("read", /^\/analytics(\/|$)/, "analytics.view"),
+  r("any", /^\/automations(\/|$)/, "settings.marketing"),
+  r("any", /^\/push(\/|$)/, "settings.marketing"),
   r("write", /^\/checkout-settings(\/|$)/, "settings.store"),
   r("write", /^\/invoice-settings(\/|$)/, "settings.store"),
   r("write", /^\/invoices(\/|$)/, "orders.edit"),

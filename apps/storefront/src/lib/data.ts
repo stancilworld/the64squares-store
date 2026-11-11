@@ -489,6 +489,7 @@ export type PublicReview = {
   source: "website" | "admin" | "etsy"
   reply: string | null
   date: string
+  photos?: string[]
 }
 
 // Star summaries for the shop's product cards: { [product id]: { average, count } }.

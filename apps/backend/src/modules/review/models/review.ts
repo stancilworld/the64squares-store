@@ -21,6 +21,8 @@ const Review = model
     reply: model.text().nullable(),
     // When the review was written (may be earlier than created_at for imported reviews).
     reviewed_at: model.dateTime(),
+    // Up to 3 photo addresses added by the shopper (Website → Site features → Review photos).
+    photos: model.json().nullable(),
   })
   .indexes([{ on: ["product_id", "status"] }, { on: ["customer_id", "product_id"] }])
 

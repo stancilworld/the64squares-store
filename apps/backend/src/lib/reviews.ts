@@ -1,3 +1,4 @@
+import crypto from "node:crypto"
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { REVIEW_MODULE } from "../modules/review"
@@ -22,6 +23,20 @@ export type ReviewRow = {
   reply: string | null
   reviewed_at: Date | string
   created_at?: Date | string
+  photos?: string[] | null
+}
+
+// A photo the shopper uploaded for their review: the signature proves the store made it.
+const photoSecret = () => process.env.JWT_SECRET || process.env.COOKIE_SECRET || "dev-secret"
+export const photoSig = (url: string) => crypto.createHmac("sha256", photoSecret()).update(`review-photo:${url}`).digest("base64url").slice(0, 32)
+export const photosFrom = (input: unknown): string[] | null => {
+  if (!Array.isArray(input)) return null
+  const out: string[] = []
+  for (const p of input.slice(0, 3)) {
+    const { url, sig } = (p ?? {}) as { url?: unknown; sig?: unknown }
+    if (typeof url === "string" && typeof sig === "string" && url.length < 1000 && sig === photoSig(url)) out.push(url)
+  }
+  return out
 }
 
 export type Summary = { count: number; average: number; stars: [number, number, number, number, number] }
@@ -56,6 +71,7 @@ export const publicReview = (r: ReviewRow) => ({
   source: r.source,
   reply: r.reply,
   date: new Date(r.reviewed_at).toISOString(),
+  photos: Array.isArray(r.photos) ? r.photos.slice(0, 3) : [],
 })
 
 const service = (c: MedusaContainer) => c.resolve<ReviewModuleService>(REVIEW_MODULE)

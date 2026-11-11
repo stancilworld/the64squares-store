@@ -4,7 +4,8 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { FillMedia } from "@/components/media"
 import { PanelHeader } from "@/components/play-shell/nav"
-import { getNews, getNewsArticle } from "@/lib/data"
+import { ShareButtons } from "@/components/share-buttons"
+import { getNews, getNewsArticle, getSiteFeatures } from "@/lib/data"
 import { newsDate } from "@/lib/news-date"
 import { absoluteUrl, jsonLd, seoMetadata } from "@/lib/seo"
 import { Loading } from "../../loading-text"
@@ -21,7 +22,7 @@ async function Article({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params
   const a = await getNewsArticle(handle)
   if (!a) notFound()
-  const { articles } = await getNews(4)
+  const [{ articles }, features] = await Promise.all([getNews(4), getSiteFeatures()])
   const more = articles.filter((m) => m.handle !== a.handle).slice(0, 3)
 
   return (
@@ -58,6 +59,11 @@ async function Article({ params }: { params: Promise<{ handle: string }> }) {
       )}
       {/* Cleaned by the server when the article was saved (only the editor's own formatting). */}
       <div className="news-body mx-auto mt-8 max-w-[720px]" dangerouslySetInnerHTML={{ __html: a.body_html }} />
+      {features.share_buttons.enabled && (
+        <div className="mx-auto mt-8 max-w-[720px] [&_a]:border-[var(--g-line)] [&_button]:border-[var(--g-line)] [&_span]:text-[var(--g-muted)]">
+          <ShareButtons path={`/play/news/${a.handle}`} title={a.title} />
+        </div>
+      )}
 
       {more.length > 0 && (
         <aside className="mx-auto mt-14 max-w-[960px] border-t border-[var(--g-line)] pt-6">

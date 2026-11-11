@@ -1,13 +1,15 @@
 "use client"
 
 import type { HttpTypes } from "@medusajs/types"
+import { NotifyMe } from "./notify-me"
+import { SaleCountdown } from "./sale-countdown"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react"
 import { addToCart } from "@/lib/cart"
 import { notifyCartChanged } from "@/lib/cart-events"
 import { notifyVariantSelected } from "@/lib/product-events"
-import { arrivalDate, formatArrival, formatShortDate, indiaToday } from "@/lib/delivery-date"
+import { arrivalDate, formatArrival, indiaToday } from "@/lib/delivery-date"
 import { useSwatch } from "./colours-provider"
 import { formatPrice } from "@/lib/format"
 import { track } from "@/lib/tracking/engine"
@@ -50,6 +52,8 @@ export type ProductPageInfo = {
   returns_text: string
   in_carts: number | null
   sale_ends_at: string | null
+  // "Email me when it's back" under sold-out options (Website → Site features).
+  back_in_stock?: boolean
 }
 
 const Tick = () => (
@@ -85,6 +89,13 @@ export function ProductOptions({ product, info }: { product: HttpTypes.StoreProd
     const first = variants.find(inStock) ?? variants[0]
     return Object.fromEntries(optionTitles.map((t) => [t, (first && valueOf(first, t)) ?? ""]))
   })
+  // A link to one option (?variant=…, e.g. from Google Shopping) opens with it chosen.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("variant")
+    const v = id ? variants.find((x) => x.id === id) : undefined
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- read once from the address
+    if (v) setChoice(Object.fromEntries(optionTitles.map((t) => [t, valueOf(v, t) ?? ""])))
+  }, [variants, optionTitles])
   const [pending, start] = useTransition()
   const [added, setAdded] = useState(false)
   const [error, setError] = useState("")
@@ -176,7 +187,8 @@ export function ProductOptions({ product, info }: { product: HttpTypes.StoreProd
           {percentOff}% off
           {info.sale_ends_at && (
             <>
-              <span aria-hidden="true"> · </span>Sale ends {formatShortDate(info.sale_ends_at)}
+              <span aria-hidden="true"> · </span>
+              <SaleCountdown endsAt={info.sale_ends_at} />
             </>
           )}
         </p>
@@ -337,6 +349,7 @@ export function ProductOptions({ product, info }: { product: HttpTypes.StoreProd
           Buy now
         </button>
       </div>
+      {info.back_in_stock && selected && !inStock(selected) && <NotifyMe key={selected.id} variantId={selected.id} />}
       {added && (
         <p className="mt-4 text-[15px]">
           Added to cart!{" "}

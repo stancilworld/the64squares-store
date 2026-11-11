@@ -10,6 +10,7 @@ import { ProductFaq } from "@/components/product-faq"
 import { jsonLd as jsonLdHtml } from "@/lib/seo"
 import { WishlistHeart } from "@/components/wishlist-heart"
 import { ProductReviews } from "@/components/product-reviews"
+import { ShareButtons } from "@/components/share-buttons"
 import { Stars } from "@/components/stars"
 import { SITE_URL } from "@/lib/site"
 
@@ -143,7 +144,8 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
               dispatch_from: deliveryInfo.dispatch_from,
               returns_text: deliveryInfo.returns_text,
               in_carts: extras.in_carts,
-              sale_ends_at: extras.sale_ends_at,
+              sale_ends_at: features.countdowns.enabled ? extras.sale_ends_at : null,
+              back_in_stock: features.back_in_stock.enabled,
             }}
           />
           <div className="mt-8 rounded-md border border-rule bg-chalk px-5 py-4 text-[15px]">
@@ -174,6 +176,7 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
               ))}
             </p>
           )}
+          {features.share_buttons.enabled && <ShareButtons path={`/products/${product.handle}`} title={product.title} className="mt-8" />}
           {care && (
             <details className="mt-8 border-y border-rule py-4 text-[15px]">
               <summary className="cursor-pointer font-medium">Care instructions</summary>
@@ -183,7 +186,7 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
         </div>
       </div>
       {features.faq.enabled && faq.length > 0 && <ProductFaq items={faq} />}
-      {features.reviews.enabled && <ProductReviews productId={product.id} summary={summary} reviews={reviews} />}
+      {features.reviews.enabled && <ProductReviews productId={product.id} summary={summary} reviews={reviews} photos={features.reviews.photos} />}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={breadcrumbJsonLd(crumbs)} />
       {features.faq.enabled && faq.length > 0 && (

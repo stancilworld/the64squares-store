@@ -3,12 +3,13 @@ import { Suspense } from "react"
 import { Checkout } from "@/components/checkout/checkout"
 import { getCustomer } from "@/lib/auth"
 import { getCheckoutConfig } from "@/lib/checkout"
+import { getSiteFeatures } from "@/lib/data"
 
 export const metadata: Metadata = { title: "Checkout", robots: { index: false } }
 
 async function CheckoutLoader() {
-  const [config, customer] = await Promise.all([getCheckoutConfig(), getCustomer()])
-  return <Checkout config={config} customer={customer} />
+  const [config, customer, features] = await Promise.all([getCheckoutConfig(), getCustomer(), getSiteFeatures()])
+  return <Checkout config={config} customer={customer} coupons={features.coupon_box.enabled} />
 }
 
 // Backpack → Addresses → Payment. Only the items ticked in the backpack are bought.

@@ -20,6 +20,7 @@ type Review = {
   source: "website" | "admin" | "etsy"
   reply: string | null
   reviewed_at: string
+  photos?: string[] | null
   product: { id: string; title: string; handle: string; thumbnail: string | null } | null
 }
 type ListResponse = { reviews: Review[]; pending: number }
@@ -109,6 +110,15 @@ function ReviewCard({ r, storeUrl }: { r: Review; storeUrl: string }) {
       <Text size="small" className="whitespace-pre-line">
         {r.body}
       </Text>
+      {!!r.photos?.length && (
+        <div className="flex gap-2">
+          {r.photos.map((src) => (
+            <a key={src} href={src} target="_blank" rel="noreferrer" title="Open the photo">
+              <img src={src} alt="Shopper's photo" className="h-20 w-20 rounded-md border object-cover" />
+            </a>
+          ))}
+        </div>
+      )}
       {r.reply && !replying && (
         <div className="rounded-md bg-ui-bg-subtle px-3 py-2">
           <Text size="xsmall" weight="plus">

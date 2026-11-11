@@ -223,6 +223,54 @@ export const SiteFeaturesBody = z.object({
 })
 export type SiteFeaturesBodyType = z.infer<typeof SiteFeaturesBody>
 
+// Automatic emails (lib/automations.ts).
+const autoMail = {
+  enabled: z.boolean(),
+  subject: z.string().trim().max(150),
+  heading: z.string().trim().max(150),
+  body: z.string().max(3000),
+  button_label: z.string().trim().max(40),
+  coupon_code: z.string().trim().max(60).regex(/^[\w-]*$/, "Use letters, numbers, - and _ only."),
+}
+export const AutomationsBody = z
+  .object({
+    welcome: z.object(autoMail).partial(),
+    abandoned_cart: z.object({ ...autoMail, hours: z.number().int().min(1).max(72) }).partial(),
+    review_request: z.object({ ...autoMail, days: z.number().int().min(1).max(60) }).partial(),
+    win_back: z.object({ ...autoMail, days: z.number().int().min(30).max(365) }).partial(),
+    back_in_stock: z.object(autoMail).partial(),
+    referral_reward: z.object(autoMail).partial(),
+  })
+  .partial()
+export type AutomationsBodyType = z.infer<typeof AutomationsBody>
+
+export const AutomationTestBody = z.object({
+  kind: z.enum(["welcome", "abandoned_cart", "review_request", "win_back", "back_in_stock", "referral_reward"]),
+  to: z.string().trim().email(),
+})
+export type AutomationTestBodyType = z.infer<typeof AutomationTestBody>
+
+export const StockAlertBody = z.object({ email: z.string().trim().email().max(200), variant_id: z.string().regex(/^variant_[A-Z0-9]{10,40}$/i) })
+export type StockAlertBodyType = z.infer<typeof StockAlertBody>
+
+export const UnsubscribeBody = z.object({ email: z.string().trim().email().max(200), sig: z.string().regex(/^[\w-]{16,64}$/) })
+export type UnsubscribeBodyType = z.infer<typeof UnsubscribeBody>
+
+export const PushSubscribeBody = z.object({
+  endpoint: z.string().url().max(1000).refine((u) => u.startsWith("https://"), "Must be https"),
+  keys: z.object({ p256dh: z.string().min(20).max(200), auth: z.string().min(8).max(100) }),
+})
+export type PushSubscribeBodyType = z.infer<typeof PushSubscribeBody>
+export const PushUnsubscribeBody = z.object({ endpoint: z.string().url().max(1000) })
+export type PushUnsubscribeBodyType = z.infer<typeof PushUnsubscribeBody>
+export const PushSendBody = z.object({
+  title: z.string().trim().min(1).max(60),
+  body: z.string().trim().min(1).max(160),
+  url: z.string().trim().max(500).regex(/^(\/|https:\/\/)/, "Start with / or https://"),
+  image_url: z.string().trim().url().max(1000).nullish(),
+})
+export type PushSendBodyType = z.infer<typeof PushSendBody>
+
 // The simple product form (lib/product-form.ts).
 const BadgeBody = z.object({
   kind: z.enum(["auto", "none", "new", "bestseller", "sale", "custom"]),

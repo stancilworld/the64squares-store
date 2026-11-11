@@ -8,7 +8,14 @@ type Recovered = { completed: boolean; items: { variant_id: string; quantity: nu
 // (skipping what's already there), then opens the cart.
 export async function GET(request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
-  const back = (q: string) => NextResponse.redirect(new URL(`/cart${q}`, request.url))
+  // A discount code from the email (?code=…) goes along, so checkout applies it.
+  const code = new URL(request.url).searchParams.get("code")
+  const keep = code && /^[\w-]{2,60}$/.test(code) ? code : null
+  const back = (q: string) => {
+    const url = new URL(`/cart${q}`, request.url)
+    if (keep) url.searchParams.set("code", keep)
+    return NextResponse.redirect(url)
+  }
   if (!/^cart_[A-Z0-9]+\.[\w-]{10,40}$/.test(token)) return back("")
   let data: Recovered
   try {

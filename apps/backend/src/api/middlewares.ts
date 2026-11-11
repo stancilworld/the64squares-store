@@ -10,6 +10,13 @@ import {
   PageBody,
   NewsBody,
   SiteFeaturesBody,
+  AutomationsBody,
+  AutomationTestBody,
+  StockAlertBody,
+  UnsubscribeBody,
+  PushSubscribeBody,
+  PushUnsubscribeBody,
+  PushSendBody,
   SeoMetaBody,
   RedirectBody,
   ClearNotFoundBody,
@@ -261,6 +268,12 @@ export default defineMiddlewares({
     },
     {
       method: ["POST"],
+      matcher: "/store/account/reviews/photos",
+      // Up to 3 photos as base64 (about 40 MB).
+      bodyParser: { sizeLimit: "42mb" },
+    },
+    {
+      method: ["POST"],
       matcher: "/admin/mailbox/send",
       // Attachments travel in the body (up to about 10 MB of files).
       bodyParser: { sizeLimit: "20mb" },
@@ -295,6 +308,45 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/seo/not-found",
       middlewares: [validateAndTransformBody(ClearNotFoundBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/automations",
+      middlewares: [validateAndTransformBody(AutomationsBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/automations/test",
+      middlewares: [validateAndTransformBody(AutomationTestBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/stock-alerts",
+      middlewares: [validateAndTransformBody(StockAlertBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/push/subscribe",
+      middlewares: [validateAndTransformBody(PushSubscribeBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/push/unsubscribe",
+      middlewares: [validateAndTransformBody(PushUnsubscribeBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/push/send",
+      middlewares: [validateAndTransformBody(PushSendBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/unsubscribe",
+      middlewares: [validateAndTransformBody(UnsubscribeBody)],
+    },
+    {
+      matcher: "/store/account/referral",
+      middlewares: [authenticate("customer", ["bearer", "session"])],
     },
     {
       method: ["POST"],

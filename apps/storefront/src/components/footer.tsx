@@ -1,7 +1,8 @@
 import Image from "next/image"
 import Link from "next/link"
 import type { ComponentType } from "react"
-import { type FooterLink, type SiteNavigation, getContent, getMarketingConfig, getSiteNavigation } from "@/lib/data"
+import { type FooterLink, type SiteNavigation, getContent, getMarketingConfig, getSiteFeatures, getSiteNavigation } from "@/lib/data"
+import { FooterSignup } from "./footer-signup"
 import { anyTag } from "@/lib/tracking/types"
 import { CookieSettingsLink } from "./tracking/tracking"
 import { FacebookIcon, InstagramIcon, LinkedInIcon, WhatsAppIcon, YouTubeIcon } from "./icons"
@@ -60,12 +61,19 @@ function FooterLinks({ links, className }: { links: FooterLink[]; className: str
 }
 
 export async function Footer() {
-  const [site, nav, marketing] = await Promise.all([getContent("site"), getSiteNavigation(), getMarketingConfig()])
+  const [site, nav, marketing, features] = await Promise.all([getContent("site"), getSiteNavigation(), getMarketingConfig(), getSiteFeatures()])
   const media = site.find((b) => b.section === "footer_media")?.image_url
   const f = nav.footer
 
   return (
     <footer className="board-wash mt-auto bg-ink text-white/80">
+      {features.newsletter_footer.enabled && (
+        <div className="border-b border-white/10">
+          <div className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10">
+            <FooterSignup title={features.newsletter_footer.title} body={features.newsletter_footer.body} />
+          </div>
+        </div>
+      )}
       <div className="mx-auto grid max-w-[1440px] gap-10 px-6 pb-10 pt-14 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_1fr_1fr_1fr] lg:gap-12 lg:px-10 lg:pb-12 lg:pt-20">
         <div>
           {media ? (
@@ -107,6 +115,11 @@ export async function Footer() {
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-5 text-[13px] text-white/55 lg:px-10">
           <p>The 64 Squares, made in India.</p>
+          {features.business_profile.enabled && features.business_profile.url && (
+            <a href={features.business_profile.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white">
+              {features.business_profile.label || "Find us on Google"}
+            </a>
+          )}
           {anyTag(marketing) && <CookieSettingsLink className="underline underline-offset-2 hover:text-white" />}
         </div>
       </div>

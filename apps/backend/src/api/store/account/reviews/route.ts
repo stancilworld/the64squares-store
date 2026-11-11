@@ -1,7 +1,7 @@
 import { createReviewWorkflow, updateReviewWorkflow } from "../../../../workflows/review"
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
-import { clean, hasBought, type ReviewRow } from "../../../../lib/reviews"
+import { clean, hasBought, photoSig, photosFrom, type ReviewRow } from "../../../../lib/reviews"
 import { REVIEW_MODULE } from "../../../../modules/review"
 import type ReviewModuleService from "../../../../modules/review/service"
 
@@ -16,7 +16,9 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
   const [mine] = (await reviews.listReviews({ customer_id: me.id, product_id: productId }, { take: 1 })) as unknown as ReviewRow[]
   res.json({
     can_review: await hasBought(req.scope, me, productId),
-    review: mine ? { rating: mine.rating, title: mine.title, body: mine.body, status: mine.status } : null,
+    review: mine
+      ? { rating: mine.rating, title: mine.title, body: mine.body, status: mine.status, photos: (mine.photos ?? []).map((url) => ({ url, sig: photoSig(url) })) }
+      : null,
     name: [me.first_name, me.last_name].filter(Boolean).join(" ") || null,
   })
 }
@@ -36,7 +38,18 @@ export const POST = async (req: AuthenticatedMedusaRequest, res: MedusaResponse)
   }
   const name = clean(b.name, 60) || [me.first_name, me.last_name].filter(Boolean).join(" ") || "Customer"
   const reviews = req.scope.resolve<ReviewModuleService>(REVIEW_MODULE)
-  const fields = { rating, title: clean(b.title, 120) || null, body, name, city: clean(b.city, 60) || null, status: "pending" as const, verified: true, reviewed_at: new Date() }
+  const photos = photosFrom(b.photos)
+  const fields = {
+    rating,
+    title: clean(b.title, 120) || null,
+    body,
+    name,
+    city: clean(b.city, 60) || null,
+    status: "pending" as const,
+    verified: true,
+    reviewed_at: new Date(),
+    ...(photos ? { photos: photos.length ? photos : null } : {}),
+  }
   const [mine] = (await reviews.listReviews({ customer_id: me.id, product_id: b.product_id }, { take: 1 })) as unknown as ReviewRow[]
   if (mine) await updateReviewWorkflow(req.scope).run({ input: { id: mine.id, ...fields } })
   else await createReviewWorkflow(req.scope).run({ input: { ...fields, product_id: b.product_id, customer_id: me.id, source: "website" } })

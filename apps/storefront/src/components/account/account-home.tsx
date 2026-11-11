@@ -4,13 +4,14 @@ import type { HttpTypes } from "@medusajs/types"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
-import { type AccountOrder, deleteAddress, setPassword, signOut, updateDetails } from "@/lib/auth"
+import { type AccountOrder, deleteAddress, type Invite, setPassword, signOut, updateDetails } from "@/lib/auth"
 import { notifyCartChanged } from "@/lib/cart-events"
 import { formatPrice } from "@/lib/format"
 import { eventDay, eventTime, type Ticket } from "@/lib/tournament-types"
 import { Field, PrimaryButton } from "../checkout/fields"
 import { FillMedia } from "../media"
 import { orderDate, stepLabel } from "../order-details"
+import { InviteFriends } from "./invite-friends"
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -86,7 +87,7 @@ function Password() {
   )
 }
 
-export function AccountHome({ customer, orders, tickets = [] }: { customer: HttpTypes.StoreCustomer; orders: AccountOrder[]; tickets?: Ticket[] }) {
+export function AccountHome({ customer, orders, tickets = [], invite = null }: { customer: HttpTypes.StoreCustomer; orders: AccountOrder[]; tickets?: Ticket[]; invite?: Invite | null }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const addresses = customer.addresses ?? []
@@ -156,6 +157,12 @@ export function AccountHome({ customer, orders, tickets = [] }: { customer: Http
           </div>
         )}
       </Section>
+
+      {invite && (
+        <Section title="Invite friends">
+          <InviteFriends invite={invite} />
+        </Section>
+      )}
 
       {tickets.length > 0 && (
         <Section title="Your tournaments">

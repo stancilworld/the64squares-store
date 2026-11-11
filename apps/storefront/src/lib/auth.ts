@@ -237,3 +237,16 @@ export async function getMyOrder(id: string): Promise<AccountOrder | null> {
     return null
   }
 }
+
+export type Invite = { code: string; link: string; give_amount: number; get_amount: number; min_order: number; uses: number; rewards: number }
+
+// The customer's "invite a friend" code (Website → Site features → Referrals), or null when off.
+export async function getMyInvite(): Promise<Invite | null> {
+  const headers = await authHeaders()
+  if (!headers.authorization) return null
+  try {
+    return await sdk.client.fetch<Invite>("/store/account/referral", { headers })
+  } catch {
+    return null
+  }
+}

@@ -2,11 +2,35 @@
 
 import Link from "next/link"
 import { useEffect, useState, useTransition } from "react"
-import { getMyReview, type MyReview, submitReview } from "@/lib/review-actions"
+import { getMyReview, type MyReview, type ReviewPhoto, submitReview } from "@/lib/review-actions"
+
+// A photo made smaller in the browser before it is sent (phone photos are often 5–10 MB).
+const shrink = async (file: File): Promise<{ name: string; type: string; data: string }> => {
+  const toB64 = (blob: Blob) =>
+    new Promise<string>((ok, fail) => {
+      const r = new FileReader()
+      r.onload = () => ok(String(r.result).split(",")[1] ?? "")
+      r.onerror = () => fail(r.error)
+      r.readAsDataURL(blob)
+    })
+  try {
+    const bmp = await createImageBitmap(file)
+    const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height))
+    const canvas = document.createElement("canvas")
+    canvas.width = Math.round(bmp.width * scale)
+    canvas.height = Math.round(bmp.height * scale)
+    canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height)
+    const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.85))
+    if (blob) return { name: file.name.replace(/\.[^.]+$/, "") + ".jpg", type: "image/jpeg", data: await toB64(blob) }
+  } catch {
+    // The browser can't open it (e.g. HEIC outside Safari): the store converts it.
+  }
+  return { name: file.name, type: file.type || "image/heic", data: await toB64(file) }
+}
 
 // "Write a review": only for signed-in shoppers who bought the product. Reviews show once
 // the shop approves them.
-export function ReviewForm({ productId }: { productId: string }) {
+export function ReviewForm({ productId, photos = false }: { productId: string; photos?: boolean }) {
   const [me, setMe] = useState<MyReview | null>(null)
   const [open, setOpen] = useState(false)
   const [rating, setRating] = useState(0)
@@ -15,6 +39,8 @@ export function ReviewForm({ productId }: { productId: string }) {
   const [body, setBody] = useState("")
   const [name, setName] = useState("")
   const [city, setCity] = useState("")
+  const [pics, setPics] = useState<ReviewPhoto[]>([])
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
   const [sent, setSent] = useState(false)
   const [pending, start] = useTransition()
@@ -28,6 +54,7 @@ export function ReviewForm({ productId }: { productId: string }) {
         setRating(r.review.rating)
         setTitle(r.review.title ?? "")
         setBody(r.review.body)
+        setPics(r.review.photos ?? [])
       }
       setName(r.name ?? "")
     })
@@ -74,7 +101,7 @@ export function ReviewForm({ productId }: { productId: string }) {
     if (!rating) return setError("Choose how many stars.")
     if (body.trim().length < 10) return setError("Please write a few words about the product.")
     start(async () => {
-      const r = await submitReview({ productId, rating, title, body, name, city })
+      const r = await submitReview({ productId, rating, title, body, name, city, ...(photos ? { photos: pics } : {}) })
       if (r.ok) setSent(true)
       else setError(r.error)
     })
@@ -130,10 +157,66 @@ export function ReviewForm({ productId }: { productId: string }) {
           <input value={city} maxLength={60} onChange={(e) => setCity(e.target.value)} className={`${field} h-[44px]`} />
         </label>
       </div>
+      {photos && (
+        <div>
+          <p className="text-[14px] font-medium">
+            Photos <span className="font-normal text-muted">(optional, up to 3)</span>
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            {pics.map((p) => (
+              <div key={p.url} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.url} alt="" className="h-[72px] w-[72px] rounded-md border border-rule object-cover" />
+                <button
+                  type="button"
+                  aria-label="Remove this photo"
+                  onClick={() => setPics((x) => x.filter((y) => y.url !== p.url))}
+                  className="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-black text-[13px] text-white"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {pics.length < 3 && (
+              <label className={`grid h-[72px] w-[72px] cursor-pointer place-items-center rounded-md border border-dashed border-black/40 text-center text-[12px] leading-tight hover:bg-chalk ${uploading ? "opacity-50" : ""}`}>
+                {uploading ? "Adding…" : "+ Add photo"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={uploading}
+                  className="sr-only"
+                  onChange={async (e) => {
+                    const files = [...(e.target.files ?? [])].slice(0, 3 - pics.length)
+                    e.target.value = ""
+                    if (!files.length) return
+                    setUploading(true)
+                    setError("")
+                    try {
+                      const res = await fetch("/api/review-photos", {
+                        method: "POST",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({ files: await Promise.all(files.map(shrink)) }),
+                      })
+                      const data = (await res.json()) as { photos?: ReviewPhoto[]; message?: string }
+                      if (res.ok && data.photos) setPics((x) => [...x, ...data.photos!].slice(0, 3))
+                      else setError(data.message || "The photos couldn't be added.")
+                    } catch {
+                      setError("The photos couldn't be added. Please try again.")
+                    } finally {
+                      setUploading(false)
+                    }
+                  }}
+                />
+              </label>
+            )}
+          </div>
+        </div>
+      )}
       <p className="text-[12px] text-muted">Only your first name and the first letter of your surname are shown.</p>
       {error && <p className="text-[14px] text-red-700">{error}</p>}
       <div className="flex gap-2">
-        <button type="submit" disabled={pending} className="btn btn-solid h-[46px] disabled:opacity-50">
+        <button type="submit" disabled={pending || uploading} className="btn btn-solid h-[46px] disabled:opacity-50">
           {pending ? "Sending…" : "Send review"}
         </button>
         <button type="button" className="btn btn-outline h-[46px]" onClick={() => setOpen(false)}>

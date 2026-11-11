@@ -6,7 +6,8 @@ import { Suspense } from "react"
 import { ArrowLeftLong } from "@/components/icons"
 import { PostDate } from "@/components/post-date"
 import { RichText } from "@/components/rich-text"
-import { getPost } from "@/lib/data"
+import { ShareButtons } from "@/components/share-buttons"
+import { getPost, getSiteFeatures } from "@/lib/data"
 import { absoluteUrl, jsonLd, seoMetadata } from "@/lib/seo"
 
 export async function generateMetadata({ params }: PageProps<"/blog/[handle]">): Promise<Metadata> {
@@ -19,7 +20,7 @@ export async function generateMetadata({ params }: PageProps<"/blog/[handle]">):
 
 async function Post({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params
-  const post = await getPost(handle)
+  const [post, features] = await Promise.all([getPost(handle), getSiteFeatures()])
   if (!post) {
     notFound()
   }
@@ -58,6 +59,7 @@ async function Post({ params }: { params: Promise<{ handle: string }> }) {
         <RichText text={post.body} className="mt-[48px] text-[17px] leading-[28px] lg:mt-[114px] lg:text-[18px]" />
         <p className="mt-[40px] text-[24px] italic lg:mt-[38px] lg:text-[32px]">by {post.author}</p>
         <PostDate iso={post.published_at} className="mt-1 block text-[18px] lg:text-[20px]" />
+        {features.share_buttons.enabled && <ShareButtons path={`/blog/${post.handle}`} title={post.title} className="mt-8" />}
       </div>
     </article>
   )
