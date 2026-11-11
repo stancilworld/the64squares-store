@@ -20,10 +20,11 @@ import type { PlayPass } from "@/lib/play"
 import type { PublicProfile } from "@/lib/profile-types"
 import { usePlayPass } from "./use-play-pass"
 import { type ChatMsg, GameChat } from "./game-chat"
+import { ShareGame } from "./share-game"
 import { useBoardSettings } from "@/lib/chess/settings"
 import { GAME_URL, type GameState, LIVE_KEY, type Presence, resultText, SPEED_LABEL, speedOf, tcText } from "@/lib/game-types"
 
-type Props = { id: string; initialPass: PlayPass | null }
+type Props = { id: string; initialPass: PlayPass | null; share?: boolean }
 type Pending = { from: Square; to: Square; promotion?: "q" | "r" | "b" | "n" }
 
 const noSubscribe = () => () => {}
@@ -40,7 +41,7 @@ const store = {
   },
 }
 
-export function GameView({ id, initialPass }: Props) {
+export function GameView({ id, initialPass, share = false }: Props) {
   const pass = usePlayPass(initialPass)
   const token = pass?.token ?? null
   const meId = pass?.me.id ?? null
@@ -540,6 +541,12 @@ export function GameView({ id, initialPass }: Props) {
           <a href={`${GAME_URL}/game/games/${id}.pgn`} className="g-btn" download>
             PGN
           </a>
+        )}
+        {share && game.status === "finished" && game.moves.length >= 2 && (
+          <ShareGame
+            id={id}
+            text={`${game.white?.name ?? "White"} vs ${game.black?.name ?? "Black"}: ${game.result === "1/2-1/2" ? "½–½" : (game.result ?? "")} in ${Math.ceil(game.moves.length / 2)} moves. ${resultText(game)}`}
+          />
         )}
       </div>
     </div>

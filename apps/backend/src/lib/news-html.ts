@@ -24,7 +24,7 @@ export const cleanArticleHtml = (html: string) =>
       ol: ["start"],
       mark: ["data-color", "style"],
       span: ["style"],
-      div: ["data-youtube-video"],
+      div: ["data-youtube-video", "data-t64-product", "data-t64-title", "data-t64-fen", "data-t64-caption"],
       "*": ["style"],
     },
     allowedStyles: {
@@ -44,6 +44,22 @@ export const cleanArticleHtml = (html: string) =>
         return { tagName: "a", attribs }
       },
       h1: "h2",
+      // Article blocks (product card, chess diagram): only well-formed values are kept.
+      div: (_tag, given) => {
+        const attribs: sanitizeHtml.Attributes = {}
+        if ("data-youtube-video" in given) attribs["data-youtube-video"] = ""
+        const handle = given["data-t64-product"]
+        if (handle && /^[a-z0-9][a-z0-9-]{0,119}$/.test(handle)) {
+          attribs["data-t64-product"] = handle
+          if (given["data-t64-title"]) attribs["data-t64-title"] = given["data-t64-title"].slice(0, 200)
+        }
+        const fen = given["data-t64-fen"]
+        if (fen && /^([pnbrqkPNBRQK1-8]{1,8}\/){7}[pnbrqkPNBRQK1-8]{1,8}$/.test(fen)) {
+          attribs["data-t64-fen"] = fen
+          if (given["data-t64-caption"]) attribs["data-t64-caption"] = given["data-t64-caption"].slice(0, 200)
+        }
+        return { tagName: "div", attribs }
+      },
     },
     // Pictures and videos whose address was removed above.
     exclusiveFilter: (frame) => (frame.tag === "img" || frame.tag === "iframe") && !frame.attribs.src,

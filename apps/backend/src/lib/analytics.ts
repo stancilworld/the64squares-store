@@ -261,3 +261,16 @@ export const playReport = async (c: MedusaContainer, p: Period) => {
     endings,
   }
 }
+
+// Views and visits of pages whose address starts with one of the given prefixes, by page.
+export const viewsByPage = async (c: MedusaContainer, p: Period, prefixes: string[]) => {
+  const k = db(c)
+  const rowsOut = await rows(
+    k,
+    `select regexp_replace(e.page, '[?#].*$', '') as page, count(*) as views, count(distinct ${VISIT}) as visits
+     ${EV} and e.name = 'PageView' and (${prefixes.map(() => "e.page like ?").join(" or ")})
+     group by 1`,
+    [p.from, p.to, ...prefixes.map((x) => `${x}%`)]
+  )
+  return new Map(rowsOut.map((r) => [String(r.page).replace(/\/$/, ""), { views: n(r.views), visits: n(r.visits) }]))
+}

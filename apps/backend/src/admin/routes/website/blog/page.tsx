@@ -16,6 +16,7 @@ import {
   usePrompt,
 } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useSearchParams } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { formatWhen, fromLocalInput, isFuture, toLocalInput } from "../../../lib/dates"
 import { FORMATTING_HELP } from "../../../lib/formatting"
@@ -255,6 +256,17 @@ const BlogPage = () => {
     queryKey: ["posts"],
     queryFn: () => sdk.client.fetch<{ posts: Post[] }>("/admin/posts"),
   })
+
+  // Opened from Content (?edit=<id>): open that one once the list is in.
+  const [params, setParams] = useSearchParams()
+  const want = params.get("edit")
+  useEffect(() => {
+    const found = want ? data?.posts.find((x) => x.id === want) : undefined
+    if (!found) return
+    setEditing(found)
+    setOpen(true)
+    setParams({}, { replace: true })
+  }, [want, data, setParams])
 
   const openDrawer = (p: Post | null) => {
     setEditing(p)

@@ -15,6 +15,7 @@ import {
   usePrompt,
 } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useSearchParams } from "react-router-dom"
 import { useEffect, useMemo, useState } from "react"
 import { formatWhen, fromLocalInput, isFuture, toLocalInput } from "../../../lib/dates"
 import { ImageField } from "../../../lib/image-field"
@@ -332,6 +333,17 @@ const NewsPage = () => {
     queryFn: () => sdk.client.fetch<{ articles: Article[] }>("/admin/news"),
   })
   const topics = useMemo(() => [...new Set([...TOPICS, ...(data?.articles ?? []).map((a) => a.topic)])], [data])
+
+  // Opened from Content (?edit=<id>): open that one once the list is in.
+  const [params, setParams] = useSearchParams()
+  const want = params.get("edit")
+  useEffect(() => {
+    const found = want ? data?.articles.find((x) => x.id === want) : undefined
+    if (!found) return
+    setEditing(found)
+    setOpen(true)
+    setParams({}, { replace: true })
+  }, [want, data, setParams])
 
   const openEditor = (a: Article | null) => {
     setEditing(a)

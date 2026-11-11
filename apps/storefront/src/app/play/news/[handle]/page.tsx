@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
+import { ArticleBody } from "@/components/article-body"
 import { FillMedia } from "@/components/media"
 import { PanelHeader } from "@/components/play-shell/nav"
 import { ShareButtons } from "@/components/share-buttons"
@@ -58,7 +59,9 @@ async function Article({ params }: { params: Promise<{ handle: string }> }) {
         </div>
       )}
       {/* Cleaned by the server when the article was saved (only the editor's own formatting). */}
-      <div className="news-body mx-auto mt-8 max-w-[720px]" dangerouslySetInnerHTML={{ __html: a.body_html }} />
+      <div className="mx-auto mt-8 max-w-[720px]">
+        <ArticleBody html={a.body_html} className="news-body" />
+      </div>
       {features.share_buttons.enabled && (
         <div className="mx-auto mt-8 max-w-[720px] [&_a]:border-[var(--g-line)] [&_button]:border-[var(--g-line)] [&_span]:text-[var(--g-muted)]">
           <ShareButtons path={`/play/news/${a.handle}`} title={a.title} />

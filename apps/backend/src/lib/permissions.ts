@@ -154,6 +154,7 @@ const RULES: Rule[] = [
   r("write", /^\/pages(\/|$)/, "content.help"),
   r("write", /^\/posts(\/|$)/, "content.blog"),
   r("write", /^\/news(\/|$)/, "content.news"),
+  r("any", /^\/content-hub(\/|$)/, "content.blog"),
   r("write", /^\/upload-limits(\/|$)/, "settings.branding"),
   r("write", /^\/seo-settings(\/|$)/, "settings.branding"),
   r("write", /^\/site-features(\/|$)/, "settings.branding"),

@@ -816,3 +816,30 @@ export const WebhookBody = z.object({
 export type WebhookBodyType = z.infer<typeof WebhookBody>
 export const WebhookUpdateBody = WebhookBody.partial()
 export type WebhookUpdateBodyType = z.infer<typeof WebhookUpdateBody>
+
+// Content (lib/content-hub.ts, lib/ai-writer.ts).
+export const ContentIdeasBody = z.object({
+  ideas: z
+    .array(
+      z.object({
+        id: z.string().max(40).optional(),
+        title: z.string().trim().min(1).max(200),
+        notes: z.string().max(2000).optional(),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
+        kind: z.enum(["blog", "news", "social", "other"]),
+        status: z.enum(["idea", "writing", "done"]),
+        source: z.string().max(120).nullish(),
+        created_at: z.string().max(40).optional(),
+      })
+    )
+    .max(500),
+})
+export type ContentIdeasBodyType = z.infer<typeof ContentIdeasBody>
+
+export const ContentAssistBody = z.object({
+  task: z.enum(["titles", "outline", "intro", "meta", "social", "faq", "improve"]),
+  topic: z.string().trim().min(3).max(300),
+  keyword: z.string().trim().max(100).optional(),
+  text: z.string().max(8000).optional(),
+})
+export type ContentAssistBodyType = z.infer<typeof ContentAssistBody>

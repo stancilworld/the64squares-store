@@ -9,6 +9,8 @@ import { TableKit } from "@tiptap/extension-table"
 import Youtube from "@tiptap/extension-youtube"
 import { CharacterCount, Placeholder } from "@tiptap/extensions"
 import { useEffect, useRef, useState } from "react"
+import { ChessBoardBlock, ProductCardBlock } from "./article-blocks"
+import { sdk } from "./sdk"
 import { isConvertedPicture, PICTURE_ACCEPT, uploadImage } from "./upload"
 
 // A word-processor style editor (TipTap) for long-form writing such as News articles: styles,
@@ -178,14 +180,23 @@ const Toolbar = ({
   setFull: (v: boolean) => void
 }) => {
   // One small input row, for a link or a YouTube address.
-  const [ask, setAsk] = useState<null | "link" | "video">(null)
+  const [ask, setAsk] = useState<null | "link" | "video" | "product" | "board">(null)
   const [url, setUrl] = useState("")
+  const [caption, setCaption] = useState("")
+  const [products, setProducts] = useState<{ handle: string; title: string }[]>([])
   const c = () => editor.chain().focus()
   const inTable = editor.isActive("table")
 
-  const openAsk = (kind: "link" | "video") => {
-    setUrl(kind === "link" ? (editor.getAttributes("link").href as string) ?? "" : "")
+  const openAsk = (kind: "link" | "video" | "product" | "board") => {
+    setUrl(kind === "link" ? (editor.getAttributes("link").href as string) ?? "" : kind === "board" ? "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" : "")
+    setCaption("")
     setAsk(kind)
+    if (kind === "product" && !products.length) {
+      sdk.client
+        .fetch<{ products: { handle: string; title: string }[] }>("/admin/products", { query: { fields: "handle,title", limit: 300 } })
+        .then((r) => setProducts(r.products))
+        .catch(() => {})
+    }
   }
   const apply = () => {
     const v = url.trim()
@@ -194,6 +205,12 @@ const Toolbar = ({
       else c().extendMarkRange("link").setLink({ href: /^(https?:|mailto:|tel:|\/)/i.test(v) ? v : `https://${v}` }).run()
     } else if (ask === "video" && v) {
       if (!c().setYoutubeVideo({ src: v }).run()) toast.error("That doesn't look like a YouTube link")
+    } else if (ask === "product" && v) {
+      const p = products.find((x) => x.handle === v || x.title.toLowerCase() === v.toLowerCase())
+      if (!p) return toast.error("Pick a product from the list")
+      c().insertProductCard(p.handle, p.title).run()
+    } else if (ask === "board" && v) {
+      if (!c().insertChessBoard(v, caption.trim()).run()) return toast.error("That position doesn't look right", { description: "Paste a FEN, for example from Lichess or chess.com (Share → FEN)." })
     }
     setAsk(null)
   }
@@ -291,6 +308,12 @@ const Toolbar = ({
         <Tool label="YouTube video" onClick={() => openAsk("video")} active={ask === "video"}>
           <Glyph d={PATHS.video} />
         </Tool>
+        <Tool label="Product card" onClick={() => openAsk("product")} active={ask === "product"}>
+          <span className="text-[15px] leading-none">🛒</span>
+        </Tool>
+        <Tool label="Chess diagram (from a FEN)" onClick={() => openAsk("board")} active={ask === "board"}>
+          <span className="text-[17px] leading-none">♞</span>
+        </Tool>
         <Tool label="Table" onClick={() => c().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} active={inTable}>
           <Glyph d={PATHS.table} />
         </Tool>
@@ -346,14 +369,33 @@ const Toolbar = ({
           <Input
             autoFocus
             size="small"
-            placeholder={ask === "link" ? "https://… (leave empty to remove the link)" : "https://www.youtube.com/watch?v=…"}
+            placeholder={
+              ask === "link"
+                ? "https://… (leave empty to remove the link)"
+                : ask === "product"
+                  ? "Type to find a product"
+                  : ask === "board"
+                    ? "FEN, e.g. from Lichess: Share → FEN"
+                    : "https://www.youtube.com/watch?v=…"
+            }
+            list={ask === "product" ? "rich-editor-products" : undefined}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => e.key === "Escape" && setAsk(null)}
             className="flex-1"
           />
+          {ask === "product" && (
+            <datalist id="rich-editor-products">
+              {products.map((p) => (
+                <option key={p.handle} value={p.handle}>
+                  {p.title}
+                </option>
+              ))}
+            </datalist>
+          )}
+          {ask === "board" && <Input size="small" placeholder="Caption (optional), e.g. White to play and win" value={caption} onChange={(e) => setCaption(e.target.value)} className="flex-1" />}
           <Button size="small" type="submit">
-            {ask === "link" ? "Apply link" : "Add video"}
+            {ask === "link" ? "Apply link" : ask === "product" ? "Add product" : ask === "board" ? "Add diagram" : "Add video"}
           </Button>
           <Button size="small" variant="transparent" type="button" onClick={() => setAsk(null)}>
             Cancel
@@ -418,6 +460,8 @@ export const RichEditor = ({
       Highlight.configure({ multicolor: true }),
       TableKit.configure({ table: { resizable: false } }),
       Youtube.configure({ nocookie: true, controls: true, width: 640, height: 360 }),
+      ProductCardBlock,
+      ChessBoardBlock,
       Placeholder.configure({ placeholder }),
       CharacterCount,
     ],

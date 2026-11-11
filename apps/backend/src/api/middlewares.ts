@@ -11,6 +11,8 @@ import {
   NewsBody,
   SiteFeaturesBody,
   AutomationsBody,
+  ContentIdeasBody,
+  ContentAssistBody,
   AutomationTestBody,
   StockAlertBody,
   UnsubscribeBody,
@@ -308,6 +310,16 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/seo/not-found",
       middlewares: [validateAndTransformBody(ClearNotFoundBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/content-hub/ideas",
+      middlewares: [validateAndTransformBody(ContentIdeasBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/content-hub/assist",
+      middlewares: [validateAndTransformBody(ContentAssistBody)],
     },
     {
       method: ["POST"],
