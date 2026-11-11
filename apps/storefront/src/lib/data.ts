@@ -408,6 +408,63 @@ export async function getSiteConfig(): Promise<SiteConfig> {
   }
 }
 
+// On/off switches and words for promotional parts of the site (admin → Website → Site features).
+export type SiteFeatures = {
+  announcement: { enabled: boolean; text: string; link_url: string; link_label: string; style: "amber" | "ink" }
+  popup: {
+    enabled: boolean
+    kind: "newsletter" | "offer"
+    title: string
+    body: string
+    coupon_code: string
+    image_url: string | null
+    button_label: string
+    button_url: string
+    delay_seconds: number
+    again_after_days: number
+    pages: "all" | "home" | "shop"
+  }
+  countdowns: { enabled: boolean }
+  reviews: { enabled: boolean; photos: boolean }
+  newsletter_footer: { enabled: boolean; title: string; body: string }
+  coupon_box: { enabled: boolean }
+  code_badges: { enabled: boolean; code: string; text: string }
+  back_in_stock: { enabled: boolean }
+  referrals: { enabled: boolean; give_amount: number; get_amount: number; min_order: number }
+  breadcrumbs: { enabled: boolean }
+  faq: { enabled: boolean }
+  share_buttons: { enabled: boolean }
+  push: { enabled: boolean; prompt_after_seconds: number }
+  business_profile: { enabled: boolean; url: string; label: string }
+}
+// If the store can't be reached, promotional extras stay off.
+const FEATURES_OFF: SiteFeatures = {
+  announcement: { enabled: false, text: "", link_url: "", link_label: "", style: "ink" },
+  popup: { enabled: false, kind: "newsletter", title: "", body: "", coupon_code: "", image_url: null, button_label: "", button_url: "", delay_seconds: 12, again_after_days: 14, pages: "all" },
+  countdowns: { enabled: true },
+  reviews: { enabled: true, photos: false },
+  newsletter_footer: { enabled: false, title: "", body: "" },
+  coupon_box: { enabled: true },
+  code_badges: { enabled: false, code: "", text: "" },
+  back_in_stock: { enabled: false },
+  referrals: { enabled: false, give_amount: 0, get_amount: 0, min_order: 0 },
+  breadcrumbs: { enabled: true },
+  faq: { enabled: true },
+  share_buttons: { enabled: false },
+  push: { enabled: false, prompt_after_seconds: 30 },
+  business_profile: { enabled: false, url: "", label: "" },
+}
+export async function getSiteFeatures(): Promise<SiteFeatures> {
+  "use cache"
+  cacheLife({ stale: 30, revalidate: 30, expire: 3600 })
+  cacheTag("site-features")
+  try {
+    return { ...FEATURES_OFF, ...(await sdk.client.fetch<Partial<SiteFeatures>>("/store/site-features")) }
+  } catch {
+    return FEATURES_OFF
+  }
+}
+
 // Tags and cookie banner (admin → Settings → Marketing & integrations).
 export async function getMarketingConfig(): Promise<MarketingConfig> {
   "use cache"

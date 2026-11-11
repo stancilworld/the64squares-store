@@ -5,8 +5,9 @@ import { LeaderboardSwitch } from "@/components/play/leaderboard-switch"
 import { PanelHeader } from "@/components/play-shell/nav"
 import { getPlayPass } from "@/lib/play"
 import { Loading } from "../loading-text"
+import { seoMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = { title: "Leaderboard", description: "The top-rated chess players on The 64 Squares." }
+export const generateMetadata = (): Promise<Metadata> => seoMetadata({ path: "/play/leaderboard", title: "Leaderboard", description: "The top-rated chess players on The 64 Squares." })
 
 async function Board() {
   const pass = await getPlayPass()

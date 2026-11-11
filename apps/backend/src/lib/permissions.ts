@@ -155,6 +155,8 @@ const RULES: Rule[] = [
   r("write", /^\/news(\/|$)/, "content.news"),
   r("write", /^\/upload-limits(\/|$)/, "settings.branding"),
   r("write", /^\/seo-settings(\/|$)/, "settings.branding"),
+  r("write", /^\/site-features(\/|$)/, "settings.branding"),
+  r("write", /^\/seo(\/|$)/, "settings.branding"),
   r("any", /^\/marketing(\/|$)/, "settings.marketing"),
   r("write", /^\/checkout-settings(\/|$)/, "settings.store"),
   r("write", /^\/invoice-settings(\/|$)/, "settings.store"),

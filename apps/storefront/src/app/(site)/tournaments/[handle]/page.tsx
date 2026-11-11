@@ -10,10 +10,11 @@ import { formatPrice } from "@/lib/format"
 import { getMyTickets } from "@/lib/tournament-actions"
 import { eventDate, eventTime, ratingText, type Tournament } from "@/lib/tournament-types"
 import { getTournament } from "@/lib/tournaments"
+import { absoluteUrl, jsonLd, seoMetadata } from "@/lib/seo"
 
 export async function generateMetadata({ params }: PageProps<"/tournaments/[handle]">): Promise<Metadata> {
   const t = await getTournament((await params).handle)
-  return t ? { title: t.title, description: t.summary ?? undefined } : { title: "Tournament" }
+  return t ? seoMetadata({ path: `/tournaments/${t.handle}`, title: t.title, description: t.summary, image: t.image_url }) : { title: "Tournament" }
 }
 
 
@@ -134,6 +135,33 @@ async function TournamentDetail({ params }: PageProps<"/tournaments/[handle]">) 
           )}
         </div>
       </div>
+      {/* For Google: the tournament as an event (date, place, entry fee). */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={jsonLd({
+          "@context": "https://schema.org",
+          "@type": "Event",
+          name: t.title,
+          description: t.summary ?? undefined,
+          startDate: t.starts_at,
+          endDate: t.ends_at ?? undefined,
+          eventStatus: t.status === "cancelled" ? "https://schema.org/EventCancelled" : "https://schema.org/EventScheduled",
+          eventAttendanceMode: t.mode === "online" ? "https://schema.org/OnlineEventAttendanceMode" : "https://schema.org/OfflineEventAttendanceMode",
+          location:
+            t.mode === "online"
+              ? { "@type": "VirtualLocation", url: absoluteUrl(`/tournaments/${t.handle}`) }
+              : { "@type": "Place", name: t.venue ?? "To be announced", address: t.venue ?? undefined },
+          image: t.image_url ? [absoluteUrl(t.image_url)] : undefined,
+          organizer: { "@type": "Organization", name: "The 64 Squares", url: absoluteUrl("/") },
+          offers: {
+            "@type": "Offer",
+            price: t.entry_fee,
+            priceCurrency: "INR",
+            availability: t.registration_open ? "https://schema.org/InStock" : "https://schema.org/SoldOut",
+            url: absoluteUrl(`/tournaments/${t.handle}`),
+          },
+        })}
+      />
     </>
   )
 }

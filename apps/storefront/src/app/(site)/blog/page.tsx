@@ -5,8 +5,9 @@ import { Suspense } from "react"
 import { ChevronDown } from "@/components/icons"
 import { PostDate } from "@/components/post-date"
 import { getPosts } from "@/lib/data"
+import { seoMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = { title: "The 64 Squares Journal" }
+export const generateMetadata = (): Promise<Metadata> => seoMetadata({ path: "/blog", title: "The 64 Squares Journal", absoluteTitle: true })
 
 const PAGE = 3
 

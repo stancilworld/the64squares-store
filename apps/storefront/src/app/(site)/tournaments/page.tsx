@@ -3,11 +3,14 @@ import Link from "next/link"
 import { Suspense } from "react"
 import { TournamentRow } from "@/components/tournaments/tournament-row"
 import { getTournaments } from "@/lib/tournaments"
+import { seoMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
-  title: "Tournaments",
-  description: "Online arenas and over-the-board chess tournaments from The 64 Squares. Register in a minute and get your ticket by email.",
-}
+export const generateMetadata = (): Promise<Metadata> =>
+  seoMetadata({
+    path: "/tournaments",
+    title: "Tournaments",
+    description: "Online arenas and over-the-board chess tournaments from The 64 Squares. Register in a minute and get your ticket by email.",
+  })
 
 async function List() {
   const { upcoming, past } = await getTournaments()

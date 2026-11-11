@@ -5,11 +5,10 @@ import { ClockIcon, InfoIcon, InstagramIcon, LinkIcon, MailIcon, PhoneIcon, PinI
 import { PlaceholderPage } from "@/components/placeholder-page"
 import { getContactPage } from "@/lib/data"
 import type { ContactPanelItem } from "@/lib/types"
+import { seoMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
-  title: "Contact",
-  description: "Get in touch with The 64 Squares: email, WhatsApp or send us a message.",
-}
+export const generateMetadata = (): Promise<Metadata> =>
+  seoMetadata({ path: "/contact", title: "Contact", description: "Get in touch with The 64 Squares: email, WhatsApp or send us a message." })
 
 const ICONS: Record<ContactPanelItem["type"], (p: { className?: string }) => ReactNode> = {
   email: MailIcon,

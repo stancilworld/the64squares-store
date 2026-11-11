@@ -7,11 +7,10 @@ import { getNews } from "@/lib/data"
 import { newsDate } from "@/lib/news-date"
 import type { NewsSummary, NewsTopic } from "@/lib/types"
 import { Loading } from "../loading-text"
+import { seoMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
-  title: "News",
-  description: "Tournament results, club news and announcements from The 64 Squares.",
-}
+export const generateMetadata = (): Promise<Metadata> =>
+  seoMetadata({ path: "/play/news", title: "News", description: "Tournament results, club news and announcements from The 64 Squares." })
 
 const PAGE = 13
 

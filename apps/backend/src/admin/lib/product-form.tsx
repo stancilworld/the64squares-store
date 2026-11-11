@@ -18,6 +18,8 @@ import { BadgePicker, type BadgeValue } from "./badge-picker"
 import { isConvertedPicture, PICTURE_ACCEPT, uploadImage } from "./upload"
 import { PhotoCropper } from "./photo-cropper"
 import { useUploadLimits } from "./upload-limits"
+import { SeoPanel } from "./seo-panel"
+import { FaqEditor } from "./faq-editor"
 
 // The simple The 64 Squares product form: everything about a product on one screen.
 // Saved by POST /admin/store-products(/:id) (src/lib/product-form.ts).
@@ -38,6 +40,10 @@ export type ProductFormValue = {
   engraving?: Engraving | null
   seo_title?: string | null
   seo_description?: string | null
+  seo_keyword?: string | null
+  seo_image?: string | null
+  seo_noindex?: boolean
+  faq?: { q: string; a: string }[]
   badge?: BadgeValue | null
   length?: number | null
   width?: number | null
@@ -76,6 +82,10 @@ const EMPTY: ProductFormValue = {
   engraving: null,
   seo_title: "",
   seo_description: "",
+  seo_keyword: "",
+  seo_image: null,
+  seo_noindex: false,
+  faq: [],
   badge: { kind: "auto" },
   length: null,
   width: null,
@@ -401,7 +411,8 @@ export function ProductFormPage({ id }: { id?: string }) {
     mutationFn: (body: ProductFormValue) =>
       sdk.client.fetch<{ id: string; form: ProductFormValue }>(id ? `/admin/store-products/${id}` : "/admin/store-products", {
         method: "POST",
-        body,
+        // Half-filled questions are left out.
+        body: { ...body, faq: (body.faq ?? []).filter((x) => x.q.trim() && x.a.trim()) },
       }),
     onSuccess: (r) => {
       setError(null)
@@ -691,13 +702,28 @@ export function ProductFormPage({ id }: { id?: string }) {
         </Field>
       </Section>
 
-      <Section title="Search engines (SEO)" hint="How this product looks in Google results and when the link is shared. Leave empty to use the name and description.">
-        <Field label="Search title" htmlFor="pf-seo-title" hint={`${(form.seo_title ?? "").length}/60 letters is ideal.`}>
-          <Input id="pf-seo-title" value={form.seo_title ?? ""} placeholder={form.title} onChange={(e) => set("seo_title", e.target.value)} />
-        </Field>
-        <Field label="Search description" htmlFor="pf-seo-desc" hint={`${(form.seo_description ?? "").length}/155 letters is ideal.`}>
-          <Textarea id="pf-seo-desc" rows={2} value={form.seo_description ?? ""} onChange={(e) => set("seo_description", e.target.value)} />
-        </Field>
+      <Section title="Questions and answers" hint="Common questions about this product, shown on its page (and to Google, which can show them in results). Optional.">
+        <FaqEditor value={form.faq ?? []} onChange={(v) => set("faq", v)} />
+      </Section>
+
+      <Section title="Search engines (SEO)" hint="How this product looks in Google results and when the link is shared. Leave empty to use the name, description and first photo.">
+        <SeoPanel
+          value={{ title: form.seo_title || null, description: form.seo_description || null, image_url: form.seo_image ?? null, keyword: form.seo_keyword || null, noindex: !!form.seo_noindex }}
+          onChange={(v) => {
+            set("seo_title", v.title ?? "")
+            set("seo_description", v.description ?? "")
+            set("seo_image", v.image_url)
+            set("seo_keyword", v.keyword ?? "")
+            set("seo_noindex", v.noindex)
+          }}
+          defaults={{
+            title: `${form.title || "Product name"} | The 64 Squares`,
+            description: (form.description ?? "").replace(/\s+/g, " ").trim().slice(0, 160),
+            image: form.images?.[0] ?? null,
+          }}
+          path={`/products/${form.handle || "product-name"}`}
+          html={form.description ?? ""}
+        />
       </Section>
 
       <Section

@@ -19,6 +19,9 @@ import { useEffect, useMemo, useState } from "react"
 import { formatWhen, fromLocalInput, isFuture, toLocalInput } from "../../../lib/dates"
 import { ImageField } from "../../../lib/image-field"
 import { RichEditor } from "../../../lib/rich-editor"
+import { LinkSuggestions } from "../../../lib/link-suggestions"
+import { EMPTY_SEO, SeoPanel, type SeoValues } from "../../../lib/seo-panel"
+import type { Editor } from "@tiptap/react"
 import { sdk } from "../../../lib/sdk"
 import { getPreviewLink, PageActions, useLeaveWarning } from "../../../lib/site-preview"
 
@@ -82,6 +85,22 @@ const ArticleEditor = ({
   const [form, setForm] = useState<FormState>(EMPTY)
   const [initial, setInitial] = useState("")
   const [savedId, setSavedId] = useState<string | null>(null)
+  const [tab, setTab] = useState<"write" | "seo">("write")
+  const [seo, setSeo] = useState<SeoValues>(EMPTY_SEO)
+  const [seoInitial, setSeoInitial] = useState(JSON.stringify(EMPTY_SEO))
+  const [editor, setEditor] = useState<Editor | null>(null)
+  // The article's saved search settings.
+  const { data: savedSeo } = useQuery({
+    queryKey: ["seo-meta", "news", article?.id],
+    queryFn: () => sdk.client.fetch<{ seo: SeoValues | null }>(`/admin/seo/meta?type=news&key=${article!.id}`),
+    enabled: open && !!article?.id,
+  })
+  useEffect(() => {
+    if (!open) return
+    const v = (article?.id && savedSeo?.seo) || EMPTY_SEO
+    setSeo(v)
+    setSeoInitial(JSON.stringify(v))
+  }, [open, article?.id, savedSeo])
 
   useEffect(() => {
     if (open) {
@@ -91,9 +110,11 @@ const ArticleEditor = ({
       setForm(f)
       setInitial(JSON.stringify(f))
       setSavedId(article?.id ?? null)
+      setTab("write")
     }
   }, [open, article])
-  const dirty = open && JSON.stringify(form) !== initial
+  const seoDirty = JSON.stringify(seo) !== seoInitial
+  const dirty = open && (JSON.stringify(form) !== initial || seoDirty)
   useLeaveWarning(dirty)
   const scheduled = form.status === "published" && isFuture(form.published_at)
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }))
@@ -102,6 +123,11 @@ const ArticleEditor = ({
     const res = await sdk.client.fetch<{ article: Article }>(savedId ? `/admin/news/${savedId}` : "/admin/news", { method: "POST", body: form })
     setSavedId(res.article.id)
     setInitial(JSON.stringify(form))
+    if (seoDirty) {
+      await sdk.client.fetch("/admin/seo/meta", { method: "POST", body: { target_type: "news", target_key: res.article.id, ...seo } })
+      setSeoInitial(JSON.stringify(seo))
+      qc.invalidateQueries({ queryKey: ["seo-pages"] })
+    }
     qc.invalidateQueries({ queryKey: ["news"] })
     return res.article
   }
@@ -168,6 +194,37 @@ const ArticleEditor = ({
               <FocusModal.Title asChild>
                 <h1 className="sr-only">{isNew ? "New article" : "Edit article"}</h1>
               </FocusModal.Title>
+              <div className="flex gap-1 self-start rounded-lg bg-ui-bg-component p-1">
+                {(
+                  [
+                    ["write", "Write"],
+                    ["seo", "SEO"],
+                  ] as const
+                ).map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setTab(k)}
+                    className={`rounded-md px-3 py-1 text-[13px] font-medium ${tab === k ? "bg-ui-bg-base text-ui-fg-base shadow-elevation-card-rest" : "text-ui-fg-subtle"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {tab === "seo" ? (
+                <SeoPanel
+                  value={seo}
+                  onChange={setSeo}
+                  defaults={{
+                    title: `${form.title || "Headline"} | The 64 Squares`,
+                    description: form.excerpt || form.body_html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160),
+                    image: form.cover_url,
+                  }}
+                  path={`/play/news/${form.handle || "headline"}`}
+                  html={form.body_html}
+                />
+              ) : (
+              <>
               <input
                 aria-label="Headline"
                 placeholder="Headline"
@@ -185,7 +242,9 @@ const ArticleEditor = ({
                 value={form.excerpt ?? ""}
                 onChange={(e) => set("excerpt", e.target.value || null)}
               />
-              <RichEditor value={form.body_html} onChange={(html) => set("body_html", html)} placeholder="Write the article…" />
+              <RichEditor value={form.body_html} onChange={(html) => set("body_html", html)} placeholder="Write the article…" onEditor={setEditor} />
+              </>
+              )}
             </div>
           </div>
 
@@ -245,6 +304,7 @@ const ArticleEditor = ({
               value={form.cover_url}
               onChange={(url) => set("cover_url", url)}
             />
+            <LinkSuggestions editor={editor} html={form.body_html} selfPath={`/play/news/${form.handle}`} />
             {savedId && (
               <Button
                 variant="danger"

@@ -42,6 +42,7 @@ const NAV: Record<string, string | string[]> = {
   "/app/website/navigation": "content.footer",
   "/app/website/blog": "content.blog",
   "/app/website/news": "content.news",
+  "/app/website/features": "settings.branding",
   "/app/website/help-pages": "content.help",
   "/app/settings/branding": "settings.branding",
   "/app/settings/seo": "settings.branding",

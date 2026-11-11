@@ -1,16 +1,21 @@
 import Image from "next/image"
 import Link from "next/link"
+import type { Metadata } from "next"
 import { Suspense } from "react"
+import { absoluteUrl, jsonLd, seoMetadata } from "@/lib/seo"
 import { Hero } from "@/components/hero"
 import { ImageCarousel } from "@/components/image-carousel"
 import { NewsletterSection } from "@/components/newsletter-section"
 import { ProductCard } from "@/components/product-card"
 import { redirect } from "next/navigation"
 import { HomePlay, type HomeEvent } from "@/components/home/home-play"
-import { getCategories, getContent, getDeliveryInfo, getProductCards, getSiteNavigation } from "@/lib/data"
+import { getCategories, getContent, getDeliveryInfo, getProductCards, getSiteFeatures, getSiteNavigation } from "@/lib/data"
 import { formatPrice } from "@/lib/format"
 import { dateBlock, eventTime } from "@/lib/tournament-types"
 import { getTournaments } from "@/lib/tournaments"
+
+export const generateMetadata = (): Promise<Metadata> =>
+  seoMetadata({ path: "/", title: "The 64 Squares | Premium chess sets, boards & tournaments", absoluteTitle: true })
 
 // Shown until pictures are uploaded in the admin (Website → Homepage).
 const DEFAULT_FEATURED_IMAGE = "/images/home-travel-case.jpg"
@@ -38,12 +43,13 @@ async function PlaySection() {
 }
 
 export default async function HomePage() {
-  const [blocks, products, categories, nav, delivery] = await Promise.all([
+  const [blocks, products, categories, nav, delivery, features] = await Promise.all([
     getContent("home"),
     getProductCards(),
     getCategories(),
     getSiteNavigation(),
     getDeliveryInfo(),
+    getSiteFeatures(),
   ])
   // The admin can make the website open on Play instead (Website → Menu & footer).
   if (nav.experience?.home === "play") redirect("/play")
@@ -60,6 +66,21 @@ export default async function HomePage() {
 
   return (
     <>
+      {/* For Google: who runs the site (and its Google Business Profile, if set). */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={jsonLd([
+          {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "The 64 Squares",
+            url: absoluteUrl("/"),
+            logo: absoluteUrl("/brand/logo-mark.png"),
+            ...(features.business_profile.enabled && features.business_profile.url ? { sameAs: [features.business_profile.url] } : {}),
+          },
+          { "@context": "https://schema.org", "@type": "WebSite", name: "The 64 Squares", url: absoluteUrl("/") },
+        ])}
+      />
       {hero && <Hero block={hero} showPlay={showPlay} />}
 
       {categories.length > 0 && (

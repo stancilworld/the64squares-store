@@ -4,6 +4,7 @@ import localFont from "next/font/local"
 import "./globals.css"
 import { ColoursProvider } from "@/components/colours-provider"
 import { SamePageTop } from "@/components/same-page-top"
+import { SITE_DESCRIPTION } from "@/lib/seo"
 import { SignInDialog } from "@/components/account/sign-in-dialog"
 import { getCustomer } from "@/lib/auth"
 import { getCheckoutConfig } from "@/lib/checkout"
@@ -22,7 +23,7 @@ const sora = localFont({
   fallback: ["ui-sans-serif", "system-ui", "sans-serif"],
 })
 
-const DESCRIPTION = "Premium chess sets, boards, pieces and clocks, made in India. Play online and join tournaments."
+const DESCRIPTION = SITE_DESCRIPTION
 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await getSiteConfig()

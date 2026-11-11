@@ -368,10 +368,13 @@ export const RichEditor = ({
   value,
   onChange,
   placeholder = "Start writing…",
+  onEditor,
 }: {
   value: string
   onChange: (html: string) => void
   placeholder?: string
+  // Hands the editor to the page (e.g. for link suggestions).
+  onEditor?: (editor: Editor | null) => void
 }) => {
   const [uploading, setUploading] = useState(false)
   const [full, setFull] = useState(false)
@@ -446,6 +449,9 @@ export const RichEditor = ({
     onUpdate: ({ editor: e }) => changeRef.current(e.isEmpty ? "" : e.getHTML()),
   })
   editorRef.current = editor
+  useEffect(() => {
+    onEditor?.(editor)
+  }, [editor, onEditor])
 
   // A different article opened in the same editor.
   useEffect(() => {

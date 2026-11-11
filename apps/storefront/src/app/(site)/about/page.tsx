@@ -3,8 +3,9 @@ import { FillMedia } from "@/components/media"
 import { NewsletterSection } from "@/components/newsletter-section"
 import { TeamFaces } from "@/components/team-faces"
 import { getContent, getTeamMembers } from "@/lib/data"
+import { seoMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = { title: "About us" }
+export const generateMetadata = (): Promise<Metadata> => seoMetadata({ path: "/about", title: "About us" })
 
 export default async function AboutPage() {
   const [blocks, home, members] = await Promise.all([

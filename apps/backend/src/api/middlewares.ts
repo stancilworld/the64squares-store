@@ -9,6 +9,11 @@ import {
   NewsletterBody,
   PageBody,
   NewsBody,
+  SiteFeaturesBody,
+  SeoMetaBody,
+  RedirectBody,
+  ClearNotFoundBody,
+  GscSiteBody,
   PostBody,
   UpdateContentBlockBody,
   UpdatePageBody,
@@ -265,6 +270,36 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/invoice-settings",
       middlewares: [validateAndTransformBody(InvoiceSettingsBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/seo/meta",
+      middlewares: [validateAndTransformBody(SeoMetaBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/seo/redirects",
+      middlewares: [validateAndTransformBody(RedirectBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/seo/redirects/:id",
+      middlewares: [validateAndTransformBody(RedirectBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/seo/gsc/site",
+      middlewares: [validateAndTransformBody(GscSiteBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/seo/not-found",
+      middlewares: [validateAndTransformBody(ClearNotFoundBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/site-features",
+      middlewares: [validateAndTransformBody(SiteFeaturesBody)],
     },
     {
       method: ["POST"],

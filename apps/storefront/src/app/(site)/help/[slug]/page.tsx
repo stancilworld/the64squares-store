@@ -3,11 +3,12 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { SitePageView } from "@/components/site-page"
 import { getSitePage } from "@/lib/data"
+import { seoMetadata } from "@/lib/seo"
 
 export async function generateMetadata({ params }: PageProps<"/help/[slug]">): Promise<Metadata> {
   const { slug } = await params
   const page = await getSitePage(slug)
-  return { title: page?.title ?? "Help" }
+  return page ? seoMetadata({ path: `/help/${page.handle}`, title: page.title, description: page.body.replace(/[#*_>\[\]()`-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 155) }) : { title: "Help" }
 }
 
 async function Help({ params }: { params: Promise<{ slug: string }> }) {

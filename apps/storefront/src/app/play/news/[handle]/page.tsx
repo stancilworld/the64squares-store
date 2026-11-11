@@ -6,13 +6,14 @@ import { FillMedia } from "@/components/media"
 import { PanelHeader } from "@/components/play-shell/nav"
 import { getNews, getNewsArticle } from "@/lib/data"
 import { newsDate } from "@/lib/news-date"
+import { absoluteUrl, jsonLd, seoMetadata } from "@/lib/seo"
 import { Loading } from "../../loading-text"
 
 export async function generateMetadata({ params }: PageProps<"/play/news/[handle]">): Promise<Metadata> {
   const { handle } = await params
   const a = await getNewsArticle(handle)
   return a
-    ? { title: a.title, description: a.excerpt ?? undefined, openGraph: { title: a.title, description: a.excerpt ?? undefined, images: a.cover_url ? [a.cover_url] : undefined, type: "article" } }
+    ? seoMetadata({ path: `/play/news/${a.handle}`, title: a.title, description: a.excerpt, image: a.cover_url, type: "article", publishedAt: a.published_at })
     : { title: "News" }
 }
 
@@ -25,6 +26,20 @@ async function Article({ params }: { params: Promise<{ handle: string }> }) {
 
   return (
     <article>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={jsonLd({
+          "@context": "https://schema.org",
+          "@type": "NewsArticle",
+          headline: a.title,
+          description: a.excerpt ?? undefined,
+          image: a.cover_url ? [absoluteUrl(a.cover_url)] : undefined,
+          datePublished: a.published_at ?? undefined,
+          author: { "@type": "Organization", name: a.author },
+          publisher: { "@type": "Organization", name: "The 64 Squares", logo: { "@type": "ImageObject", url: absoluteUrl("/brand/logo-mark.png") } },
+          mainEntityOfPage: absoluteUrl(`/play/news/${a.handle}`),
+        })}
+      />
       <header className="mx-auto mt-6 max-w-[760px]">
         <Link href={`/play/news?topic=${encodeURIComponent(a.topic)}`} className="text-[13px] font-semibold text-[var(--g-accent)] hover:underline">
           {a.topic}

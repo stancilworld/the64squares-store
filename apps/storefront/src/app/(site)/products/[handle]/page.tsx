@@ -1,11 +1,13 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { ProductGallery } from "@/components/product-gallery"
 import { ProductOptions } from "@/components/product-options"
 import { BADGE_CLASSES, badgeOf } from "@/lib/badges"
-import { getDeliveryInfo, getProduct, getProductExtras, getProductReviews, isOnSale, salePriceListOf } from "@/lib/data"
+import { getDeliveryInfo, getProduct, getProductExtras, getProductReviews, getSiteFeatures, isOnSale, salePriceListOf } from "@/lib/data"
+import { Breadcrumbs, breadcrumbJsonLd } from "@/components/breadcrumbs"
+import { ProductFaq } from "@/components/product-faq"
+import { jsonLd as jsonLdHtml } from "@/lib/seo"
 import { WishlistHeart } from "@/components/wishlist-heart"
 import { ProductReviews } from "@/components/product-reviews"
 import { Stars } from "@/components/stars"
@@ -20,19 +22,20 @@ export async function generateMetadata({ params }: PageProps<"/products/[handle]
   const plain = (product.description ?? "").replace(/\s+/g, " ").trim()
   const description =
     (typeof meta.seo_description === "string" && meta.seo_description.trim()) || (plain.length > 160 ? `${plain.slice(0, 157)}…` : plain) || undefined
-  const image = product.thumbnail ?? product.images?.[0]?.url
+  const image = (typeof meta.seo_image === "string" && meta.seo_image) || product.thumbnail || product.images?.[0]?.url
   return {
+    ...(meta.seo_noindex === true ? { robots: { index: false, follow: true } } : {}),
     title: { absolute: typeof meta.seo_title === "string" && meta.seo_title.trim() ? title : `${title} | The 64 Squares` },
     description,
     alternates: { canonical: `/products/${product.handle}` },
-    openGraph: { title, description, type: "website", url: `/products/${product.handle}`, images: image ? [{ url: image }] : undefined },
+    openGraph: { siteName: "The 64 Squares", locale: "en_IN", title, description, type: "website", url: `/products/${product.handle}`, images: image ? [{ url: image }] : undefined },
     twitter: { card: "summary_large_image", title, description, images: image ? [image] : undefined },
   }
 }
 
 async function Product({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params
-  const [product, deliveryInfo] = await Promise.all([getProduct(handle), getDeliveryInfo()])
+  const [product, deliveryInfo, features] = await Promise.all([getProduct(handle), getDeliveryInfo(), getSiteFeatures()])
   if (!product) {
     notFound()
   }
@@ -57,6 +60,13 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
     ["Age", meta.age],
   ].filter((d): d is [string, string] => !!d[1])
   const care = typeof meta.care === "string" ? meta.care.trim() : ""
+  const rawMeta = (product.metadata ?? {}) as Record<string, unknown>
+  const faq = Array.isArray(rawMeta.faq) ? (rawMeta.faq as { q: string; a: string }[]).filter((x) => x?.q && x?.a) : []
+  const crumbs = [
+    { name: "Shop", path: "/shop" },
+    ...(product.categories?.[0] ? [{ name: product.categories[0].name, path: `/shop?category=${product.categories[0].handle}` }] : []),
+    { name: product.title, path: `/products/${product.handle}` },
+  ]
 
   // For Google: the product, its price and stock, and its star rating.
   const prices = (product.variants ?? []).map((v) => v.calculated_price?.calculated_amount).filter((n): n is number => typeof n === "number")
@@ -82,7 +92,7 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
           },
         }
       : {}),
-    ...(summary.count
+    ...(features.reviews.enabled && summary.count
       ? {
           aggregateRating: { "@type": "AggregateRating", ratingValue: summary.average, reviewCount: summary.count, bestRating: 5, worstRating: 1 },
           review: reviews.slice(0, 10).map((rv) => ({
@@ -99,15 +109,7 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
 
   return (
     <div className="mx-auto max-w-[1440px] px-6 pb-20 pt-6 lg:px-10 lg:pb-28 lg:pt-8">
-      <nav aria-label="Breadcrumb" className="text-[13px] text-muted">
-        <Link href="/shop" className="hover:underline">Shop</Link>
-        {product.collection && (
-          <>
-            {" / "}
-            <Link href="/shop" className="hover:underline">{product.collection.title}</Link>
-          </>
-        )}
-      </nav>
+      {features.breadcrumbs.enabled && <Breadcrumbs items={crumbs} />}
       <div className="mt-4 grid gap-7 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-10">
         <ProductGallery
           title={product.title}
@@ -127,7 +129,7 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
             </span>
           )}
           <h1 className="text-[24px] font-bold leading-tight tracking-[-0.02em] lg:text-[30px]">{product.title}</h1>
-          {summary.count > 0 && (
+          {features.reviews.enabled && summary.count > 0 && (
             <a href="#reviews" className="mt-2 inline-flex items-center gap-2 text-[14px] text-muted hover:underline">
               <Stars value={summary.average} size={16} />
               {summary.average.toFixed(1)} · {summary.count} review{summary.count === 1 ? "" : "s"}
@@ -161,6 +163,17 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
           {product.description && (
             <p className="mt-8 max-w-[60ch] text-[16px] leading-[1.7]">{product.description}</p>
           )}
+          {features.code_badges.enabled && features.code_badges.code && (
+            <p className="mt-6 inline-flex items-center gap-2 rounded-md border border-dashed border-ink px-3 py-2 text-[14px]">
+              <span aria-hidden="true">🏷️</span>
+              {(features.code_badges.text || "Use code {code} at checkout").split("{code}").map((part, i, all) => (
+                <span key={i}>
+                  {part}
+                  {i < all.length - 1 && <strong className="font-bold tracking-wide">{features.code_badges.code}</strong>}
+                </span>
+              ))}
+            </p>
+          )}
           {care && (
             <details className="mt-8 border-y border-rule py-4 text-[15px]">
               <summary className="cursor-pointer font-medium">Care instructions</summary>
@@ -169,8 +182,20 @@ async function Product({ params }: { params: Promise<{ handle: string }> }) {
           )}
         </div>
       </div>
-      <ProductReviews productId={product.id} summary={summary} reviews={reviews} />
+      {features.faq.enabled && faq.length > 0 && <ProductFaq items={faq} />}
+      {features.reviews.enabled && <ProductReviews productId={product.id} summary={summary} reviews={reviews} />}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={breadcrumbJsonLd(crumbs)} />
+      {features.faq.enabled && faq.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={jsonLdHtml({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: faq.map((x) => ({ "@type": "Question", name: x.q, acceptedAnswer: { "@type": "Answer", text: x.a } })),
+          })}
+        />
+      )}
     </div>
   )
 }

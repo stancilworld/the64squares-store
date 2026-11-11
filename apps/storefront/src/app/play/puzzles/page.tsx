@@ -3,8 +3,10 @@ import { Suspense } from "react"
 import { PuzzlesHome } from "@/components/play/puzzles/puzzles-home"
 import { getPlayPass } from "@/lib/play"
 import { Loading } from "../loading-text"
+import { seoMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = { title: "Chess puzzles", description: "Daily chess puzzle, rated puzzle trainer, Puzzle Rush and tactics by theme." }
+export const generateMetadata = (): Promise<Metadata> =>
+  seoMetadata({ path: "/play/puzzles", title: "Chess puzzles", description: "Daily chess puzzle, rated puzzle trainer, Puzzle Rush and tactics by theme." })
 
 async function Home() {
   return <PuzzlesHome initialPass={await getPlayPass()} />

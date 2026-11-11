@@ -4,8 +4,10 @@ import { Suspense } from "react"
 import { ProductGrid } from "@/components/product-grid"
 import { ShopFilters, type FilterGroup } from "@/components/shop-filters"
 import { getCategories, getProductCards } from "@/lib/data"
+import { seoMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = { title: "Shop" }
+export const generateMetadata = (): Promise<Metadata> =>
+  seoMetadata({ path: "/shop", title: "Shop", description: "Chess sets, boards, pieces and clocks, handmade in India. Free shipping on larger orders." })
 
 type Search = Record<string, string | string[] | undefined>
 

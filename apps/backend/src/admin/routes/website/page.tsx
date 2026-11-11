@@ -54,6 +54,14 @@ const SECTIONS: Section[] = [
     permission: "content.blog",
   },
   {
+    title: "Site features",
+    description: "Switch the announcement bar, pop-up, badges, share buttons and other promotions on or off.",
+    to: "/website/features",
+    sitePath: "/",
+    icon: Sparkles,
+    permission: "settings.branding",
+  },
+  {
     title: "News",
     description: "News articles with a full editor: headings, pictures, tables, videos. Shown in the Play area at /play/news.",
     to: "/website/news",

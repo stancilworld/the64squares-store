@@ -7,12 +7,13 @@ import { ArrowLeftLong } from "@/components/icons"
 import { PostDate } from "@/components/post-date"
 import { RichText } from "@/components/rich-text"
 import { getPost } from "@/lib/data"
+import { absoluteUrl, jsonLd, seoMetadata } from "@/lib/seo"
 
 export async function generateMetadata({ params }: PageProps<"/blog/[handle]">): Promise<Metadata> {
   const { handle } = await params
   const post = await getPost(handle)
   return post
-    ? { title: post.title, description: post.excerpt ?? undefined }
+    ? seoMetadata({ path: `/blog/${post.handle}`, title: post.title, description: post.excerpt, image: post.cover_url ?? post.thumbnail_url, type: "article", publishedAt: post.published_at })
     : { title: "The 64 Squares Journal" }
 }
 
@@ -25,6 +26,20 @@ async function Post({ params }: { params: Promise<{ handle: string }> }) {
 
   return (
     <article className="mb-[96px] lg:mb-[100px]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={jsonLd({
+          "@context": "https://schema.org",
+          "@type": "BlogPosting",
+          headline: post.title,
+          description: post.excerpt ?? undefined,
+          image: post.cover_url ? [absoluteUrl(post.cover_url)] : undefined,
+          datePublished: post.published_at ?? undefined,
+          author: { "@type": "Person", name: post.author },
+          publisher: { "@type": "Organization", name: "The 64 Squares", logo: { "@type": "ImageObject", url: absoluteUrl("/brand/logo-mark.png") } },
+          mainEntityOfPage: absoluteUrl(`/blog/${post.handle}`),
+        })}
+      />
       <div className="mx-auto max-w-[1440px] px-6 pt-6 lg:px-[80px] lg:pt-[51px]">
         <Link href="/blog" className="inline-flex items-center gap-[3px] text-[16px] hover:underline">
           <ArrowLeftLong className="h-[10px] w-[40px]" />

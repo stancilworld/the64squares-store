@@ -163,6 +163,66 @@ export const SeoSettingsBody = z.object({
 })
 export type SeoSettingsBodyType = z.infer<typeof SeoSettingsBody>
 
+// SEO (lib/seo-pages.ts, workflows/seo.ts).
+export const SeoMetaBody = z.object({
+  target_type: z.enum(["product", "news", "post", "tournament", "page", "static"]),
+  target_key: z.string().trim().min(1).max(200),
+  title: z.string().trim().max(120).nullable().optional(),
+  description: z.string().trim().max(320).nullable().optional(),
+  image_url: z.string().trim().max(500).nullable().optional(),
+  keyword: z.string().trim().max(80).nullable().optional(),
+  noindex: z.boolean().optional(),
+})
+export type SeoMetaBodyType = z.infer<typeof SeoMetaBody>
+export const RedirectBody = z.object({
+  from_path: z.string().trim().min(2).max(300),
+  to_path: z.string().trim().min(1).max(500).regex(/^(\/|https?:\/\/)/, "Start with / or https://"),
+  permanent: z.boolean().optional(),
+})
+export type RedirectBodyType = z.infer<typeof RedirectBody>
+export const GscSiteBody = z.object({ site_url: z.string().trim().min(3).max(300) })
+export type GscSiteBodyType = z.infer<typeof GscSiteBody>
+export const ClearNotFoundBody = z.object({ ids: z.array(z.string()).min(1).max(500) })
+export type ClearNotFoundBodyType = z.infer<typeof ClearNotFoundBody>
+
+// Website → Site features (lib/site-features.ts).
+const sfText = (n: number) => z.string().trim().max(n)
+const optionalUrl = z.string().trim().max(500).regex(/^(\/|https?:\/\/|$)/, "Start with / or https://")
+const dateOrNull = z.string().datetime({ offset: true }).nullable()
+const sfMoney = z.number().int().min(0).max(100000)
+export const SiteFeaturesBody = z.object({
+  announcement: z.object({ enabled: z.boolean(), text: sfText(160), link_url: optionalUrl, link_label: sfText(30), style: z.enum(["amber", "ink"]), starts_at: dateOrNull, ends_at: dateOrNull }).partial().optional(),
+  popup: z
+    .object({
+      enabled: z.boolean(),
+      kind: z.enum(["newsletter", "offer"]),
+      title: sfText(80),
+      body: sfText(300),
+      coupon_code: z.string().trim().max(40).regex(/^[A-Za-z0-9_-]*$/, "Letters, numbers, - and _ only"),
+      image_url: z.string().trim().max(500).nullable(),
+      button_label: sfText(30),
+      button_url: optionalUrl,
+      delay_seconds: z.number().int().min(0).max(600),
+      again_after_days: z.number().int().min(0).max(365),
+      pages: z.enum(["all", "home", "shop"]),
+    })
+    .partial()
+    .optional(),
+  countdowns: z.object({ enabled: z.boolean() }).partial().optional(),
+  reviews: z.object({ enabled: z.boolean(), photos: z.boolean() }).partial().optional(),
+  newsletter_footer: z.object({ enabled: z.boolean(), title: sfText(60), body: sfText(200) }).partial().optional(),
+  coupon_box: z.object({ enabled: z.boolean() }).partial().optional(),
+  code_badges: z.object({ enabled: z.boolean(), code: z.string().trim().max(40).regex(/^[A-Za-z0-9_-]*$/), text: sfText(60) }).partial().optional(),
+  back_in_stock: z.object({ enabled: z.boolean() }).partial().optional(),
+  referrals: z.object({ enabled: z.boolean(), give_amount: sfMoney, get_amount: sfMoney, min_order: sfMoney }).partial().optional(),
+  breadcrumbs: z.object({ enabled: z.boolean() }).partial().optional(),
+  faq: z.object({ enabled: z.boolean() }).partial().optional(),
+  share_buttons: z.object({ enabled: z.boolean() }).partial().optional(),
+  push: z.object({ enabled: z.boolean(), prompt_after_seconds: z.number().int().min(0).max(600) }).partial().optional(),
+  business_profile: z.object({ enabled: z.boolean(), url: optionalUrl, label: sfText(40) }).partial().optional(),
+})
+export type SiteFeaturesBodyType = z.infer<typeof SiteFeaturesBody>
+
 // The simple product form (lib/product-form.ts).
 const BadgeBody = z.object({
   kind: z.enum(["auto", "none", "new", "bestseller", "sale", "custom"]),
@@ -194,6 +254,10 @@ export const ProductFormBody = z.object({
     .optional(),
   seo_title: z.string().max(120).nullable().optional(),
   seo_description: z.string().max(320).nullable().optional(),
+  seo_keyword: z.string().max(80).nullable().optional(),
+  seo_image: z.string().max(500).nullable().optional(),
+  seo_noindex: z.boolean().optional(),
+  faq: z.array(z.object({ q: z.string().trim().min(1).max(200), a: z.string().trim().min(1).max(2000) })).max(20).optional(),
   badge: BadgeBody.nullable().optional(),
   length: size,
   width: size,

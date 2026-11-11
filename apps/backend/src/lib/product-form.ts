@@ -44,6 +44,11 @@ export type ProductForm = {
   engraving?: Engraving | null
   seo_title?: string | null
   seo_description?: string | null
+  seo_keyword?: string | null
+  seo_image?: string | null
+  seo_noindex?: boolean
+  // Questions and answers shown on the product page (and to Google).
+  faq?: { q: string; a: string }[]
   badge?: Badge | null
   length?: number | null
   width?: number | null
@@ -261,6 +266,10 @@ export const loadForm = async (container: MedusaContainer, id: string): Promise<
     engraving: readEngraving(meta),
     seo_title: str(meta.seo_title),
     seo_description: str(meta.seo_description),
+    seo_keyword: str(meta.seo_keyword),
+    seo_image: str(meta.seo_image),
+    seo_noindex: meta.seo_noindex === true,
+    faq: Array.isArray(meta.faq) ? (meta.faq as { q: string; a: string }[]).filter((x) => x?.q && x?.a) : [],
     badge: readBadge(meta),
     length: p.length ?? null,
     width: p.width ?? null,
@@ -474,6 +483,10 @@ export const saveForm = async (
       ...(f.engraving !== undefined ? { engraving: f.engraving?.enabled ? f.engraving : null } : {}),
       ...(f.seo_title !== undefined ? { seo_title: f.seo_title?.trim() || null } : {}),
       ...(f.seo_description !== undefined ? { seo_description: f.seo_description?.trim() || null } : {}),
+      ...(f.seo_keyword !== undefined ? { seo_keyword: f.seo_keyword?.trim() || null } : {}),
+      ...(f.seo_image !== undefined ? { seo_image: f.seo_image || null } : {}),
+      ...(f.seo_noindex !== undefined ? { seo_noindex: f.seo_noindex } : {}),
+      ...(f.faq !== undefined ? { faq: f.faq.length ? f.faq : null } : {}),
       ...(f.badge !== undefined ? { badge: badgeForMetadata(f.badge) } : {}) },
     images,
     thumbnail: f.images[0] ?? allImages[0] ?? null,
