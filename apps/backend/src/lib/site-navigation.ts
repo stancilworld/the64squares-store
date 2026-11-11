@@ -53,7 +53,6 @@ export const DEFAULT_SITE_NAVIGATION: SiteNavigation = {
     extra_links: [
       { label: "Play", href: "/play" },
       { label: "Tournaments", href: "/tournaments" },
-      { label: "News", href: "/news" },
     ],
   },
   footer: {

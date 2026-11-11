@@ -21,6 +21,13 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.the64squares.in" },
     ],
   },
+  // News lives in the Play area.
+  async redirects() {
+    return [
+      { source: "/news", destination: "/play/news", permanent: true },
+      { source: "/news/:handle", destination: "/play/news/:handle", permanent: true },
+    ]
+  },
   turbopack: {
     rules: {
       "*.css": {

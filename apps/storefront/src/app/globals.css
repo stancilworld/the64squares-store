@@ -782,3 +782,19 @@ html[data-focus] .play-main {
 @media (min-width: 1280px) {
   .hero-copy { padding-inline: 80px; }
 }
+/* News inside the Play area (dark). */
+.play-ui .news-body { color: #e9e6df; }
+.play-ui .news-body a { text-decoration-color: var(--g-accent); }
+.play-ui .news-body blockquote { border-left-color: var(--g-accent); }
+.play-ui .news-body hr, .play-ui .news-body th, .play-ui .news-body td { border-color: var(--g-line); }
+.play-ui .news-body th, .play-ui .news-body code, .play-ui .news-body pre { background: var(--g-panel-2); }
+.play-ui .news-body mark { color: #111; }
+@media (min-width: 1024px) {
+  .play-ui .news-body img, .play-ui .news-body div[data-youtube-video] { width: 100%; margin-left: 0; }
+}
+/* "Live now": a pulsing dot for a game in progress, and the bar that leads back to it. */
+.live-dot { display: inline-block; width: 9px; height: 9px; border-radius: 999px; background: var(--g-bad); box-shadow: 0 0 0 0 rgb(255 122 107 / 0.6); animation: live-pulse 1.6s ease-out infinite; }
+@keyframes live-pulse { 70% { box-shadow: 0 0 0 7px rgb(255 122 107 / 0); } 100% { box-shadow: 0 0 0 0 rgb(255 122 107 / 0); } }
+.return-bar { background: #b3261e; box-shadow: 0 6px 18px rgb(0 0 0 / 0.35); }
+.return-bar:hover { background: #c62e25; }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }

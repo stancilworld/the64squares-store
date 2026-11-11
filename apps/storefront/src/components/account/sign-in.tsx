@@ -11,8 +11,9 @@ type Mode = "code" | "password" | "create"
 const safeNext = (next?: string) => (next && next.startsWith("/") && !next.startsWith("//") ? next : "/account")
 
 // Sign in with an emailed code (default), a password, or Google. "Create account with a
-// password" also checks the email with a code first.
-export function SignIn({ google, next }: { google: boolean; next?: string }) {
+// password" also checks the email with a code first. In the sign-in pop-up, onDone runs instead
+// of going to another page (the pop-up refreshes the page the shopper is on).
+export function SignIn({ google, next, onDone, inDialog = false }: { google: boolean; next?: string; onDone?: () => void; inDialog?: boolean }) {
   const router = useRouter()
   const [mode, setMode] = useState<Mode>("code")
   const [email, setEmail] = useState("")
@@ -33,6 +34,7 @@ export function SignIn({ google, next }: { google: boolean; next?: string }) {
 
   const done = () => {
     notifyCartChanged()
+    if (onDone) return onDone()
     router.push(safeNext(next))
     router.refresh()
   }
@@ -101,7 +103,13 @@ export function SignIn({ google, next }: { google: boolean; next?: string }) {
 
   return (
     <div className="mx-auto max-w-[460px]">
-      <h1 className="text-center text-[26px] font-semibold lg:text-[34px]">{title}</h1>
+      {inDialog ? (
+        <h2 id="sign-in-title" className="text-center text-[24px] font-semibold">
+          {title}
+        </h2>
+      ) : (
+        <h1 className="text-center text-[26px] font-semibold lg:text-[34px]">{title}</h1>
+      )}
       <p className="mt-2 text-center text-[15px] text-black/70 lg:text-[17px]">
         {mode === "code"
           ? "We'll email you a 6-digit code. No password needed."
@@ -127,9 +135,9 @@ export function SignIn({ google, next }: { google: boolean; next?: string }) {
             Continue with Google
           </button>
           <p className="my-6 flex items-center gap-3 text-[13px] text-black/50">
-            <span className="h-px flex-1 bg-[var(--g-panel-2)]" />
+            <span className="h-px flex-1 bg-black/15" />
             or with your email
-            <span className="h-px flex-1 bg-[var(--g-panel-2)]" />
+            <span className="h-px flex-1 bg-black/15" />
           </p>
         </>
       )}

@@ -4,6 +4,9 @@ import localFont from "next/font/local"
 import "./globals.css"
 import { ColoursProvider } from "@/components/colours-provider"
 import { SamePageTop } from "@/components/same-page-top"
+import { SignInDialog } from "@/components/account/sign-in-dialog"
+import { getCustomer } from "@/lib/auth"
+import { getCheckoutConfig } from "@/lib/checkout"
 import { Tracking } from "@/components/tracking/tracking"
 import { getColourPalette, getMarketingConfig, getSiteConfig } from "@/lib/data"
 import { ListProvider } from "@/lib/list"
@@ -45,6 +48,14 @@ const BASE_METADATA: Metadata = {
   },
 }
 
+// The sign-in pop-up, only for visitors who aren't signed in.
+async function SignInSlot() {
+  const customer = await getCustomer()
+  if (customer) return null
+  const config = await getCheckoutConfig()
+  return <SignInDialog google={config.google} />
+}
+
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const [palette, marketing] = await Promise.all([getColourPalette(), getMarketingConfig()])
   return (
@@ -56,6 +67,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         </ListProvider>
         </ColoursProvider>
         <SamePageTop />
+        <Suspense fallback={null}>
+          <SignInSlot />
+        </Suspense>
         <Suspense fallback={null}>
           <Tracking config={marketing} />
         </Suspense>

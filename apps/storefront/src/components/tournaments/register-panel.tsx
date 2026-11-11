@@ -1,5 +1,6 @@
 "use client"
 
+import { openSignIn } from "../account/sign-in-dialog"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
@@ -95,7 +96,7 @@ export function RegisterPanel({ t, me, ticket }: { t: Tournament; me: Me; ticket
       if (res.ok) {
         router.push(`/account/tickets/${res.ticket.ticket_code}?new=1`)
       } else if (res.signIn) {
-        router.push(`/account?next=${encodeURIComponent(next)}`)
+        if (!openSignIn()) router.push(`/account?next=${encodeURIComponent(next)}`)
       } else {
         setError(res.error)
       }

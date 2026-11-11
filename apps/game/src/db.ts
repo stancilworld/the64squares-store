@@ -157,6 +157,26 @@ export const liveGamesFor = async (playerId: string) => {
 
 // What a player is in right now: games being played, and tournaments they've signed up for
 // that haven't finished (online arenas and events at a venue).
+// Tournaments on now or starting within a week (for the "Live now" panel; anyone can see).
+export const liveEvents = async () => {
+  try {
+    const { rows } = await pool.query(
+      `select t.id, t.title, t.handle, t.format, t.mode, t.time_control, t.starts_at, t.ends_at,
+              (select count(*)::int from public.tournament_registration r
+                where r.tournament_id = t.id and r.status = 'confirmed' and r.deleted_at is null) as players
+         from public.tournament t
+        where t.deleted_at is null and t.status = 'published'
+          and coalesce(t.ends_at, t.starts_at + interval '6 hours') > now()
+          and t.starts_at < now() + interval '7 days'
+        order by t.starts_at asc limit 8`
+    )
+    return rows
+  } catch {
+    // The store's tables may not exist on a fresh database.
+    return []
+  }
+}
+
 export const activeFor = async (playerId: string) => {
   const games = await pool.query(
     `select id, mode, white_id, black_id, white_name, black_name, white_rating, black_rating, initial_ms, increment_ms, started_at, tournament_id

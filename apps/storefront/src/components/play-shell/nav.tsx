@@ -20,6 +20,7 @@ export const PLAY_NAV = [
   { href: "/play/tournaments", label: "Tournaments", icon: "trophy" },
   { href: "/play/history", label: "History", icon: "history" },
   { href: "/play/leaderboard", label: "Leaderboard", icon: "chart" },
+  { href: "/play/news", label: "News", icon: "news" },
   { href: "/play/profile", label: "Profile", icon: "user" },
 ]
 const MOBILE_TABS = ["/play", "/play/online", "/play/puzzles", "/play/friends", "/play/profile"]
@@ -47,7 +48,7 @@ export function SideNav({ account, showSwitch = true, pass = null }: { account: 
   return (
     <aside
       data-folded={folded ? "" : undefined}
-      className={`play-side sticky top-0 hidden h-dvh shrink-0 border-r border-[var(--g-line)] bg-[var(--g-side)] transition-[width] duration-200 lg:block ${folded ? "w-[72px]" : "w-[212px]"}`}
+      className={`play-side sticky top-0 z-40 hidden h-dvh shrink-0 border-r border-[var(--g-line)] bg-[var(--g-side)] transition-[width] duration-200 lg:block ${folded ? "w-[72px]" : "w-[212px]"}`}
     >
       <button
         type="button"

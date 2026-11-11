@@ -126,7 +126,7 @@ const ArticleEditor = ({
     const tab = window.open("about:blank", "_blank")
     try {
       if (dirty || !savedId) await write()
-      const url = await getPreviewLink(`/news/${form.handle}`)
+      const url = await getPreviewLink(`/play/news/${form.handle}`)
       if (!url) throw new Error("Preview switches on with the next website update.")
       if (tab) tab.location.href = url
     } catch (e) {
@@ -235,7 +235,7 @@ const ArticleEditor = ({
               <Label htmlFor="news-handle">Web address</Label>
               <Input id="news-handle" value={form.handle} onChange={(e) => set("handle", toHandle(e.target.value))} />
               <Text size="xsmall" className="break-all text-ui-fg-subtle">
-                the64squares.in/news/{form.handle || "headline"}
+                the64squares.in/play/news/{form.handle || "headline"}
               </Text>
             </div>
             <ImageField
@@ -284,11 +284,11 @@ const NewsPage = () => {
         <div>
           <Heading level="h1">News</Heading>
           <Text size="small" className="text-ui-fg-subtle">
-            Articles for the News page, written like a Word document. Newest show first; a top story shows large.
+            Articles for News in the Play area (/play/news), written like a Word document. Newest first; a top story shows large. Published articles appear within about 15 seconds.
           </Text>
         </div>
         <div className="flex flex-wrap gap-2">
-          <PageActions path="/news" />
+          <PageActions path="/play/news" />
           <Button size="small" onClick={() => openEditor(null)}>
             Write an article
           </Button>

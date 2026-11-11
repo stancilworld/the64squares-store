@@ -5,11 +5,13 @@ import { migratePuzzles, puzzleRoute } from "./puzzles.js"
 import { chatHistory, dropChat, registerChat } from "./chat.js"
 import { migrateMissions, missionRoute } from "./missions.js"
 import { config } from "./config.js"
-import { activeFor, gamePgn, leaderboard, liveGamesFor, migrate, playerStats, pool, ratingsFor, recentGamesFor } from "./db.js"
+import { activeFor, gamePgn, liveEvents, leaderboard, liveGamesFor, migrate, playerStats, pool, ratingsFor, recentGamesFor } from "./db.js"
 import { type Color, type Game, isGuest, type Player } from "./game.js"
 import { speedOf, type Speed } from "./glicko.js"
 import { GameManager } from "./manager.js"
 import { arenaStandings, online, registerArena, startArenas } from "./arena.js"
+import { fideTop, migrateFide, startFide } from "./fide.js"
+import { FIDE_LISTS, FIDE_SPEEDS, type FideList, type FideSpeed } from "./fide-rules.js"
 import { banOf, migrateFairPlay, registerFairPlay, startFairPlay } from "./fairplay.js"
 import { migrateFriends, registerFriends } from "./friends.js"
 import { xpForGame } from "./levels.js"
@@ -74,6 +76,17 @@ const server = http.createServer(async (req, res) => {
     if (a && req.method === "GET") {
       const img = await readAvatar(a[1])
       return img ? send(res, 200, img, "image/webp", origin, "public, max-age=31536000, immutable") : send(res, 404, "Not found", "text/plain", origin)
+    }
+    // FIDE top lists: /fide?speed=standard&list=open
+    if (path === "/fide" && req.method === "GET") {
+      const speed = url.searchParams.get("speed") ?? "standard"
+      const list = url.searchParams.get("list") ?? "open"
+      if (!FIDE_SPEEDS.includes(speed as FideSpeed) || !FIDE_LISTS.includes(list as FideList)) return json(res, 400, { error: "unknown list" }, origin)
+      return json(res, 200, await fideTop(speed as FideSpeed, list as FideList), origin)
+    }
+    // Tournaments on now or this week, for everyone.
+    if (path === "/events" && req.method === "GET") {
+      return json(res, 200, { events: await liveEvents() }, origin)
     }
     // The signed-in (or guest) player's games in progress and tournaments they've joined.
     if (path === "/me/active" && req.method === "GET") {
@@ -490,7 +503,10 @@ const main = async () => {
   await migratePuzzles()
   await migrateMissions()
   await migrateHouse()
+  await migrateFide()
   startFairPlay(manager)
+  // FIDE rankings: downloaded monthly in the background.
+  if (process.env.FIDE_RANKINGS !== "off") startFide()
   // Experience for both players when a game against a person ends.
   manager.whenGameEnds(async (g) => {
     if (g.r.status !== "finished" || !g.r.result) return

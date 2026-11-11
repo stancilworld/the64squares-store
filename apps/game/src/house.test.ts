@@ -140,6 +140,6 @@ test("level matching: new players start gently, losing runs get easier games", (
   assert.ok(losing >= 1100 && winning <= 1500)
   for (let i = 0; i < 100; i++) {
     const w = houseWaitMs()
-    assert.ok(w >= 15_000 && w <= 30_000)
+    assert.ok(w >= 20_000 && w <= 45_000)
   }
 })

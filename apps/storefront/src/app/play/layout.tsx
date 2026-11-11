@@ -7,6 +7,7 @@ import { PlayLive } from "@/components/play-shell/live"
 import { getPlayPass } from "@/lib/play"
 import { GIcon } from "@/components/play-shell/icons"
 import { MobileBar, MobileTabs, SideNav } from "@/components/play-shell/nav"
+import { ReturnBar } from "@/components/play-shell/return-bar"
 import { getCustomer } from "@/lib/auth"
 import { getSiteNavigation } from "@/lib/data"
 
@@ -44,6 +45,10 @@ async function Live() {
   return <PlayLive pass={await getPlayPass()} />
 }
 
+async function Return() {
+  return <ReturnBar pass={await getPlayPass()} />
+}
+
 async function Top() {
   const [nav, pass] = await Promise.all([getSiteNavigation(), getPlayPass()])
   return <MobileBar pass={pass} showSwitch={nav.experience?.show_switch !== false} />
@@ -62,7 +67,12 @@ export default function PlayLayout({ children }: { children: React.ReactNode }) 
         <Suspense fallback={<div className="h-[52px] bg-[var(--g-side)] lg:hidden" />}>
           <Top />
         </Suspense>
-        <main className="play-main flex-1 px-3 pb-[78px] pt-3 sm:px-5 lg:px-8 lg:pb-6 lg:pt-6">{children}</main>
+        <main className="play-main flex-1 px-3 pb-[78px] pt-3 sm:px-5 lg:px-8 lg:pb-6 lg:pt-6">
+          <Suspense fallback={null}>
+            <Return />
+          </Suspense>
+          {children}
+        </main>
         <Suspense fallback={null}>
           <MobileTabs />
         </Suspense>

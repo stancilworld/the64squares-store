@@ -55,9 +55,9 @@ const SECTIONS: Section[] = [
   },
   {
     title: "News",
-    description: "News articles with a full editor: headings, pictures, tables, videos. Shown at /news.",
+    description: "News articles with a full editor: headings, pictures, tables, videos. Shown in the Play area at /play/news.",
     to: "/website/news",
-    sitePath: "/news",
+    sitePath: "/play/news",
     icon: DocumentText,
     permission: "content.news",
   },

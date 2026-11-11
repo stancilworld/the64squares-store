@@ -7,6 +7,7 @@ const paths: Record<string, string> = {
   trophy: "M7 4h10v4a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4m10-4h3a3 3 0 0 1-3 4M12 13v4m-4 3h8m-6-3h4",
   history: "M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3.5 2",
   chart: "M4 20V10m6 10V4m6 16v-7m4 7H2",
+  news: "M4 5h13v14a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2zM17 9h3v10a2 2 0 0 1-2 2M7.5 8.5h6M7.5 12h6M7.5 15.5h4",
   back: "M15 5l-7 7 7 7",
   shop: "M5 8h14l-1.2 11H6.2zM9 8V6a3 3 0 0 1 6 0v2",
   link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",

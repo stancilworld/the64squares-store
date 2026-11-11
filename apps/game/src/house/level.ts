@@ -1,7 +1,9 @@
 // Pure rules for choosing a House Player's level (tested without a database).
 
 // Wait for a person first: 15 to 30 seconds.
-export const houseWaitMs = (r: () => number = Math.random) => 15_000 + Math.round(r() * 15_000)
+// How long someone waits for a person before a House Player is offered: never less than
+// 20 seconds, then a random extra up to 25 seconds, so it never feels like a fixed timer.
+export const houseWaitMs = (r: () => number = Math.random) => 20_000 + Math.round(r() * 25_000)
 
 // Expected score against an opponent (the usual Elo formula).
 const expected = (me: number, opp: number) => 1 / (1 + 10 ** ((opp - me) / 400))

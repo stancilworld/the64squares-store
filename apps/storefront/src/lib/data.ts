@@ -175,7 +175,8 @@ export async function getNews(
   topic?: string | null
 ): Promise<{ articles: NewsSummary[]; topics: NewsTopic[]; count: number }> {
   "use cache"
-  cacheLife("minutes")
+  // Short, so a newly published article shows within seconds.
+  cacheLife({ stale: 15, revalidate: 15, expire: 600 })
   cacheTag("news")
   try {
     return await sdk.client.fetch<{ articles: NewsSummary[]; topics: NewsTopic[]; count: number }>("/store/news", {
@@ -189,7 +190,7 @@ export async function getNews(
 
 export async function getNewsArticle(handle: string): Promise<NewsArticle | null> {
   "use cache"
-  cacheLife("minutes")
+  cacheLife({ stale: 15, revalidate: 15, expire: 600 })
   cacheTag("news")
   const res = await orNull(sdk.client.fetch<{ article: NewsArticle }>(`/store/news/${handle}`, { headers: await previewHeaders() }))
   return res?.article ?? null

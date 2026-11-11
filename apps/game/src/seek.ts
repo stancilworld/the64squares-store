@@ -80,11 +80,11 @@ const match = async (io: Server, manager: GameManager) => {
     for (const [id, s] of seeks) {
       if (s.offer && s.offer.expires < now) {
         s.offer = null
-        s.houseAt = now + 20_000
+        s.houseAt = now + houseWaitMs()
         io.to(`player:${id}`).emit("seek:house-withdrawn", {})
       }
       if (!s.offer && now >= s.houseAt) {
-        s.houseAt = now + 20_000
+        s.houseAt = now + houseWaitMs()
         await offerHouse(io, manager, id, s, now)
       }
     }
