@@ -74,9 +74,12 @@ export function ProductOptions({ product, info }: { product: HttpTypes.StoreProd
   const today = useToday()
   const swatch = useSwatch()
   const variants = useMemo(() => product.variants ?? [], [product.variants])
+  // Only options some variant actually has a value for. A product can carry an option its
+  // variants were never linked to (e.g. Medusa's "Default option"); counting it would leave
+  // nothing selectable and the buy buttons greyed out.
   const optionTitles = useMemo(
-    () => (product.options ?? []).map((o) => o.title),
-    [product.options]
+    () => (product.options ?? []).map((o) => o.title).filter((t) => variants.some((v) => valueOf(v, t))),
+    [product.options, variants]
   )
   const [choice, setChoice] = useState<Record<string, string>>(() => {
     const first = variants.find(inStock) ?? variants[0]
@@ -86,8 +89,9 @@ export function ProductOptions({ product, info }: { product: HttpTypes.StoreProd
   const [added, setAdded] = useState(false)
   const [error, setError] = useState("")
 
+  // One variant: it's always the one. Otherwise the variant matching every chosen option.
   const selected = useMemo(
-    () => variants.find((v) => optionTitles.every((t) => valueOf(v, t) === choice[t])),
+    () => (variants.length === 1 ? variants[0] : variants.find((v) => optionTitles.every((t) => valueOf(v, t) === choice[t]))),
     [variants, optionTitles, choice]
   )
 
