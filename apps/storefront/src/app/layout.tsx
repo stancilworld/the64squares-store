@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import localFont from "next/font/local"
 import "./globals.css"
 import { ColoursProvider } from "@/components/colours-provider"
+import { SamePageTop } from "@/components/same-page-top"
 import { Tracking } from "@/components/tracking/tracking"
 import { getColourPalette, getMarketingConfig, getSiteConfig } from "@/lib/data"
 import { ListProvider } from "@/lib/list"
@@ -54,6 +55,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </ListProvider>
         </ColoursProvider>
+        <SamePageTop />
         <Suspense fallback={null}>
           <Tracking config={marketing} />
         </Suspense>

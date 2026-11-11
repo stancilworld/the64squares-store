@@ -52,7 +52,7 @@ export function useActive(pass: PlayPass | null) {
   return { data, load }
 }
 
-export function ActiveGames({ pass, compact = false }: { pass: PlayPass | null; compact?: boolean }) {
+export function ActiveGames({ pass, compact = false, folded = false }: { pass: PlayPass | null; compact?: boolean; folded?: boolean }) {
   const { data, load } = useActive(pass)
   const path = usePathname()
   // Open on the page it was opened on; changing page closes it.
@@ -82,17 +82,20 @@ export function ActiveGames({ pass, compact = false }: { pass: PlayPass | null; 
         type="button"
         aria-expanded={open}
         aria-label={`Active games${count ? `: ${count}` : ""}`}
+        title={folded ? "Active games" : undefined}
         onClick={() => setOpen((o) => !o)}
         className={
           compact
             ? "relative flex h-10 w-10 items-center justify-center rounded-lg text-[var(--g-muted)]"
-            : "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[15px] font-semibold text-[var(--g-muted)] transition hover:bg-[var(--g-panel)] hover:text-white"
+            : folded
+              ? "relative flex h-11 w-full items-center justify-center rounded-lg text-[var(--g-muted)] transition hover:bg-[var(--g-panel)] hover:text-white"
+              : "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[15px] font-semibold text-[var(--g-muted)] transition hover:bg-[var(--g-panel)] hover:text-white"
         }
       >
         <GIcon name="board" size={compact ? 22 : 22} />
-        {!compact && <span className="flex-1">Active games</span>}
+        {!compact && !folded && <span className="flex-1">Active games</span>}
         {count > 0 && (
-          <span className={`${compact ? "absolute right-0.5 top-0.5" : ""} grid h-[20px] min-w-[20px] place-items-center rounded-full bg-[var(--g-accent)] px-1.5 text-[11px] font-extrabold text-black`}>
+          <span className={`${compact ? "absolute right-0.5 top-0.5" : folded ? "absolute right-1 top-0.5 !h-[17px] !min-w-[17px] !text-[10px]" : ""} grid h-[20px] min-w-[20px] place-items-center rounded-full bg-[var(--g-accent)] px-1.5 text-[11px] font-extrabold text-black`}>
             {count}
           </span>
         )}

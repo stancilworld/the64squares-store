@@ -4,10 +4,11 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { Avatar, LevelBadge } from "@/components/play/avatar"
 import { GIcon } from "@/components/play-shell/icons"
-import { GAME_URL, TIME_CONTROLS, tcText } from "@/lib/game-types"
+import { GAME_URL, tcText } from "@/lib/game-types"
 import { MiniBoard } from "@/components/chess/mini-board"
 import { positionAt, puzzleApi } from "@/lib/puzzles"
 import { TITLE_COLOURS } from "@/lib/profile-types"
+import { ChessStage } from "./chess-stage"
 import { DailyMissions } from "./menu/missions"
 import { ART, useLobby, useMyProfile } from "./menu/screen"
 
@@ -107,14 +108,15 @@ export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null
         </Link>
       )}
 
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        {/* Quick pairing */}
-        <section className="menu-hero menu-rise flex flex-col p-5 sm:p-7 lg:col-start-1 lg:row-start-1" aria-label="Quick play">
-          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-            <h1 className="font-display text-[28px] sm:text-[38px]">
+      <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr]">
+        {/* Play online: one button (all the time controls are on the Online screen) and a
+            chess scene that answers the mouse. */}
+        <section className="menu-hero menu-rise grid overflow-hidden lg:col-start-1 lg:row-start-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]" aria-label="Play online">
+          <div className="order-2 flex flex-col justify-center p-5 sm:order-1 sm:p-7">
+            <h1 className="font-display text-[26px] leading-[1.05] sm:text-[34px]">
               {hello}, {first}.
             </h1>
-            <p className="g-muted flex items-center gap-2 text-[14px] font-medium">
+            <p className="g-muted mt-2 flex items-center gap-2 text-[14px] font-medium">
               {lobby && (lobby.online || lobby.playing) ? (
                 <>
                   <span className="h-2 w-2 bg-[var(--g-good)]" />
@@ -122,36 +124,22 @@ export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null
                   {lobby.playing} {lobby.playing === 1 ? "game" : "games"} on now
                 </>
               ) : (
-                "Pick a time control to find an opponent."
+                "Bullet, blitz, rapid or classical, against players at your level."
               )}
             </p>
-          </div>
-          <div className="mt-5 grid flex-1 auto-rows-fr grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5">
-            {TIME_CONTROLS.map((t) => {
-              const waiting = lobby?.seeking?.[t.tc] ?? 0
-              return (
-                <Link key={t.tc} href={`/play/online?tc=${encodeURIComponent(t.tc)}&go=1`} className="tc-cell">
-                  <span className="font-mono text-[24px] font-extrabold leading-none tracking-tight sm:text-[30px]">{t.tc}</span>
-                  <span className="g-muted text-[12px] font-semibold sm:text-[13px]">{t.label}</span>
-                  {waiting > 0 && <span aria-label={`${waiting} waiting`} className="absolute right-2 top-2 h-2 w-2 bg-[var(--g-good)]" />}
-                </Link>
-              )
-            })}
-            <Link href="/play/online" className="tc-cell">
-              <span className="text-[17px] font-extrabold leading-none tracking-tight sm:text-[20px]">Custom</span>
-              <span className="g-muted text-[12px] font-semibold sm:text-[13px]">All options</span>
+            <Link href="/play/online" className="menu-play mt-5 flex h-[56px] w-full items-center justify-center gap-3 text-[18px] font-extrabold tracking-tight">
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                <path d="M8 5.5v13l10.5-6.5z" />
+              </svg>
+              Play online
             </Link>
+            <p className="g-muted mt-2.5 text-center text-[13px]">{signedIn ? "Rated games count for your rating and XP." : "Play as a guest, or sign up to get a rating."}</p>
           </div>
-          <Link href="/play/online?tc=10%2B0&go=1" className="menu-play mt-3 flex h-[58px] w-full items-center justify-center gap-3 text-[18px] font-extrabold tracking-tight">
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-              <path d="M8 5.5v13l10.5-6.5z" />
-            </svg>
-            Play 10 min rapid{signedIn ? ", rated" : ""}
-          </Link>
+          <ChessStage href="/play/online" label="Play online" className="order-1 h-[210px] !rounded-none sm:order-2 sm:h-auto sm:min-h-[280px] lg:min-h-[300px]" />
         </section>
 
         {/* Player card */}
-        <div className="order-3 flex flex-col gap-3 sm:gap-4 lg:order-none lg:col-start-2 lg:row-start-1">
+        <div className="order-3 flex flex-col gap-3 sm:gap-4 lg:order-none lg:col-start-2 lg:row-span-2 lg:row-start-1">
         <section className="menu-card menu-rise flex flex-col p-5 [animation-delay:80ms]" aria-label="Your profile">
           <div className="flex items-center gap-3">
             <Avatar url={profile?.avatar_url ?? null} name={name} size={58} />
@@ -242,7 +230,7 @@ export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null
         </div>
 
       {/* Modes */}
-      <nav aria-label="Ways to play" className="order-2 grid grid-cols-2 gap-3 sm:gap-4 lg:order-none lg:col-span-2 lg:grid-cols-4">
+      <nav aria-label="Ways to play" className="order-2 grid grid-cols-2 gap-3 sm:gap-4 lg:order-none lg:col-start-1 lg:row-start-2">
         {MODES.map((m, i) => (
           <Link key={m.href} href={m.href} className="menu-tile menu-rise flex min-h-[140px] flex-col p-4 sm:min-h-[170px] sm:p-5" style={{ animationDelay: `${80 + i * 40}ms` }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}

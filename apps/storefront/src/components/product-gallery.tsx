@@ -272,14 +272,16 @@ export function ProductGallery({
   }, [selected])
 
   if (!count) {
-    return <div className="relative aspect-square overflow-hidden rounded-md bg-placeholder">{overlay}</div>
+    return <div className="relative aspect-square self-start overflow-hidden rounded-md bg-placeholder">{overlay}</div>
   }
 
   const go = (i: number) => setSelected((i + count) % count)
   const shown = preview ?? selected
 
   return (
-    <div className="grid min-w-0 gap-2.5">
+    // Natural height (never stretched to the taller details column beside it, which used to
+    // open a gap and pull the small photos out of square); stays in view while details scroll.
+    <div className="grid min-w-0 content-start gap-2.5 self-start lg:sticky lg:top-[96px]">
       <div
         className="group relative aspect-square overflow-hidden rounded-md bg-placeholder"
         role="region"
@@ -342,7 +344,7 @@ export function ProductGallery({
       {count > 1 && (
         <div
           ref={strip}
-          className="flex gap-2.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex items-start gap-2.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           onMouseLeave={() => setPreview(null)}
         >
           {images.map((img, i) => (
@@ -358,7 +360,7 @@ export function ProductGallery({
                 setSelected(i)
                 setPreview(null)
               }}
-              className="relative aspect-square shrink-0 basis-[calc((100%-30px)/4)] overflow-hidden rounded-md bg-placeholder transition-opacity hover:opacity-90"
+              className="relative aspect-square h-auto shrink-0 basis-[calc((100%-30px)/4)] self-start overflow-hidden rounded-md bg-placeholder transition-opacity hover:opacity-90"
             >
               <Image src={img.url} alt="" fill sizes="160px" className="object-cover" />
               {i === selected && (

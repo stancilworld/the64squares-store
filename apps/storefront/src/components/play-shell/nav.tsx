@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { GearIcon, openBoardSettings } from "@/components/chess/board-settings"
 import { ExperienceSwitch } from "@/components/experience-switch"
 import type { PlayPass } from "@/lib/play"
+import { useSideFolded, toggleSide } from "@/lib/chess/side"
 import { ActiveGames } from "./active-games"
 import { GIcon } from "./icons"
 
@@ -37,47 +38,67 @@ const titleFor = (path: string) => {
   return item.label
 }
 
-// Desktop: a side menu, like a game's main menu.
+// Desktop: a side menu, like a game's main menu. While a game is on it folds to icons; the
+// arrow on its edge opens or folds it. On short screens it scrolls inside itself.
 export function SideNav({ account, showSwitch = true, pass = null }: { account: React.ReactNode; showSwitch?: boolean; pass?: PlayPass | null }) {
   const path = usePathname()
+  const folded = useSideFolded()
+  const row = `flex items-center rounded-lg text-[var(--g-muted)] transition hover:bg-[var(--g-panel)] hover:text-white ${folded ? "h-11 justify-center short:h-10" : "gap-3 px-3 py-2.5 short:py-2"}`
   return (
-    <aside className="play-side sticky top-0 hidden h-dvh w-[212px] shrink-0 flex-col border-r border-[var(--g-line)] bg-[var(--g-side)] lg:flex">
-      <Link href="/play" className="flex items-center px-5 pb-3 pt-5">
-        <Image src="/brand/logo-footer.webp" alt="The 64 Squares" width={388} height={160} className="h-[44px] w-auto" priority />
-      </Link>
-      {showSwitch && <ExperienceSwitch active="play" dark className="mx-4 mb-3" />}
-      <nav className="flex flex-col gap-1 px-3">
-        {PLAY_NAV.map((n) => {
-          const on = isActive(path, n.href)
-          return (
-            <Link
-              key={n.href}
-              href={n.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] font-semibold transition ${
-                on ? "bg-[var(--g-panel-2)] text-white shadow-[inset_3px_0_0_var(--g-accent)]" : "text-[var(--g-muted)] hover:bg-[var(--g-panel)] hover:text-white"
-              }`}
-            >
-              <GIcon name={n.icon} className={on ? "text-[var(--g-accent)]" : ""} />
-              {n.label}
-            </Link>
-          )
-        })}
-        <ActiveGames pass={pass} />
-      </nav>
-      <div className="mt-auto flex flex-col gap-1 border-t border-[var(--g-line)] p-3">
-        <button
-          type="button"
-          onClick={openBoardSettings}
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[14px] font-medium text-[var(--g-muted)] hover:bg-[var(--g-panel)] hover:text-white"
-        >
-          <GearIcon />
-          Board settings
-        </button>
-        {account}
-        <Link href="/shop" className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-medium text-[var(--g-muted)] hover:bg-[var(--g-panel)] hover:text-white">
-          <GIcon name="shop" size={20} />
-          Back to the shop
+    <aside
+      data-folded={folded ? "" : undefined}
+      className={`play-side sticky top-0 hidden h-dvh shrink-0 border-r border-[var(--g-line)] bg-[var(--g-side)] transition-[width] duration-200 lg:block ${folded ? "w-[72px]" : "w-[212px]"}`}
+    >
+      <button
+        type="button"
+        onClick={toggleSide}
+        aria-label={folded ? "Open the menu" : "Fold the menu"}
+        aria-expanded={!folded}
+        title={folded ? "Open the menu" : "Fold the menu"}
+        className="absolute -right-3 top-[76px] z-10 grid h-6 w-6 place-items-center rounded-full border border-[var(--g-line)] bg-[var(--g-panel-2)] text-[var(--g-muted)] shadow-md transition hover:bg-[var(--g-accent)] hover:text-black"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={folded ? "rotate-180" : ""}>
+          <path d="M15 5l-7 7 7 7" />
+        </svg>
+      </button>
+      <div className="flex h-full flex-col overflow-y-auto overflow-x-hidden [scrollbar-width:thin]">
+        <Link href="/play" className={`flex items-center pb-3 pt-5 short:pt-3 ${folded ? "justify-center" : "px-5"}`}>
+          {folded ? (
+            <Image src="/brand/logo-mark.png" alt="The 64 Squares" width={256} height={294} className="h-[38px] w-auto" priority />
+          ) : (
+            <Image src="/brand/logo-footer.webp" alt="The 64 Squares" width={388} height={160} className="h-[44px] w-auto" priority />
+          )}
         </Link>
+        {showSwitch && !folded && <ExperienceSwitch active="play" dark className="mx-4 mb-3" />}
+        <nav className={`flex flex-col gap-1 short:gap-0.5 ${folded ? "px-2" : "px-3"}`}>
+          {PLAY_NAV.map((n) => {
+            const on = isActive(path, n.href)
+            return (
+              <Link
+                key={n.href}
+                href={n.href}
+                title={folded ? n.label : undefined}
+                aria-label={folded ? n.label : undefined}
+                className={`${row} text-[15px] font-semibold ${on ? "!bg-[var(--g-panel-2)] !text-white shadow-[inset_3px_0_0_var(--g-accent)]" : ""}`}
+              >
+                <GIcon name={n.icon} className={on ? "text-[var(--g-accent)]" : ""} />
+                {!folded && n.label}
+              </Link>
+            )
+          })}
+          <ActiveGames pass={pass} folded={folded} />
+        </nav>
+        <div className={`mt-auto flex flex-col gap-1 border-t border-[var(--g-line)] short:gap-0 ${folded ? "p-2" : "p-3"}`}>
+          <button type="button" onClick={openBoardSettings} title={folded ? "Board settings" : undefined} aria-label="Board settings" className={`${row} text-left text-[14px] font-medium`}>
+            <GearIcon />
+            {!folded && "Board settings"}
+          </button>
+          {!folded && account}
+          <Link href="/shop" title={folded ? "Back to the shop" : undefined} aria-label="Back to the shop" className={`${row} text-[14px] font-medium`}>
+            <GIcon name="shop" size={20} />
+            {!folded && "Back to the shop"}
+          </Link>
+        </div>
       </div>
     </aside>
   )

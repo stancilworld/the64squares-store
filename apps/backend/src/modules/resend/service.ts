@@ -1,10 +1,11 @@
 import { AbstractNotificationProviderService, MedusaError } from "@medusajs/framework/utils"
 import type { Logger, NotificationTypes } from "@medusajs/framework/types"
 import { getServiceKeys } from "../../lib/service-keys"
+import { sendFromMailbox } from "../../lib/mailbox"
 
 // Sends The 64 Squares's emails (order confirmations, sign-in codes, password resets) through Resend.
-// Without an API key (e.g. on a developer's computer) emails are written to the server log
-// instead of being sent.
+// Without a Resend key they go out from the shop's mailbox (Titan) when it's connected;
+// with neither (a developer's computer) they are written to the server log instead.
 
 type Options = { api_key?: string; from?: string; api_base?: string }
 
@@ -35,7 +36,13 @@ class ResendNotificationService extends AbstractNotificationProviderService {
     const replyTo = (typeof own === "string" && own) || keys.emailReplyTo || process.env.EMAIL_REPLY_TO || undefined
 
     if (!apiKey) {
-      this.logger_.info(`[email not sent: no RESEND_API_KEY] to=${notification.to} subject="${content.subject}"\n${content.text ?? ""}`)
+      // No Resend key: send from the shop's own mailbox (e.g. info@ at GoDaddy Titan) if it's
+      // connected in the admin; otherwise (a developer's computer) only log it.
+      if (keys.mailbox) {
+        const id = await sendFromMailbox(keys.mailbox, { to: notification.to, subject: content.subject, html: content.html, text: content.text, replyTo })
+        return { id }
+      }
+      this.logger_.info(`[email not sent: no RESEND_API_KEY or mailbox] to=${notification.to} subject="${content.subject}"\n${content.text ?? ""}`)
       return { id: `log_${Date.now()}` }
     }
 

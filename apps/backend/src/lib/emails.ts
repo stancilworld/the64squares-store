@@ -160,6 +160,21 @@ export const signInCodeEmail = (code: string): Email => {
   }
 }
 
+export const passwordResetEmail = (link: string): Email => {
+  const subject = "Reset your The 64 Squares admin password"
+  return {
+    subject,
+    html: layout(
+      subject,
+      `<h1 style="font-size:24px;margin:0 0 12px">Reset your password</h1>
+<p style="margin:0 0 16px">Someone (hopefully you) asked to reset the password for the The 64 Squares admin. The link works for 15 minutes.</p>
+${button(link, "Choose a new password")}
+<p style="margin:16px 0 0;color:#777;font-size:14px">If you didn't ask for this, ignore this email. Your password stays the same.</p>`
+    ),
+    text: `Reset your The 64 Squares admin password (the link works for 15 minutes):\n${link}\n\nIf you didn't ask for this, ignore this email.`,
+  }
+}
+
 // To a player: their tournament ticket.
 export const tournamentTicketEmail = (
   t: {

@@ -76,6 +76,23 @@ const smtpTransport = (m: MailboxCreds) =>
     socketTimeout: 60_000,
   })
 
+// A plain notification email (password reset, order email…) sent from the shop's mailbox,
+// for when no Resend key is set. Not filed in Sent.
+export const sendFromMailbox = async (
+  m: MailboxCreds,
+  mail: { to: string; subject: string; html?: string; text?: string; replyTo?: string }
+) => {
+  const info = await smtpTransport(m).sendMail({
+    from: { name: "The 64 Squares", address: m.email },
+    to: mail.to,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+    replyTo: mail.replyTo,
+  })
+  return info.messageId as string
+}
+
 // Plain-language reasons for the usual connection problems.
 export const explainMailError = (e: unknown) => {
   const err = e as { message?: string; authenticationFailed?: boolean; responseCode?: number; code?: string; responseText?: string }
