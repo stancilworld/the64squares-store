@@ -74,9 +74,19 @@ function KeyField({
       </div>
       <Input
         id={row.name}
-        type={row.secret ? "password" : "text"}
+        // A plain text box with the characters hidden, not a password box: browsers fill
+        // saved passwords into password boxes (ignoring autoComplete="off"), which used to put
+        // the admin password into the first secret here and block saving other keys.
+        type="text"
+        name={`key-${row.name.toLowerCase()}`}
         autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
         spellCheck={false}
+        data-1p-ignore
+        data-lpignore="true"
+        data-form-type="other"
+        style={row.secret && value ? ({ WebkitTextSecurity: "disc" } as React.CSSProperties) : undefined}
         placeholder={row.source ? "Paste a new value to replace it" : "Paste here"}
         value={value}
         disabled={remove}

@@ -62,7 +62,11 @@ export const POST = async (req: AuthenticatedMedusaRequest<Body>, res: MedusaRes
     const value = def.secret ? String(raw).replace(/\s+/g, "") : String(raw).trim()
     if (!value) continue
     if (!def.pattern.test(value)) {
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, `${def.label} doesn't look right. ${def.hint}.`)
+      const section = def.group.startsWith("razorpay") ? "Razorpay " : def.group.startsWith("payu") ? "PayU " : ""
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `${section}${def.label} doesn't look right. ${def.hint}. If you didn't type in that box, your browser may have filled it in: clear it and save again.`
+      )
     }
     changes[def.name] = value
   }
