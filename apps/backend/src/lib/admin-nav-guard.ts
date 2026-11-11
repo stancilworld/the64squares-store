@@ -25,6 +25,8 @@ const NAV: Record<string, string | string[]> = {
   "/app/website/chatbot": ["content.chatbot", "messages.view"],
   "/app/messages": ["messages.view", "mailbox.view"],
   "/app/reviews": "reviews.manage",
+  "/app/analytics": "analytics.view",
+  "/app/seo": "settings.branding",
   "/app/website": [
     "content.homepage",
     "content.about",

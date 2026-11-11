@@ -1,7 +1,6 @@
 "use client"
 
 import type { Consent, EventName, MarketingConfig, Platform, TrackData, TrackItem } from "./types"
-import { anyTag } from "./types"
 
 // One place for every shop event on the website. track() hands the event to each tag the
 // visitor allowed (Meta Pixel, Google Analytics, Google Ads, Tag Manager, Clarity), with the
@@ -240,6 +239,37 @@ const cookie = (name: string) => {
   return m ? decodeURIComponent(m[1]) : null
 }
 
+const SEARCH_ENGINES = /(^|\.)(google|bing|yahoo|duckduckgo|yandex|baidu|ecosia)\./
+
+// The other website the visitor came from (its name only), on the first page of the visit.
+let firstRef: string | null | undefined
+export const referrer = () => {
+  if (firstRef !== undefined) return firstRef
+  firstRef = null
+  try {
+    const r = document.referrer ? new URL(document.referrer) : null
+    if (r && r.hostname && r.hostname !== location.hostname && /^https?:$/.test(r.protocol)) firstRef = r.hostname.replace(/^www\./, "").toLowerCase().slice(0, 100)
+  } catch {}
+  return firstRef
+}
+
+// A random id for this visit (this browser tab, until it is closed), so the store can count
+// visits rather than page views. Kept only in the tab; never linked to a person.
+let visit: string | null = null
+export const visitId = () => {
+  if (visit) return visit
+  try {
+    visit = sessionStorage.getItem("t64:visit")
+    if (!visit || !/^[a-z0-9]{8,32}$/.test(visit)) {
+      visit = Array.from(crypto.getRandomValues(new Uint8Array(10)), (b) => (b % 36).toString(36)).join("")
+      sessionStorage.setItem("t64:visit", visit)
+    }
+  } catch {
+    visit ??= Math.random().toString(36).slice(2, 14).padEnd(10, "0")
+  }
+  return visit
+}
+
 const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "fbclid"] as const
 let campaign: Record<string, string> | null = null
 
@@ -248,7 +278,18 @@ let campaign: Record<string, string> | null = null
 const captureCampaign = () => {
   const p = new URLSearchParams(location.search)
   const found = Object.fromEntries(UTM_KEYS.filter((k) => p.get(k)).map((k) => [k, p.get(k)!.slice(0, 200)]))
+  if (!campaign) {
+    try {
+      campaign = JSON.parse(sessionStorage.getItem("t64:visit-utm") ?? "null") as Record<string, string> | null
+    } catch {}
+  }
   if (Object.keys(found).length) campaign = found
+  // No campaign tags but the visitor came from another website: that website is the source
+  // (a search engine: "organic"), as Google Analytics counts it.
+  else if (!campaign) {
+    const host = referrer()
+    if (host) campaign = { utm_source: host, utm_medium: SEARCH_ENGINES.test(host) ? "organic" : "referral" }
+  }
   const allowed = consent.analytics || consent.marketing
   try {
     if (allowed && campaign) localStorage.setItem("t64:utm", JSON.stringify({ at: Date.now(), v: campaign }))
@@ -256,6 +297,8 @@ const captureCampaign = () => {
       const saved = JSON.parse(localStorage.getItem("t64:utm") ?? "null") as { at: number; v: Record<string, string> } | null
       if (saved && Date.now() - saved.at < 30 * 86_400_000) campaign = saved.v
     }
+    // For the rest of this visit (this tab), so a reload keeps where the visit came from.
+    if (campaign) sessionStorage.setItem("t64:visit-utm", JSON.stringify(campaign))
   } catch {}
 }
 
@@ -434,12 +477,14 @@ const repeat = (name: EventName, d: TrackData) => {
 export const track = (name: EventName, d: TrackData = {}) => {
   const c = config
   if (typeof window === "undefined") return
-  if (repeat(name, d)) return
   if (!c) {
     if (early.length < 20) early.push([name, d])
     return
   }
-  if (!anyTag(c)) return
+  // After the queue above: an event queued before setup is sent once when it is replayed.
+  if (repeat(name, d)) return
+  // Always recorded by the store itself (Marketing → Analytics); the tags below only run
+  // when they are switched on and the visitor allowed them.
   const w = win()
   const eventId = d.event_id ?? newId(name)
   const sent: Platform[] = []
@@ -540,7 +585,10 @@ export const track = (name: EventName, d: TrackData = {}) => {
       ...(d.currency ? { currency: d.currency.toUpperCase() } : {}),
       ...(d.items?.length ? { items: d.items.slice(0, 50) } : {}),
       ...(d.search ? { search: d.search.slice(0, 100) } : {}),
+      ...(typeof d.results === "number" ? { results: Math.max(0, Math.min(100000, Math.round(d.results))) } : {}),
       ...(d.cart_id ? { cart_id: d.cart_id } : {}),
+      ...(visitId() ? { visit: visitId()! } : {}),
+      ...(name === "PageView" && referrer() ? { ref: referrer()! } : {}),
     },
   })
   if (!timer) timer = setTimeout(flush, 500)

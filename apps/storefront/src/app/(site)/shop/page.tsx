@@ -75,7 +75,7 @@ async function Shop({ searchParams }: { searchParams: Promise<Search> }) {
 
   return (
     <>
-      {q && <TrackSearch q={String(sp.q).trim().slice(0, 100)} />}
+      {q && <TrackSearch q={String(sp.q).trim().slice(0, 100)} results={filtered.length} />}
       {/* A slim title line, so the products start near the top of the screen. */}
       <div className="mx-auto flex max-w-[1440px] items-baseline gap-3 border-b border-rule px-6 pb-3 pt-5 lg:px-10 lg:pt-6">
         <h1 className="text-[22px] font-bold leading-tight tracking-[-0.02em] lg:text-[26px]">{title}</h1>

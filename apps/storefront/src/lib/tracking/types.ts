@@ -61,6 +61,8 @@ export type TrackData = {
   currency?: string | null
   items?: TrackItem[]
   search?: string | null
+  // How many products a search found (0: the shop had nothing for it).
+  results?: number | null
   cart_id?: string | null
   order_id?: string | null
   // For Google Ads enhanced conversions on the order page (Google hashes them in the browser).

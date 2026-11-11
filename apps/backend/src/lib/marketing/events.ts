@@ -20,6 +20,9 @@ export type EventData = {
   currency?: string | null
   items?: EventItem[]
   search?: string | null
+  results?: number | null
+  visit?: string | null
+  ref?: string | null
   order_id?: string | null
   // Campaign tags of the visit (first touch): utm_source, utm_medium, utm_campaign...
   utm?: Record<string, string> | null

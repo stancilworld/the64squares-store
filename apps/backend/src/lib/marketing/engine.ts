@@ -75,6 +75,9 @@ const sanitise = (d: EventData) => ({
       }
     : {}),
   ...(d.search ? { search: d.search.slice(0, 100) } : {}),
+  ...(typeof d.results === "number" ? { results: d.results } : {}),
+  ...(d.visit ? { visit: d.visit } : {}),
+  ...(d.ref ? { ref: d.ref } : {}),
   ...(d.order_id ? { order_id: d.order_id } : {}),
   ...(d.utm && Object.keys(d.utm).length ? { utm: d.utm } : {}),
 })

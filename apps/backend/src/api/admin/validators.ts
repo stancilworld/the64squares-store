@@ -625,6 +625,12 @@ export const CollectBody = z.object({
             value: z.number().min(0).max(10_000_000).nullable().optional(),
             currency: z.string().regex(/^[A-Za-z]{3}$/).nullable().optional(),
             search: mText(100).nullable().optional(),
+            // How many results a search found (0 = shoppers looked for something we don't show).
+            results: z.number().int().min(0).max(100_000).nullable().optional(),
+            // A random number for this browser tab's visit (no cookie), to count visits.
+            visit: z.string().regex(/^[a-z0-9]{8,32}$/).nullable().optional(),
+            // The site the visitor came from (its name only, e.g. "google.com").
+            ref: mText(120).regex(/^[a-z0-9.-]+$/).nullable().optional(),
             cart_id: z.string().regex(/^cart_[A-Z0-9]+$/).nullable().optional(),
             items: z
               .array(
