@@ -197,7 +197,7 @@ export const registerArena = (
   socket: Socket,
   manager: GameManager,
   me: () => Player | null,
-  limited: (s: Socket) => boolean
+  limited: (s: Socket, ack?: unknown) => boolean
 ) => {
   const player = me()
   if (player) {
@@ -217,7 +217,7 @@ export const registerArena = (
   }
 
   socket.on("arena:watch", async (idOrHandle: unknown, ack: unknown) => {
-    if (typeof ack !== "function" || limited(socket) || typeof idOrHandle !== "string" || idOrHandle.length > 120) return
+    if (typeof ack !== "function" || limited(socket, ack) || typeof idOrHandle !== "string" || idOrHandle.length > 120) return
     const a = await getArena(idOrHandle)
     if (!a) return ack({ ok: false, error: "not-found" })
     socket.join(`arena:${a.t.id}`)
@@ -226,7 +226,7 @@ export const registerArena = (
   })
 
   socket.on("arena:join", async (tid: unknown, ack: unknown) => {
-    if (typeof ack !== "function" || limited(socket) || typeof tid !== "string") return
+    if (typeof ack !== "function" || limited(socket, ack) || typeof tid !== "string") return
     const p = me()
     if (!p) return ack({ ok: false, error: "sign-in" })
     const a = await getArena(tid)
@@ -248,7 +248,7 @@ export const registerArena = (
   })
 
   socket.on("arena:pause", async (tid: unknown, ack: unknown) => {
-    if (typeof ack !== "function" || limited(socket) || typeof tid !== "string") return
+    if (typeof ack !== "function" || limited(socket, ack) || typeof tid !== "string") return
     const p = me()
     const a = p ? await getArena(tid) : null
     if (!p || !a) return ack({ ok: false })

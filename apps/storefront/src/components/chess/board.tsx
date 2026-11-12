@@ -1,7 +1,7 @@
 "use client"
 
 import { Chess, type Square } from "chess.js"
-import { type ReactNode, useMemo, useState } from "react"
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 import { Chessboard, type PieceRenderObject } from "react-chessboard"
 import { premoveTargets, withPremoves } from "@/lib/chess/premove"
 import { playSound } from "@/lib/chess/sounds"
@@ -123,6 +123,33 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
   const theme = BOARD_THEMES[settings.theme]
   const [picked, setSelected] = useState<Square | null>(null)
   const [promotion, setPromotion] = useState<{ from: Square; to: Square; colour: Colour } | null>(null)
+  // A drag the board library lost track of (a very quick flick can end before it has noticed
+  // the start) leaves the piece dimmed and the board stuck. A drag still open shortly after the
+  // finger or button is lifted is ended by starting the board afresh.
+  const dragging = useRef(false)
+  const [boardKey, setBoardKey] = useState(0)
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const released = (e: Event) => {
+      if (!dragging.current) return
+      // Another finger lifted while one still holds the piece.
+      if (e instanceof PointerEvent && !e.isPrimary) return
+      if (typeof TouchEvent !== "undefined" && e instanceof TouchEvent && e.touches.length > 0) return
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        if (!dragging.current) return
+        dragging.current = false
+        setSelected(null)
+        setBoardKey((k) => k + 1)
+      }, 300)
+    }
+    const events = ["pointerup", "pointercancel", "mouseup", "touchend", "touchcancel", "blur"] as const
+    for (const e of events) window.addEventListener(e, released, true)
+    return () => {
+      clearTimeout(timer)
+      for (const e of events) window.removeEventListener(e, released, true)
+    }
+  }, [])
   const chess = useMemo(() => {
     try {
       return new Chess(fen)
@@ -242,6 +269,7 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
   return (
     <div className="relative select-none">
       <Chessboard
+        key={boardKey}
         options={{
           id,
           position: shownFen,
@@ -253,8 +281,15 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
           // movements otherwise start a drag that can leave the piece dimmed and stuck.
           dragActivationDistance: 6,
           canDragPiece: ({ piece }) => (canMove && piece.pieceType[0] === movable) || (canPremove && piece.pieceType[0] === premoveFor),
-          onPieceDrag: ({ square }) => square && setSelected(square as Square),
+          onPieceDrag: ({ square }) => {
+            dragging.current = true
+            if (square) setSelected(square as Square)
+          },
+          onPieceDragCancel: () => {
+            dragging.current = false
+          },
           onPieceDrop: ({ sourceSquare, targetSquare }) => {
+            dragging.current = false
             if (!targetSquare || targetSquare === sourceSquare) return false
             if (canPremove) {
               const p = virtual.at(sourceSquare)

@@ -60,7 +60,7 @@ const CHALLENGE_MS = 60_000
 
 type Ack = (res: Record<string, unknown>) => void
 
-export const registerFriends = (io: Server, socket: Socket, manager: GameManager, me: () => Player | null, limited: (s: Socket) => boolean) => {
+export const registerFriends = (io: Server, socket: Socket, manager: GameManager, me: () => Player | null, limited: (s: Socket, ack?: unknown) => boolean) => {
   const signedIn = () => {
     const p = me()
     return p && !isGuest(p.id) ? p : null
@@ -68,20 +68,20 @@ export const registerFriends = (io: Server, socket: Socket, manager: GameManager
   const tell = (playerId: string, event: string, data: unknown) => io.to(`player:${playerId}`).emit(event, data)
 
   socket.on("friends:list", async (_: unknown, ack: unknown) => {
-    if (typeof ack !== "function" || limited(socket)) return
+    if (typeof ack !== "function" || limited(socket, ack)) return
     const p = signedIn()
     if (!p) return (ack as Ack)({ ok: false, error: "sign-in" })
     ;(ack as Ack)({ ok: true, ...(await listFor(p.id, manager)) })
   })
 
   socket.on("friends:relation", async (other: unknown, ack: unknown) => {
-    if (typeof ack !== "function" || typeof other !== "string" || limited(socket)) return
+    if (typeof ack !== "function" || typeof other !== "string" || limited(socket, ack)) return
     const p = signedIn()
     ;(ack as Ack)({ ok: true, relation: p && p.id !== other ? await relation(p.id, other) : "self" })
   })
 
   socket.on("friends:request", async (to: unknown, ack: unknown) => {
-    if (typeof ack !== "function" || typeof to !== "string" || limited(socket)) return
+    if (typeof ack !== "function" || typeof to !== "string" || limited(socket, ack)) return
     const reply = ack as Ack
     const p = signedIn()
     if (!p) return reply({ ok: false, error: "sign-in" })
@@ -109,7 +109,7 @@ export const registerFriends = (io: Server, socket: Socket, manager: GameManager
 
   // Accept an incoming request; decline it, cancel your own, or unfriend.
   socket.on("friends:respond", async (input: { id?: unknown; accept?: unknown }, ack: unknown) => {
-    if (typeof ack !== "function" || typeof input?.id !== "string" || limited(socket)) return
+    if (typeof ack !== "function" || typeof input?.id !== "string" || limited(socket, ack)) return
     const p = signedIn()
     if (!p) return (ack as Ack)({ ok: false, error: "sign-in" })
     const [a, b] = pair(p.id, input.id)
@@ -127,7 +127,7 @@ export const registerFriends = (io: Server, socket: Socket, manager: GameManager
   })
 
   socket.on("challenge:send", async (input: { to?: unknown; tc?: unknown; colour?: unknown }, ack: unknown) => {
-    if (typeof ack !== "function" || typeof input?.to !== "string" || limited(socket)) return
+    if (typeof ack !== "function" || typeof input?.to !== "string" || limited(socket, ack)) return
     const reply = ack as Ack
     const p = signedIn()
     if (!p) return reply({ ok: false, error: "sign-in" })
@@ -163,7 +163,7 @@ export const registerFriends = (io: Server, socket: Socket, manager: GameManager
   })
 
   socket.on("challenge:respond", async (input: { game_id?: unknown; accept?: unknown }, ack: unknown) => {
-    if (typeof ack !== "function" || typeof input?.game_id !== "string" || limited(socket)) return
+    if (typeof ack !== "function" || typeof input?.game_id !== "string" || limited(socket, ack)) return
     const reply = ack as Ack
     const p = signedIn()
     const c = challenges.get(input.game_id)

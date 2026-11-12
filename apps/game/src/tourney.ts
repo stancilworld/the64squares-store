@@ -397,9 +397,9 @@ export class Tourneys {
     void this.view(tid).then((v) => v && this.io.to(`tourney:${tid}`).emit("tourney:state", v))
   }
 
-  register(socket: Socket, me: () => Player | null, limited: (s: Socket) => boolean) {
+  register(socket: Socket, me: () => Player | null, limited: (s: Socket, ack?: unknown) => boolean) {
     socket.on("tourney:watch", async (idOrHandle: unknown, ack: unknown) => {
-      if (typeof ack !== "function" || limited(socket) || typeof idOrHandle !== "string" || idOrHandle.length > 120) return
+      if (typeof ack !== "function" || limited(socket, ack) || typeof idOrHandle !== "string" || idOrHandle.length > 120) return
       const t = await loadT(idOrHandle)
       if (!t) return ack({ ok: false, error: "not-found" })
       socket.join(`tourney:${t.id}`)

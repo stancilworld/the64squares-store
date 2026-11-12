@@ -272,6 +272,11 @@ export class GameManager {
     return typeof res === "boolean" ? { ok } : res
   }
 
+  // A game held in memory (waiting or active), without loading anything.
+  live(id: string): Game | undefined {
+    return this.games.get(id)
+  }
+
   // Live games a player is in (from memory, so it is instant).
   liveFor(playerId: string) {
     return [...this.games.values()].filter((g) => g.r.status === "active" && g.colorOf(playerId)).map((g) => g.r.id)

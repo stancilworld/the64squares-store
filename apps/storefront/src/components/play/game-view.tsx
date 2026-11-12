@@ -48,6 +48,7 @@ export function GameView({ id, initialPass, share = false }: Props) {
   const router = useRouter()
   const socket = useRef<Socket | null>(null)
   const [game, setGame] = useState<GameState | null>(null)
+  const gameRef = useRef<GameState | null>(null)
   const [receivedAt, setReceivedAt] = useState(0)
   const [presence, setPresence] = useState<(Presence & { at: number }) | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -83,15 +84,49 @@ export function GameView({ id, initialPass, share = false }: Props) {
     setPremoveState(p)
   }, [])
 
+  // Fetches the whole game again (after a refused or unanswered move, the board may be behind).
+  const watchRef = useRef<() => void>(() => {})
+  // The move waiting for the server (0: none); cleared when the server's next position arrives.
+  const moveSeq = useRef(0)
+  const pendingSeq = useRef(0)
+
   const sendMove = useCallback((g: GameState, m: Pending) => {
+    const s = socket.current
+    if (!s?.connected) {
+      // Sent now, it would wait and could be played later on a board that has moved on.
+      setNotice("Connection lost. Reconnecting…")
+      return false
+    }
+    const seq = ++moveSeq.current
+    pendingSeq.current = seq
     setPending(m)
     setViewPly(null)
-    socket.current?.emit("game:move", { id: g.id, uci: `${m.from}${m.to}${m.promotion ?? ""}`, ply: g.moves.length }, (res: { ok: boolean; error?: string }) => {
-      if (!res.ok) {
-        setPending(null)
-        if (res.error === "illegal") setNotice("That move isn't allowed.")
+    const drop = () => {
+      if (pendingSeq.current !== seq) return
+      pendingSeq.current = 0
+      setPending(null)
+    }
+    s.timeout(6000).emit("game:move", { id: g.id, uci: `${m.from}${m.to}${m.promotion ?? ""}`, ply: g.moves.length }, (err: Error | null, res?: { ok: boolean; error?: string }) => {
+      if (err) {
+        // No answer: the connection has quietly died. Start a fresh one; it reloads the game,
+        // showing the move if the server got it.
+        drop()
+        setNotice("Slow connection. Reconnecting…")
+        s.disconnect().connect()
+        return
       }
+      if (res?.ok) {
+        // The new position normally arrives with the answer; if it doesn't, fetch it.
+        setTimeout(() => pendingSeq.current === seq && watchRef.current(), 2500)
+        return
+      }
+      drop()
+      if (res?.error === "illegal") setNotice("That move isn't allowed.")
+      else if (res?.error === "busy") setNotice("Too many moves at once. Play it again.")
+      // Refused because this board was behind (or anything else): catch up with the game.
+      watchRef.current()
     })
+    return true
   }, [])
 
   // The VS card when a game starts and the result animation when it ends: only for changes
@@ -125,9 +160,11 @@ export function GameView({ id, initialPass, share = false }: Props) {
         setCard(true)
       }
       setGame(g)
+      gameRef.current = g
       setReceivedAt(t)
       setNow(t)
       setPending(null)
+      pendingSeq.current = 0
       const [pm, ...rest] = premoveRef.current
       if (!pm) return
       const mine = g.white?.id === meRef.current ? "w" : g.black?.id === meRef.current ? "b" : null
@@ -158,8 +195,14 @@ export function GameView({ id, initialPass, share = false }: Props) {
           setChat((res.chat ?? []).map((m) => ({ ...m, seen: 0 })))
           setPresence(res.presence ? { ...res.presence, at: performance.now() } : null)
           setNotice(null)
-        } else setError(res.error === "not-found" ? "This game doesn't exist." : "Couldn't load the game.")
+        } else if (res.error === "not-found") setError("This game doesn't exist.")
+        else if (lastStatus.current) {
+          // Already showing the game: keep it and try again shortly.
+          setNotice("Reconnecting…")
+          setTimeout(() => s.connected && watch(), 2000)
+        } else setError("Couldn't load the game.")
       })
+    watchRef.current = watch
     s.on("connect", watch)
     s.on("game:state", (g: GameState) => g.id === id && apply(g))
     s.on("game:chat", (m: ChatMsg & { game: string }) => {
@@ -225,8 +268,11 @@ export function GameView({ id, initialPass, share = false }: Props) {
       if (!s?.connected) return setMySignal(0)
       const sent = performance.now()
       let answered = false
-      s.emit("game:ping", { id, rtt }, () => {
+      s.emit("game:ping", { id, rtt }, (res?: { plies?: number; status?: string }) => {
         answered = true
+        // The server has moves (or an ending) this board never received: fetch the game.
+        const g = gameRef.current
+        if (g && res?.plies != null && !pendingSeq.current && (res.plies !== g.moves.length || res.status !== g.status)) watchRef.current()
         rtt = Math.round(performance.now() - sent)
         setMySignal(rtt < 150 ? 4 : rtt < 300 ? 3 : rtt < 600 ? 2 : 1)
       })
@@ -331,8 +377,7 @@ export function GameView({ id, initialPass, share = false }: Props) {
   const onMove = (from: Square, to: Square, promotion?: "q" | "r" | "b" | "n") => {
     if (!game) return false
     setPremoves([])
-    sendMove(game, { from, to, promotion })
-    return true
+    return sendMove(game, { from, to, promotion })
   }
 
   const goTo = useCallback((p: number) => setViewPly(p >= latest ? null : p), [latest])

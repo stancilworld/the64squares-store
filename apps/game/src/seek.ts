@@ -124,9 +124,9 @@ export const seekList = async () => {
 
 type Ack = (res: Record<string, unknown>) => void
 
-export const registerSeek = (io: Server, socket: Socket, manager: GameManager, me: () => Player | null, limited: (s: Socket) => boolean) => {
+export const registerSeek = (io: Server, socket: Socket, manager: GameManager, me: () => Player | null, limited: (s: Socket, ack?: unknown) => boolean) => {
   socket.on("seek:join", async (input: { tc?: unknown }, ack: unknown) => {
-    if (typeof ack !== "function" || limited(socket)) return
+    if (typeof ack !== "function" || limited(socket, ack)) return
     const reply = ack as Ack
     const player = me()
     if (!player) return reply({ ok: false, error: "sign-in" })
@@ -145,7 +145,7 @@ export const registerSeek = (io: Server, socket: Socket, manager: GameManager, m
 
   // The player takes the House Player they were offered.
   socket.on("seek:house-accept", async (_: unknown, ack: unknown) => {
-    if (typeof ack !== "function" || limited(socket)) return
+    if (typeof ack !== "function" || limited(socket, ack)) return
     const reply = ack as Ack
     const player = me()
     const s = player ? seeks.get(player.id) : null

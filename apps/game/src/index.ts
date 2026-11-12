@@ -297,12 +297,16 @@ io.use(async (socket, next) => {
 })
 
 // At most 30 events per 5 seconds per connection.
-const limited = (socket: Socket) => {
+// Too many requests in a short time: refused, with an answer (a request left unanswered
+// leaves the player's board waiting for it).
+const limited = (socket: Socket, ack?: unknown) => {
   const now = Date.now()
   const hits: number[] = (socket.data.hits ?? []).filter((t: number) => now - t < 5000)
   hits.push(now)
   socket.data.hits = hits
-  return hits.length > 30
+  if (hits.length <= 40) return false
+  if (typeof ack === "function") ack({ ok: false, error: "busy" })
+  return true
 }
 
 const isId = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9]{6,20}$/.test(v)
@@ -312,7 +316,7 @@ io.on("connection", (socket) => {
   const guard = (ack: unknown): ack is Ack => typeof ack === "function"
 
   socket.on("game:create", async (input: { tc?: unknown; colour?: unknown }, ack: unknown) => {
-    if (!guard(ack) || limited(socket)) return
+    if (!guard(ack) || limited(socket, ack)) return
     const player = me()
     if (!player) return ack({ ok: false, error: "sign-in" })
     if ((await banOf(player.id))?.scope === "all") return ack({ ok: false, error: "fair-play-ban" })
@@ -327,8 +331,12 @@ io.on("connection", (socket) => {
   })
 
   socket.on("game:watch", async (id: unknown, ack: unknown) => {
-    if (!guard(ack) || limited(socket) || !isId(id)) return
-    const g = await manager.get(id)
+    if (!guard(ack) || limited(socket, ack) || !isId(id)) return
+    const g = await manager.get(id).catch((e) => {
+      console.error("game:watch", e)
+      return undefined
+    })
+    if (g === undefined) return ack({ ok: false, error: "server-error" })
     if (!g) return ack({ ok: false, error: "not-found" })
     socket.join(room(id))
     const player = me()
@@ -347,7 +355,9 @@ io.on("connection", (socket) => {
   // with the next ping. Opponents see the result as signal bars.
   socket.on("game:ping", async (input: { id?: unknown; rtt?: unknown }, ack: unknown) => {
     if (!guard(ack)) return
-    ack({ ok: true })
+    // With the number of moves played, so a board that missed one can catch up.
+    const live = isId(input?.id) ? manager.live(input.id) : undefined
+    ack({ ok: true, ...(live ? { plies: live.r.moves.length, status: live.r.status } : {}) })
     const player = me()
     if (!player || !isId(input?.id) || typeof input.rtt !== "number" || !Number.isFinite(input.rtt)) return
     const g = await manager.get(input.id)
@@ -362,7 +372,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("game:claim", async (input: { id?: unknown; outcome?: unknown }, ack: unknown) => {
-    if (!guard(ack) || limited(socket) || !isId(input?.id)) return
+    if (!guard(ack) || limited(socket, ack) || !isId(input?.id)) return
     const outcome = input.outcome === "draw" ? "draw" : "win"
     const player = me()
     if (!player) return ack({ ok: false, error: "sign-in" })
@@ -376,7 +386,7 @@ io.on("connection", (socket) => {
 
   // Rematch: one side offers, the other accepts; colours swap.
   socket.on("game:rematch", async (input: { id?: unknown; action?: unknown }, ack: unknown) => {
-    if (!guard(ack) || limited(socket) || !isId(input?.id)) return
+    if (!guard(ack) || limited(socket, ack) || !isId(input?.id)) return
     const player = me()
     if (!player) return ack({ ok: false, error: "sign-in" })
     const g = await manager.get(input.id)
@@ -419,7 +429,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("computer:save", async (input: { colour?: unknown; level?: unknown; moves?: unknown; resigned?: unknown }, ack: unknown) => {
-    if (!guard(ack) || limited(socket)) return
+    if (!guard(ack) || limited(socket, ack)) return
     const player = me()
     if (!player || isGuest(player.id)) return ack({ ok: false, error: "sign-in" })
     const colour = input?.colour === "b" ? "b" : "w"
@@ -430,7 +440,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("profile:mine", async (_: unknown, ack: unknown) => {
-    if (!guard(ack) || limited(socket)) return
+    if (!guard(ack) || limited(socket, ack)) return
     const player = me()
     if (!player || isGuest(player.id)) return ack({ ok: false, error: "sign-in" })
     await ensureProfile(player)
@@ -438,7 +448,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("profile:update", async (input: unknown, ack: unknown) => {
-    if (!guard(ack) || limited(socket)) return
+    if (!guard(ack) || limited(socket, ack)) return
     const player = me()
     if (!player || isGuest(player.id)) return ack({ ok: false, error: "sign-in" })
     const res = await updateProfile(player.id, (input ?? {}) as Record<string, unknown>)
@@ -447,7 +457,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("profile:search", async (q: unknown, ack: unknown) => {
-    if (!guard(ack) || limited(socket) || typeof q !== "string") return
+    if (!guard(ack) || limited(socket, ack) || typeof q !== "string") return
     const rows = await searchProfiles(q.slice(0, 40))
     ack({ ok: true, profiles: rows.map((p) => ({ ...publicProfile(p), online: online.has(p.player_id) })) })
   })
@@ -462,7 +472,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("game:accept", async (id: unknown, ack: unknown) => {
-    if (!guard(ack) || limited(socket) || !isId(id)) return
+    if (!guard(ack) || limited(socket, ack) || !isId(id)) return
     const player = me()
     if (!player) return ack({ ok: false, error: "sign-in" })
     if ((await banOf(player.id))?.scope === "all") return ack({ ok: false, error: "fair-play-ban" })
@@ -472,28 +482,33 @@ io.on("connection", (socket) => {
   })
 
   socket.on("game:move", async (input: { id?: unknown; uci?: unknown; ply?: unknown }, ack: unknown) => {
-    if (!guard(ack) || limited(socket) || !isId(input?.id) || typeof input.uci !== "string" || typeof input.ply !== "number") return
+    if (!guard(ack) || limited(socket, ack) || !isId(input?.id) || typeof input.uci !== "string" || typeof input.ply !== "number") return
     const player = me()
     if (!player) return ack({ ok: false, error: "sign-in" })
-    ack(await manager.act(input.id, (g, now) => g.move(player.id, input.uci as string, input.ply as number, now)))
+    try {
+      ack(await manager.act(input.id, (g, now) => g.move(player.id, input.uci as string, input.ply as number, now)))
+    } catch (e) {
+      console.error("game:move", e)
+      ack({ ok: false, error: "server-error" })
+    }
   })
 
   socket.on("game:resign", async (id: unknown, ack: unknown) => {
-    if (!guard(ack) || limited(socket) || !isId(id)) return
+    if (!guard(ack) || limited(socket, ack) || !isId(id)) return
     const player = me()
     if (!player) return ack({ ok: false, error: "sign-in" })
     ack(await manager.act(id, (g, now) => g.resign(player.id, now)))
   })
 
   socket.on("game:abort", async (id: unknown, ack: unknown) => {
-    if (!guard(ack) || limited(socket) || !isId(id)) return
+    if (!guard(ack) || limited(socket, ack) || !isId(id)) return
     const player = me()
     if (!player) return ack({ ok: false, error: "sign-in" })
     ack(await manager.act(id, (g, now) => g.abort(player.id, now)))
   })
 
   socket.on("game:draw", async (input: { id?: unknown; action?: unknown }, ack: unknown) => {
-    if (!guard(ack) || limited(socket) || !isId(input?.id)) return
+    if (!guard(ack) || limited(socket, ack) || !isId(input?.id)) return
     const action = input.action
     if (action !== "offer" && action !== "accept" && action !== "decline") return ack({ ok: false, error: "bad-action" })
     const player = me()
