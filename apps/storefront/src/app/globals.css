@@ -681,52 +681,42 @@ html[data-focus] .play-main {
 /* Play home: the interactive chess scene beside "Play online". */
 @property --mx { syntax: "<number>"; inherits: true; initial-value: 0; }
 @property --my { syntax: "<number>"; inherits: true; initial-value: 0; }
-/* Play online scene (components/play/chess-stage.tsx): a 2:1 frame that covers the box, so the
-   pictures and the canvas effects share one set of coordinates. */
+/* Play online scene (components/play/chess-stage.tsx): a picture until the 3D canvas is ready. */
 .clash {
   position: relative;
   display: block;
   overflow: hidden;
   border-radius: 10px;
-  background: #070809;
+  background: #161616;
   isolation: isolate;
   cursor: pointer;
+  touch-action: pan-y; /* sideways drags spin the scene; up and down still scroll */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
-.clash-frame {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 100%; /* until the script sizes it to cover the box */
-  aspect-ratio: 2 / 1;
-  translate: -50% -50%;
-}
-.clash-plate,
-.clash-fx {
+.clash-poster,
+.clash-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  object-fit: cover;
   pointer-events: none;
-  user-select: none;
 }
-.clash-plate { object-fit: cover; transform: scale(1.03); will-change: transform; }
-.clash-piece {
-  position: absolute;
-  height: auto;
-  max-width: none;
-  pointer-events: none;
-  user-select: none;
-  will-change: transform;
-}
-/* Edges into the dark, so the crop never shows a hard border. */
+.clash-canvas { opacity: 0; transition: opacity 0.6s ease; }
+.clash-canvas[data-ready] { opacity: 1; }
 .clash::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse 75% 85% at 50% 48%, transparent 55%, rgb(0 0 0 / 0.55));
+  background: radial-gradient(ellipse 80% 90% at 50% 46%, transparent 60%, rgb(0 0 0 / 0.45));
 }
 .clash:focus-visible { outline: 3px solid var(--g-accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .clash-canvas { transition: none; }
+}
 
 /* Home hero: sized to the screen below the header (--hero-top is measured by HeroFrame). */
 .hero { --avail: calc(100svh - var(--hero-top, 120px)); }

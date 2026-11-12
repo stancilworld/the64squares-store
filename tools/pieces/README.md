@@ -22,14 +22,11 @@ bottom of each square (`tall` in `lib/chess/settings.ts`). `STYLE=upright` gives
 
 ## Play online scene
 
-`render-clash.py` renders the Play menu's "Play online" scene with the same pieces: a backdrop
-(board and standing pieces) and each piece thrown into the air as its own transparent layer,
-from one camera, plus `layout.json` (where each layer sits, and the clash's centre).
+The Play menu's "Play online" scene is live 3D (`apps/storefront/src/components/play/clash-scene.ts`,
+three.js). Its pieces come from `export-glb.py`, which exports the six shapes above as one
+simplified glTF file, then compressed:
 
-    ./bl/bin/python render-clash.py -- clash          # about 10 minutes on 2 cores
-    PREVIEW=1 ./bl/bin/python render-clash.py -- clash full   # quick look at the whole picture
-    python3 clash-export.py clash
+    ./bl/bin/python export-glb.py -- pieces.glb
+    npx @gltf-transform/cli meshopt pieces.glb ../../apps/storefront/public/play-art/pieces.glb
 
-`clash-export.py` writes the WebP files to `apps/storefront/public/play-art/clash/` and the
-positions to `apps/storefront/src/components/play/clash-layout.ts`. The smoke, embers and
-movement are drawn live by `components/play/clash-fx.ts`.
+`public/play-art/clash-poster.webp` is a still of the scene, shown while the 3D loads.
