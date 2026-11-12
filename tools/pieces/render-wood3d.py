@@ -1,8 +1,6 @@
 import bpy, math, sys, os
 from mathutils import Vector
 
-OUT = sys.argv[sys.argv.index("--") + 1]
-ONLY = sys.argv[sys.argv.index("--") + 2] if len(sys.argv) > sys.argv.index("--") + 2 else None
 RES = int(os.environ.get("RES", 400))
 # "tabletop": seen from the player's side and above, standing on the board with a soft shadow
 # (tall images: the piece rises above its square). "upright": the old side view.
@@ -230,7 +228,10 @@ BUILD = {"P": pawn, "R": rook, "N": knight, "B": bishop, "Q": queen, "K": king}
 MATS = {"w": ("#d4be9c", "#bea580"), "b": ("#503a2d", "#382a23")}
 ROUGHNESS = {"w": 0.70, "b": 0.68}
 
-for colour in ("w", "b"):
+def main():
+  OUT = sys.argv[sys.argv.index("--") + 1]
+  ONLY = sys.argv[sys.argv.index("--") + 2] if len(sys.argv) > sys.argv.index("--") + 2 else None
+  for colour in ("w", "b"):
     for code, fn in BUILD.items():
         if ONLY and f"{colour}{code}" != ONLY: continue
         reset(); scene()
@@ -243,3 +244,7 @@ for colour in ("w", "b"):
         bpy.context.scene.render.filepath = os.path.join(OUT, f"{colour}{code}.png")
         bpy.ops.render.render(write_still=True)
         print("rendered", colour, code, flush=True)
+
+# Imported by render-clash.py for the models and wood; run directly to render the sets.
+if __name__ == "__main__":
+    main()

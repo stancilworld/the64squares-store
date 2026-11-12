@@ -681,70 +681,52 @@ html[data-focus] .play-main {
 /* Play home: the interactive chess scene beside "Play online". */
 @property --mx { syntax: "<number>"; inherits: true; initial-value: 0; }
 @property --my { syntax: "<number>"; inherits: true; initial-value: 0; }
-.stage {
-  --mx: 0;
-  --my: 0;
+/* Play online scene (components/play/chess-stage.tsx): a 2:1 frame that covers the box, so the
+   pictures and the canvas effects share one set of coordinates. */
+.clash {
   position: relative;
   display: block;
   overflow: hidden;
   border-radius: 10px;
-  background: #151515;
-  perspective: 900px;
+  background: #070809;
   isolation: isolate;
-  transition: --mx 0.6s ease-out, --my 0.6s ease-out;
+  cursor: pointer;
 }
-.stage[data-live] { transition: none; }
-.stage-light {
+.clash-frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%; /* until the script sizes it to cover the box */
+  aspect-ratio: 2 / 1;
+  translate: -50% -50%;
+}
+.clash-plate,
+.clash-fx {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at calc(50% + var(--mx) * 35%) calc(35% + var(--my) * 30%), rgb(255 179 0 / 0.28), transparent 58%);
-  z-index: 0;
-}
-.stage-scene {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  transform: rotateY(calc(var(--mx) * 5deg)) rotateX(calc(var(--my) * -3deg));
-}
-.stage-floor {
-  position: absolute;
-  left: -30%;
-  right: -30%;
-  top: 40%;
-  height: 800%;
-  transform-origin: 50% 0;
-  transform: rotateX(70deg) translateX(calc(var(--mx) * -4%));
-  background: repeating-conic-gradient(#6d4b30 0 25%, #c9a77c 0 50%) 0 0 / 12.5% 12.5%;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 22%);
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 22%);
-  opacity: 0.75;
-  z-index: 0;
-}
-.stage-piece {
-  position: absolute;
-  width: auto;
-  aspect-ratio: 1;
-  translate: calc(var(--mx) * var(--d) * -22px) calc(var(--my) * var(--d) * -10px);
-  filter: drop-shadow(0 14px 12px rgb(0 0 0 / 0.55)) brightness(calc(0.82 + var(--d) * 0.14));
-  transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3), filter 0.35s;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
   user-select: none;
 }
-.stage-piece:hover {
-  transform: translateY(-7%) scale(1.04);
-  filter: drop-shadow(0 30px 18px rgb(0 0 0 / 0.5)) brightness(1.12);
+.clash-plate { object-fit: cover; transform: scale(1.03); will-change: transform; }
+.clash-piece {
+  position: absolute;
+  height: auto;
+  max-width: none;
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
 }
-.stage:focus-visible { outline: 3px solid var(--g-accent); outline-offset: 3px; }
-@media (hover: none) {
-  .stage { animation: stage-drift 10s ease-in-out infinite alternate; }
+/* Edges into the dark, so the crop never shows a hard border. */
+.clash::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 75% 85% at 50% 48%, transparent 55%, rgb(0 0 0 / 0.55));
 }
-@keyframes stage-drift {
-  from { --mx: -0.7; --my: 0.1; }
-  to { --mx: 0.7; --my: -0.2; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .stage { animation: none; transition: none; }
-  .stage-piece { transition: none; }
-}
+.clash:focus-visible { outline: 3px solid var(--g-accent); outline-offset: 3px; }
 
 /* Home hero: sized to the screen below the header (--hero-top is measured by HeroFrame). */
 .hero { --avail: calc(100svh - var(--hero-top, 120px)); }
