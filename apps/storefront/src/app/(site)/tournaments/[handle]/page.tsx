@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { Suspense } from "react"
 import { RichText } from "@/components/rich-text"
 import { RegisterPanel } from "@/components/tournaments/register-panel"
@@ -61,6 +61,8 @@ async function Panel({ t }: { t: Tournament }) {
 async function TournamentDetail({ params }: PageProps<"/tournaments/[handle]">) {
   const t = await getTournament((await params).handle)
   if (!t) notFound()
+  // Online events live in Play: timeline, live boards, bracket and results.
+  if (t.mode === "online") redirect(`/play/tournaments/${t.handle}`)
 
   return (
     <>
@@ -146,11 +148,8 @@ async function TournamentDetail({ params }: PageProps<"/tournaments/[handle]">) 
           startDate: t.starts_at,
           endDate: t.ends_at ?? undefined,
           eventStatus: t.status === "cancelled" ? "https://schema.org/EventCancelled" : "https://schema.org/EventScheduled",
-          eventAttendanceMode: t.mode === "online" ? "https://schema.org/OnlineEventAttendanceMode" : "https://schema.org/OfflineEventAttendanceMode",
-          location:
-            t.mode === "online"
-              ? { "@type": "VirtualLocation", url: absoluteUrl(`/tournaments/${t.handle}`) }
-              : { "@type": "Place", name: t.venue ?? "To be announced", address: t.venue ?? undefined },
+          eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+          location: { "@type": "Place", name: t.venue ?? "To be announced", address: t.venue ?? undefined },
           image: t.image_url ? [absoluteUrl(t.image_url)] : undefined,
           organizer: { "@type": "Organization", name: "The 64 Squares", url: absoluteUrl("/") },
           offers: {

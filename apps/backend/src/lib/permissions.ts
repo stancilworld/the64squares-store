@@ -171,6 +171,8 @@ const RULES: Rule[] = [
   // Tournaments: players' details and check-in need their own toggle, even to read.
   r("any", /^\/fair-play(\/|$)/, "fairplay.review"),
   r("any", /^\/tournament-checkin(\/|$)/, "tournaments.checkin"),
+  r("write", /^\/tournaments\/[^/]+\/registrations\/[^/]+\/result$/, "tournaments.manage"),
+  r("any", /^\/tournament-passes(\/|$)/, "tournaments.manage"),
   r("any", /^\/tournaments\/[^/]+\/registrations(\/|$)/, "tournaments.checkin"),
   r("write", /^\/tournaments(\/|$)/, "tournaments.manage"),
 

@@ -166,6 +166,7 @@ export const DEFS: Record<Integration, Def> = {
       { kind: "text", section: "whatsapp", key: "template_order", label: "Order confirmation template", placeholder: "order_confirmed", hint: "Body variables: {{1}} first name, {{2}} order number, {{3}} total.", clean: (v) => v.trim().toLowerCase() },
       { kind: "text", section: "whatsapp", key: "template_shipped", label: "Shipped template", placeholder: "order_shipped", hint: "Body variables: {{1}} first name, {{2}} order number, {{3}} tracking number or link.", clean: (v) => v.trim().toLowerCase() },
       { kind: "text", section: "whatsapp", key: "template_abandoned", label: "Unfinished checkout template", placeholder: "cart_reminder", hint: "Body variables: {{1}} first name, {{2}} link back to the cart. Marketing category in WhatsApp.", clean: (v) => v.trim().toLowerCase() },
+      { kind: "text", section: "whatsapp", key: "template_tournament", label: "Tournament reminder template", placeholder: "tournament_reminder", hint: "Body variables: {{1}} first name, {{2}} tournament, {{3}} start time, {{4}} link. Utility category. Sent 24 hours, 1 hour and 10 minutes before the start.", clean: (v) => v.trim().toLowerCase() },
     ],
     options: [{ kind: "text", section: "whatsapp", key: "test_number", label: "Test number (optional)", placeholder: "+919876543210", hint: "The test sends WhatsApp's sample \"hello_world\" message here.", clean: (v) => v.replace(/[^\d+]/g, "") }],
     secrets: [

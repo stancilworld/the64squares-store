@@ -567,13 +567,106 @@ export const TournamentBody = z
     rules: longText.nullable().optional(),
     image_url: z.string().url().max(2000).nullable().optional(),
     status: z.enum(["draft", "published", "cancelled", "completed"]).optional(),
+    // Online tournaments (see the Tournament roadmap).
+    entry: z.enum(["pass", "free", "fee"]).optional(),
+    pass_cost: z.number().int().min(0).max(10).optional(),
+    check_in_minutes: z.number().int().min(0).max(240).optional(),
+    min_players: z.number().int().min(2).max(1000).optional(),
+    round_break_seconds: z.number().int().min(0).max(3600).optional(),
+    knockout_games: z.number().int().min(1).max(7).optional(),
+    armageddon: z.boolean().optional(),
+    age_min: optionalInt(4, 99),
+    age_max: optionalInt(4, 99),
+    prize_list: z
+      .array(
+        z.object({
+          place: z.string().trim().min(1).max(40),
+          title: z.string().trim().min(1).max(160),
+          detail: z.string().trim().max(300).nullable().optional(),
+          image_url: z.string().url().max(2000).nullable().optional().or(z.literal("")),
+          product_handle: z.string().trim().max(200).nullable().optional(),
+        })
+      )
+      .max(20)
+      .nullable()
+      .optional(),
+    category_prizes: z
+      .array(z.object({ category: z.string().trim().min(1).max(80), title: z.string().trim().min(1).max(160) }))
+      .max(20)
+      .nullable()
+      .optional(),
+    tagline: z.string().trim().max(160).nullable().optional(),
+    accent: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
+    featured: z.boolean().optional(),
+    stream_url: z.string().url().max(500).nullable().optional().or(z.literal("")),
+    paused: z.boolean().optional(),
+    coupon_code: z.string().trim().max(60).nullable().optional(),
+    certificates: z.boolean().optional(),
+    reminders: z.boolean().optional(),
   })
   .strict()
 export const UpdateTournamentBody = TournamentBody.partial().strict()
 export type TournamentBodyType = z.infer<typeof TournamentBody>
 export type UpdateTournamentBodyType = z.infer<typeof UpdateTournamentBody>
 
-export const RegistrationStatusBody = z.object({ status: z.enum(["confirmed", "cancelled"]) }).strict()
+export const RegistrationStatusBody = z.object({ status: z.enum(["confirmed", "cancelled", "withdrawn"]) }).strict()
+
+// Staff: the fair-play review of a finisher, or a prize's delivery.
+export const RegistrationResultBody = z
+  .object({
+    review: z.enum(["pending", "cleared", "disqualified"]).optional(),
+    review_note: z.string().trim().max(500).nullable().optional(),
+    prize_title: z.string().trim().max(160).nullable().optional(),
+    prize_status: z.enum(["due", "address", "shipped", "delivered"]).nullable().optional(),
+    prize_tracking: z.string().trim().max(300).nullable().optional(),
+  })
+  .strict()
+export type RegistrationResultBodyType = z.infer<typeof RegistrationResultBody>
+
+// Staff running a live online tournament.
+export const TournamentControlBody = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("start_now") }),
+  z.object({ action: z.literal("pause") }),
+  z.object({ action: z.literal("resume") }),
+  z.object({ action: z.literal("cancel"), reason: z.string().trim().min(3).max(300) }),
+  z.object({ action: z.literal("finalize"), force: z.boolean().optional() }),
+  z.object({
+    action: z.literal("fix_result"),
+    round: z.number().int().min(1),
+    board: z.number().int().min(1),
+    game_no: z.number().int().min(1).default(1),
+    result: z.enum(["1-0", "0-1", "1/2-1/2"]),
+    note: z.string().trim().min(3).max(300),
+  }),
+  z.object({ action: z.literal("message"), subject: z.string().trim().min(3).max(120), body: z.string().trim().min(3).max(2000), only_checked_in: z.boolean().optional() }),
+])
+export type TournamentControlBodyType = z.infer<typeof TournamentControlBody>
+
+// Staff give or take Tournament Passes (with a reason the player sees).
+export const PassGrantBody = z
+  .object({
+    customer_id: z.string().regex(/^cus_[A-Za-z0-9]+$/).optional(),
+    email: z.string().email().optional(),
+    delta: z.number().int().min(-20).max(20).refine((n) => n !== 0, "Enter how many passes"),
+    note: z.string().trim().min(3).max(200),
+  })
+  .strict()
+  .refine((b) => b.customer_id || b.email, "Choose a player")
+export type PassGrantBodyType = z.infer<typeof PassGrantBody>
+
+export const PassRulesBody = z
+  .object({
+    welcome: z.number().int().min(0).max(10),
+    games_per_pass: z.number().int().min(1).max(200),
+    games_daily_max: z.number().int().min(0).max(10),
+    puzzle_streak_days: z.number().int().min(1).max(60),
+    puzzle_pass: z.number().int().min(0).max(10),
+    referral: z.number().int().min(0).max(10),
+    referral_monthly_max: z.number().int().min(0).max(50),
+    completed: z.number().int().min(0).max(10),
+  })
+  .strict()
+export type PassRulesBodyType = z.infer<typeof PassRulesBody>
 export type RegistrationStatusBodyType = z.infer<typeof RegistrationStatusBody>
 
 export const CheckInBody = z.object({ code: z.string().trim().min(6).max(20), undo: z.boolean().optional() }).strict()
@@ -581,14 +674,53 @@ export type CheckInBodyType = z.infer<typeof CheckInBody>
 
 export const TournamentRegisterBody = z
   .object({
-    player_name: z.string().trim().min(2).max(120),
+    // Venue events only; online tournaments use the player's profile.
+    player_name: z.string().trim().min(2).max(120).optional(),
     phone: z.string().trim().regex(/^[0-9+\- ]{7,20}$/, "Please enter a valid phone number").nullable().optional(),
     fide_id: z.string().trim().regex(/^[0-9]{3,12}$/, "A FIDE ID is numbers only").nullable().optional(),
     rating: z.number().int().min(0).max(3500).nullable().optional(),
     city: z.string().trim().max(80).nullable().optional(),
+    // Where the player came from (utm_source or the referring site).
+    source: z.string().trim().max(60).nullable().optional(),
   })
   .strict()
 export type TournamentRegisterBodyType = z.infer<typeof TournamentRegisterBody>
+
+// "Almost done" before a player's first online tournament (workflows/player-profile.ts).
+export const PlayerProfileBody = z
+  .object({
+    first_name: z.string().trim().min(1).max(60),
+    last_name: z.string().trim().min(1).max(60),
+    dob: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Please enter your date of birth"),
+    city: z.string().trim().min(2).max(80),
+    state: z.string().trim().min(2).max(60),
+    guardian_name: z.string().trim().max(120).nullish(),
+    guardian_phone: z.string().trim().regex(/^[0-9+\- ]{7,20}$/, "Please enter a valid phone number").nullish().or(z.literal("")),
+    guardian_consent: z.boolean().optional(),
+    terms: z.boolean(),
+    marketing: z.boolean().optional(),
+  })
+  .strict()
+export type PlayerProfileBodyType = z.infer<typeof PlayerProfileBody>
+
+// A tournament page view, for the funnel report (one per visitor).
+export const TournamentVisitBody = z.object({
+  visitor: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/),
+  source: z.string().trim().max(60).optional(),
+})
+export type TournamentVisitBodyType = z.infer<typeof TournamentVisitBody>
+
+// A prize winner's delivery address.
+export const PrizeAddressBody = z.object({
+  name: z.string().trim().min(2).max(120),
+  phone: z.string().trim().regex(/^[0-9+\- ]{7,20}$/, "Please enter a valid phone number"),
+  line1: z.string().trim().min(3).max(200),
+  line2: z.string().trim().max(200).optional().or(z.literal("")),
+  city: z.string().trim().min(2).max(80),
+  state: z.string().trim().min(2).max(60),
+  pincode: z.string().trim().regex(/^[1-9][0-9]{5}$/, "Please enter a 6-digit PIN code"),
+})
+export type PrizeAddressBodyType = z.infer<typeof PrizeAddressBody>
 
 // Play → Fair play: the decision on a flagged player.
 export const FairPlayDecisionBody = z.object({
@@ -767,6 +899,7 @@ export const MarketingSettingsBody = z.object({
       template_order: optId(/^[a-z0-9_]{1,512}$/),
       template_shipped: optId(/^[a-z0-9_]{1,512}$/),
       template_abandoned: optId(/^[a-z0-9_]{1,512}$/),
+      template_tournament: optId(/^[a-z0-9_]{1,512}$/),
       test_number: optId(/^\+?\d{10,15}$/),
     })
     .partial()

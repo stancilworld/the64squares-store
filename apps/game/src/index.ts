@@ -10,6 +10,7 @@ import { type Color, type Game, isGuest, type Player } from "./game.js"
 import { speedOf, type Speed } from "./glicko.js"
 import { GameManager } from "./manager.js"
 import { arenaStandings, online, registerArena, startArenas } from "./arena.js"
+import { tourneySummaries, Tourneys } from "./tourney.js"
 import { fideTop, migrateFide, startFide } from "./fide.js"
 import { FIDE_LISTS, FIDE_SPEEDS, type FideList, type FideSpeed } from "./fide-rules.js"
 import { banOf, migrateFairPlay, registerFairPlay, startFairPlay } from "./fairplay.js"
@@ -137,6 +138,15 @@ const server = http.createServer(async (req, res) => {
       const pgn = await gamePgn(m[1])
       return pgn ? send(res, 200, pgn, "application/x-chess-pgn; charset=utf-8", origin) : send(res, 404, "Not found", "text/plain", origin)
     }
+    // A tournament's pairings, standings or bracket, live boards and stats.
+    m = /^\/tourneys\/([a-z0-9_-]{1,120})$/i.exec(path)
+    if (m && req.method === "GET") {
+      const v = await tourneys.view(m[1])
+      return v ? json(res, 200, { tourney: v }, origin) : json(res, 404, { error: "not-found" }, origin)
+    }
+    if (path === "/tourneys" && req.method === "GET") {
+      return json(res, 200, { tourneys: await tourneySummaries(manager) }, origin)
+    }
     m = /^\/arenas\/([a-z0-9_-]{1,120})\/standings$/i.exec(path)
     if (m && req.method === "GET") {
       const a = await arenaStandings(m[1])
@@ -223,6 +233,9 @@ const manager = new GameManager((view) => {
     setTimeout(() => dropChat(view.id), 15 * 60_000).unref()
   }
 })
+
+// Swiss and knockout tournaments (and every tournament's live boards and stats).
+const tourneys = new Tourneys(io, manager)
 
 // House Players' moves, chat, draw answers and rematches.
 const house = new HouseDriver(io, manager)
@@ -489,6 +502,7 @@ io.on("connection", (socket) => {
   })
 
   registerArena(io, socket, manager, me, limited)
+  tourneys.register(socket, me, limited)
   registerSeek(io, socket, manager, me, limited)
   registerFriends(io, socket, manager, me, limited)
   registerChat(io, socket, manager, me)
@@ -518,6 +532,7 @@ const main = async () => {
     }
   })
   await startArenas(io, manager)
+  await tourneys.start()
   startSeeking(io, manager)
   const restored = await manager.restore()
   house.restore()

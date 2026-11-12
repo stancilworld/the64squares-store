@@ -64,7 +64,18 @@ const finishSignIn = async (token: string, names: { first_name?: string; last_na
     headers: { authorization: `Bearer ${token}` },
   })
   await saveToken(full)
-  const cartId = (await cookies()).get(CART)?.value
+  const jar = await cookies()
+  // Arrived from a friend's invite link: tell the store who invited them (new accounts only).
+  const invite = jar.get("t64_ref")?.value
+  if (invite) {
+    try {
+      await sdk.client.fetch("/store/account/referred-by", { method: "POST", body: { code: decodeURIComponent(invite) }, headers: { authorization: `Bearer ${full}` } })
+    } catch {
+      // Not an invite code, or an older account.
+    }
+    jar.delete("t64_ref")
+  }
+  const cartId = jar.get(CART)?.value
   if (cartId) {
     try {
       await sdk.client.fetch(`/store/carts/${cartId}/customer`, { method: "POST", headers: { authorization: `Bearer ${full}` } })

@@ -28,7 +28,7 @@ const MOBILE_TABS = ["/play", "/play/online", "/play/puzzles", "/play/friends", 
 const isActive = (path: string, href: string) =>
   href === "/play"
     ? path === "/play"
-    : path === href || path.startsWith(`${href}/`) || (href === "/play/tournaments" && path.startsWith("/play/arena")) || (href === "/play/friends" && path.startsWith("/play/player/"))
+    : path === href || path.startsWith(`${href}/`) || (href === "/play/tournaments" && (path.startsWith("/play/arena") || path.startsWith("/play/my-tournaments"))) || (href === "/play/friends" && path.startsWith("/play/player/"))
 
 // Which screen we're on, for the top bar on phones.
 const titleFor = (path: string) => {

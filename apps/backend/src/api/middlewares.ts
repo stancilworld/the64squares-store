@@ -51,6 +51,13 @@ import {
   RegistrationStatusBody,
   CheckInBody,
   TournamentRegisterBody,
+  PlayerProfileBody,
+  PrizeAddressBody,
+  RegistrationResultBody,
+  TournamentControlBody,
+  PassRulesBody,
+  PassGrantBody,
+  TournamentVisitBody,
   FairPlayDecisionBody,
   ChatbotTestBody,
   CollectBody,
@@ -404,6 +411,39 @@ export default defineMiddlewares({
       middlewares: [authenticate("customer", ["bearer", "session"])],
     },
     {
+      matcher: "/store/account/referred-by",
+      middlewares: [authenticate("customer", ["bearer", "session"])],
+    },
+    {
+      matcher: "/store/account/passes",
+      middlewares: [authenticate("customer", ["bearer", "session"])],
+    },
+    {
+      method: ["GET"],
+      matcher: "/store/account/player-profile",
+      middlewares: [authenticate("customer", ["bearer", "session"])],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/account/player-profile",
+      middlewares: [authenticate("customer", ["bearer", "session"]), validateAndTransformBody(PlayerProfileBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/tournaments/:handle/check-in",
+      middlewares: [authenticate("customer", ["bearer", "session"])],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/tournaments/:handle/visit",
+      middlewares: [validateAndTransformBody(TournamentVisitBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/tournaments/:handle/prize-address",
+      middlewares: [authenticate("customer", ["bearer", "session"]), validateAndTransformBody(PrizeAddressBody)],
+    },
+    {
       method: ["POST"],
       matcher: "/store/tournaments/:handle/register",
       middlewares: [authenticate("customer", ["bearer", "session"]), validateAndTransformBody(TournamentRegisterBody)],
@@ -427,6 +467,26 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/tournaments/:id/registrations/:rid",
       middlewares: [validateAndTransformBody(RegistrationStatusBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/tournaments/:id/registrations/:rid/result",
+      middlewares: [validateAndTransformBody(RegistrationResultBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/tournaments/:id/control",
+      middlewares: [validateAndTransformBody(TournamentControlBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/tournament-passes",
+      middlewares: [validateAndTransformBody(PassRulesBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/tournament-passes/grant",
+      middlewares: [validateAndTransformBody(PassGrantBody)],
     },
     {
       method: ["POST"],

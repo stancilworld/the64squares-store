@@ -60,9 +60,33 @@ const PUBLIC_FIELDS = [
   "id", "title", "handle", "summary", "description", "format", "mode", "time_control", "rounds",
   "starts_at", "ends_at", "registration_closes_at", "venue", "capacity", "entry_fee",
   "rating_min", "rating_max", "prizes", "rules", "image_url", "status",
+  "entry", "pass_cost", "check_in_minutes", "min_players", "round_break_seconds", "knockout_games", "armageddon",
+  "age_min", "age_max", "prize_list", "category_prizes", "tagline", "accent", "featured", "stream_url", "paused",
+  "cancel_reason", "results_final_at", "certificates",
 ] as const
 
-export const TOURNAMENT_FIELDS = [...PUBLIC_FIELDS] as string[]
+// Check-in: opens `check_in_minutes` before the start and closes at the start.
+export const checkInWindow = (t: Row) => {
+  const starts = time(t.starts_at)
+  const minutes = Number(t.check_in_minutes ?? 0)
+  if (t.mode !== "online" || minutes <= 0 || Number.isNaN(starts)) return null
+  return { opens: new Date(starts - minutes * 60_000).toISOString(), closes: new Date(starts).toISOString() }
+}
+
+export const checkInOpen = (t: Row, now = Date.now()) => {
+  const w = checkInWindow(t)
+  return !!w && t.status === "published" && now >= time(w.opens) && now < time(w.closes)
+}
+
+// "3+2" → bullet/blitz/rapid/classical, as the game server rates it.
+export const speedOfTc = (tc: string) => {
+  const m = /^(\d+(?:\.\d+)?)\+(\d+)$/.exec(String(tc).trim())
+  if (!m) return "blitz"
+  const est = Number(m[1]) * 60 + 40 * Number(m[2])
+  return est < 180 ? "bullet" : est < 480 ? "blitz" : est < 1500 ? "rapid" : "classical"
+}
+
+export const TOURNAMENT_FIELDS = [...PUBLIC_FIELDS, "coupon_code", "results_at"] as string[]
 
 // What the website shows about a tournament.
 export const publicTournament = (t: Row, confirmed: number): Row => {
@@ -93,8 +117,23 @@ export const ticketView = (r: Row, t: Row) => ({
   city: r.city ?? null,
   created_at: r.created_at,
   qr_url: checkInUrl(r.ticket_code),
-  // Players can give up their place until the event starts.
+  // Players can give up their place until the event starts (and get their pass back).
   can_cancel: r.status === "confirmed" && new Date(t.starts_at).getTime() > Date.now(),
+  pass_used: !!r.pass_entry_id,
+  check_in: checkInWindow(t),
+  can_check_in: r.status === "confirmed" && !r.checked_in_at && checkInOpen(t),
+  final_rank: r.final_rank ?? null,
+  score: r.score ?? null,
+  review: r.review ?? null,
+  prize_title: r.prize_title ?? null,
+  prize_status: r.prize_status ?? null,
+  certificate_no: r.certificate_no ?? null,
+  prize_tracking: r.prize_tracking ?? null,
+  prize_address: r.prize_address ?? null,
+  // Winners send an address once the result is final.
+  can_send_address: r.prize_status === "address" && r.review !== "disqualified",
+  // The shop thank-you code, for everyone who played.
+  coupon_code: r.final_rank != null && r.status === "confirmed" ? (t.coupon_code ?? null) : null,
   tournament: {
     id: t.id,
     title: t.title,
@@ -105,7 +144,12 @@ export const ticketView = (r: Row, t: Row) => ({
     starts_at: t.starts_at,
     venue: t.venue ?? null,
     entry_fee: t.entry_fee ?? 0,
+    entry: t.entry ?? "pass",
     status: t.status,
+    format: t.format,
+    image_url: t.image_url ?? null,
+    results_final_at: t.results_final_at ?? null,
+    results_at: t.results_at ?? null,
   },
 })
 

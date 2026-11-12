@@ -46,6 +46,9 @@ function Live({ config, stored }: { config: MarketingConfig; stored: Stored | nu
       try {
         sessionStorage.setItem("t64:code", code)
       } catch {}
+      // Kept for a month too: if it's a friend's invite and they make an account, the
+      // friend earns a Tournament Pass once they play.
+      document.cookie = `t64_ref=${encodeURIComponent(code)}; path=/; max-age=${30 * 86400}; samesite=lax${location.protocol === "https:" ? "; secure" : ""}`
     }
   }, [search])
 

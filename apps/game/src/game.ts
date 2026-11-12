@@ -211,8 +211,9 @@ export class Game {
     if (this.tick(now) || this.r.status !== "active") return false
     const color = this.colorOf(playerId)
     if (!color) return false
-    // Before both sides have moved, giving up just aborts the game.
-    if (this.ply < 2) this.finish(null, "aborted", now)
+    // Before both sides have moved, giving up just aborts the game (not in a tournament,
+    // where it's a loss).
+    if (this.ply < 2 && !this.r.tournament_id) this.finish(null, "aborted", now)
     else this.finish(color === "w" ? "0-1" : "1-0", "resign", now)
     return true
   }
@@ -224,7 +225,9 @@ export class Game {
       return true
     }
     if (!color || this.r.status !== "active" || this.ply >= 2) return false
-    this.finish(null, "aborted", now)
+    // A tournament game can't be called off: leaving it loses it.
+    if (this.r.tournament_id) this.finish(color === "w" ? "0-1" : "1-0", "resign", now)
+    else this.finish(null, "aborted", now)
     return true
   }
 

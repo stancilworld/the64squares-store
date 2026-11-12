@@ -6,6 +6,7 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { BACKEND_URL, sdk } from "../../../lib/sdk"
 import { useStoreUrl } from "../../../lib/site"
 import { useMe } from "../../../lib/staff"
+import { ControlRoom, FunnelPanel, GamesPanel, MessagePanel, ResultsPanel, useEngine } from "../../../lib/tournament-live"
 import { formatEventDate, type Registration, STATUS_LABELS, type Tournament, TournamentDrawer } from "../../../lib/tournaments"
 
 const TournamentPage = () => {
@@ -22,6 +23,7 @@ const TournamentPage = () => {
     queryKey: ["tournament", id],
     queryFn: () => sdk.client.fetch<{ tournament: Tournament }>(`/admin/tournaments/${id}`),
   })
+  const engine = useEngine(t?.tournament ?? ({ id: id!, mode: "offline", status: "draft", starts_at: "" } as Tournament))
   const { data: regs, isLoading } = useQuery({
     queryKey: ["tournament", id, "registrations"],
     queryFn: () => sdk.client.fetch<{ registrations: Registration[] }>(`/admin/tournaments/${id}/registrations`),
@@ -40,7 +42,7 @@ const TournamentPage = () => {
     onError: (e: Error) => toast.error("Could not update", { description: e.message }),
   })
   const setStatus = useMutation({
-    mutationFn: ({ r, status }: { r: Registration; status: "confirmed" | "cancelled" }) =>
+    mutationFn: ({ r, status }: { r: Registration; status: "confirmed" | "cancelled" | "withdrawn" }) =>
       sdk.client.fetch(`/admin/tournaments/${id}/registrations/${r.id}`, { method: "POST", body: { status } }),
     onSuccess: refresh,
     onError: (e: Error) => toast.error("Could not update", { description: e.message }),
@@ -83,6 +85,7 @@ const TournamentPage = () => {
     )
   }
   const ev = t.tournament
+  const started = new Date(ev.starts_at).getTime() <= Date.now() && ev.status === "published"
 
   return (
     <div className="flex flex-col gap-y-3">
@@ -104,7 +107,7 @@ const TournamentPage = () => {
           </div>
           <div className="flex flex-wrap gap-2">
             {storeUrl && ev.status !== "draft" && (
-              <Button size="small" variant="secondary" onClick={() => window.open(`${storeUrl}/tournaments/${ev.handle}`, "_blank", "noopener")}>
+              <Button size="small" variant="secondary" onClick={() => window.open(`${storeUrl}/${ev.mode === "online" ? "play/" : ""}tournaments/${ev.handle}`, "_blank", "noopener")}>
                 View on website
               </Button>
             )}
@@ -133,6 +136,10 @@ const TournamentPage = () => {
         </div>
       </Container>
 
+      {ev.mode === "online" && can("tournaments.manage") && <ControlRoom t={ev} engine={engine.data} />}
+      {ev.mode === "online" && can("tournaments.checkin") && <ResultsPanel t={ev} regs={all} storeUrl={storeUrl} />}
+      {ev.mode === "online" && can("tournaments.manage") && <GamesPanel t={ev} engine={engine.data} storeUrl={storeUrl} />}
+
       {can("tournaments.checkin") ? (
         <Container className="divide-y p-0">
           <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
@@ -159,7 +166,7 @@ const TournamentPage = () => {
                   <Table.HeaderCell>Player</Table.HeaderCell>
                   <Table.HeaderCell>Ticket</Table.HeaderCell>
                   <Table.HeaderCell>Rating</Table.HeaderCell>
-                  <Table.HeaderCell>Phone</Table.HeaderCell>
+                  <Table.HeaderCell>{ev.mode === "online" ? "From" : "Phone"}</Table.HeaderCell>
                   <Table.HeaderCell>Status</Table.HeaderCell>
                   <Table.HeaderCell className="text-right">Actions</Table.HeaderCell>
                 </Table.Row>
@@ -178,11 +185,15 @@ const TournamentPage = () => {
                       {r.rating ?? "–"}
                       {r.fide_id ? <span className="block text-ui-fg-subtle txt-compact-xsmall">FIDE {r.fide_id}</span> : null}
                     </Table.Cell>
-                    <Table.Cell>{r.phone ?? "–"}</Table.Cell>
+                    <Table.Cell>{ev.mode === "online" ? (r.source ?? "direct") : (r.phone ?? "–")}</Table.Cell>
                     <Table.Cell>
                       {r.status === "cancelled" ? (
                         <Badge size="2xsmall" color="red">
                           Cancelled
+                        </Badge>
+                      ) : r.status === "withdrawn" ? (
+                        <Badge size="2xsmall" color="orange">
+                          Removed
                         </Badge>
                       ) : r.checked_in_at ? (
                         <Badge size="2xsmall" color="green">
@@ -201,19 +212,34 @@ const TournamentPage = () => {
                             {r.checked_in_at ? "Undo check-in" : "Check in"}
                           </Button>
                         )}
+                        {started && r.status === "confirmed" && ev.mode === "online" && ev.format !== "arena" && (
+                          <Button
+                            size="small"
+                            variant="transparent"
+                            onClick={async () => {
+                              if (await prompt({ title: `Remove ${r.player_name} from the event?`, description: "They aren't paired again and lose any match still to play. Their pass isn't returned." })) {
+                                setStatus.mutate({ r, status: "withdrawn" })
+                              }
+                            }}
+                          >
+                            Remove from event
+                          </Button>
+                        )}
+                        {!(started && r.status === "confirmed" && ev.mode === "online") && (
                         <Button
                           size="small"
                           variant="transparent"
                           onClick={async () => {
-                            if (r.status === "cancelled") {
+                            if (r.status !== "confirmed") {
                               setStatus.mutate({ r, status: "confirmed" })
-                            } else if (await prompt({ title: `Cancel ${r.player_name}'s place?`, description: "Their ticket stops working. You can restore it later." })) {
+                            } else if (await prompt({ title: `Cancel ${r.player_name}'s place?`, description: ev.mode === "online" ? "Their Tournament Pass goes back to them. You can restore the place later." : "Their ticket stops working. You can restore it later." })) {
                               setStatus.mutate({ r, status: "cancelled" })
                             }
                           }}
                         >
-                          {r.status === "cancelled" ? "Restore" : "Cancel place"}
+                          {r.status !== "confirmed" ? "Restore" : "Cancel place"}
                         </Button>
+                        )}
                       </div>
                     </Table.Cell>
                   </Table.Row>
@@ -229,6 +255,9 @@ const TournamentPage = () => {
           </Text>
         </Container>
       )}
+
+      {ev.mode === "online" && can("tournaments.manage") && ev.status !== "draft" && <MessagePanel t={ev} />}
+      {ev.mode === "online" && can("tournaments.manage") && <FunnelPanel t={ev} />}
 
       {can("tournaments.manage") && (
         <Container className="flex items-center justify-between gap-4">

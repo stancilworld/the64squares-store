@@ -64,7 +64,7 @@ export type Settings = {
   snapchat: { enabled: boolean; pixel_id: string; capi_enabled: boolean }
   microsoft_ads: { enabled: boolean; tag_id: string; capi_enabled: boolean }
   linkedin: { enabled: boolean; partner_id: string; purchase_conversion_id: string; lead_conversion_id: string; capi_enabled: boolean; ad_account_id: string }
-  whatsapp: { enabled: boolean; phone_number_id: string; language: string; template_order: string; template_shipped: string; template_abandoned: string; test_number: string }
+  whatsapp: { enabled: boolean; phone_number_id: string; language: string; template_order: string; template_shipped: string; template_abandoned: string; template_tournament?: string; test_number: string }
   brevo: { enabled: boolean; list_id: string }
   mailchimp: { enabled: boolean; audience_id: string }
   klaviyo: { enabled: boolean; list_id: string }

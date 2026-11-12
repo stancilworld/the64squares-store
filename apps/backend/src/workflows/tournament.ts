@@ -2,12 +2,15 @@ import {
   createStep,
   createWorkflow,
   StepResponse,
+  transform,
+  when,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import { MedusaError, Modules } from "@medusajs/framework/utils"
 import { TOURNAMENT_MODULE } from "../modules/tournament"
 import TournamentModuleService from "../modules/tournament/service"
 import { newTicketCode, registrationState } from "../lib/tournaments"
+import { changePassesStep } from "./passes"
 
 type Row = Record<string, any>
 
@@ -32,6 +35,27 @@ export type TournamentInput = {
   rules?: string | null
   image_url?: string | null
   status?: "draft" | "published" | "cancelled" | "completed"
+  entry?: "pass" | "free" | "fee"
+  pass_cost?: number
+  check_in_minutes?: number
+  min_players?: number
+  round_break_seconds?: number
+  knockout_games?: number
+  armageddon?: boolean
+  age_min?: number | null
+  age_max?: number | null
+  prize_list?: unknown
+  category_prizes?: unknown
+  tagline?: string | null
+  accent?: string | null
+  featured?: boolean
+  stream_url?: string | null
+  paused?: boolean
+  cancel_reason?: string | null
+  results_final_at?: string | Date | null
+  coupon_code?: string | null
+  certificates?: boolean
+  reminders?: boolean
 }
 
 const service = (container: { resolve: (k: string) => unknown }) =>
@@ -105,11 +129,14 @@ export type RegisterInput = {
   fide_id?: string | null
   rating?: number | null
   city?: string | null
+  // Years on the start day (online tournaments with an age group).
+  age?: number | null
+  source?: string | null
 }
 
 type Undo = { created?: string; reopened?: Row }
 
-type Registered = { registration: Row; isNew: boolean }
+type Registered = { registration: Row; isNew: boolean; pass_cost: number }
 
 const registerForTournamentStep = createStep(
   "register-for-tournament",
@@ -122,7 +149,7 @@ const registerForTournamentStep = createStep(
       const [mine] = (await s.listTournamentRegistrations({ tournament_id: t.id, customer_id: input.customer_id })) as Row[]
       if (mine?.status === "confirmed") {
         // Already registered: nothing to do, the same ticket stands.
-        return { result: { registration: mine, isNew: false }, undo: {} }
+        return { result: { registration: mine, isNew: false, pass_cost: 0 }, undo: {} }
       }
       const confirmed = await s.listTournamentRegistrations({ tournament_id: t.id, status: "confirmed" }, { select: ["id"] })
       const state = registrationState(t, confirmed.length)
@@ -140,6 +167,13 @@ const registerForTournamentStep = createStep(
           throw new MedusaError(MedusaError.Types.NOT_ALLOWED, `This tournament is for players rated ${t.rating_max} and below.`)
         }
       }
+      if (t.age_min != null || t.age_max != null) {
+        if (input.age == null) throw new MedusaError(MedusaError.Types.INVALID_DATA, "This tournament has an age group. Please add your date of birth.")
+        if (t.age_min != null && input.age < t.age_min) throw new MedusaError(MedusaError.Types.NOT_ALLOWED, `This tournament is for players aged ${t.age_min} and over.`)
+        if (t.age_max != null && input.age > t.age_max) throw new MedusaError(MedusaError.Types.NOT_ALLOWED, `This tournament is for players aged ${t.age_max} and under.`)
+      }
+      // Online tournaments cost a Tournament Pass (taken by the next step).
+      const passCost = t.mode === "online" && (t.entry ?? "pass") === "pass" ? Math.max(0, Number(t.pass_cost ?? 1)) : 0
       const details = {
         player_name: input.player_name,
         email: input.email,
@@ -147,11 +181,12 @@ const registerForTournamentStep = createStep(
         fide_id: input.fide_id ?? null,
         rating: input.rating ?? null,
         city: input.city ?? null,
+        source: mine?.source ?? input.source ?? null,
       }
       if (mine) {
         // Registered before and cancelled: the same ticket comes back to life.
-        const r = await s.updateTournamentRegistrations({ id: mine.id, ...details, status: "confirmed", checked_in_at: null } as never)
-        return { result: { registration: r as Row, isNew: true }, undo: { reopened: stripMeta(mine) } }
+        const r = await s.updateTournamentRegistrations({ id: mine.id, ...details, status: "confirmed", checked_in_at: null, pass_entry_id: null } as never)
+        return { result: { registration: r as Row, isNew: true, pass_cost: passCost }, undo: { reopened: stripMeta(mine) } }
       }
       for (let attempt = 0; attempt < 5; attempt++) {
         const code = newTicketCode()
@@ -163,7 +198,7 @@ const registerForTournamentStep = createStep(
           ticket_code: code,
           ...details,
         } as never)
-        return { result: { registration: r as Row, isNew: true }, undo: { created: (r as Row).id } }
+        return { result: { registration: r as Row, isNew: true, pass_cost: passCost }, undo: { created: (r as Row).id } }
       }
       throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, "Could not make a ticket. Please try again.")
     })
@@ -177,21 +212,49 @@ const registerForTournamentStep = createStep(
   }
 )
 
+const linkTournamentPassStep = createStep(
+  "link-tournament-pass",
+  async (input: { registration_id: string; pass_entry_id: string }, { container }) => {
+    const r = await service(container).updateTournamentRegistrations({ id: input.registration_id, pass_entry_id: input.pass_entry_id } as never)
+    return new StepResponse(r as Row, input.registration_id)
+  },
+  async (id, { container }) => {
+    if (id) await service(container).updateTournamentRegistrations({ id, pass_entry_id: null } as never)
+  }
+)
+
 export const registerForTournamentWorkflow = createWorkflow("register-for-tournament", (input: RegisterInput) => {
-  return new WorkflowResponse(registerForTournamentStep(input))
+  const registered = registerForTournamentStep(input)
+  const paid = when("take-tournament-pass", { registered }, ({ registered }) => registered.isNew && registered.pass_cost > 0).then(() => {
+    const spent = changePassesStep(
+      transform({ registered, input }, ({ registered, input }) => ({
+        customer_id: input.customer_id,
+        delta: -registered.pass_cost,
+        reason: "join" as const,
+        note: String(registered.registration.tournament_id ?? input.tournament_id),
+      }))
+    )
+    return linkTournamentPassStep(transform({ registered, spent }, ({ registered, spent }) => ({ registration_id: registered.registration.id as string, pass_entry_id: spent.entry.id })))
+  })
+  return new WorkflowResponse(transform({ registered, paid }, ({ registered, paid }) => ({ ...registered, registration: paid ?? registered.registration })))
 })
 
 // A player cancels their own place (before the start), or staff cancel or restore one.
 const setRegistrationStatusStep = createStep(
   "set-registration-status",
-  async (input: { id: string; status: "confirmed" | "cancelled"; by: "player" | "staff" }, { container }) => {
+  async (input: { id: string; status: "confirmed" | "cancelled" | "withdrawn"; by: "player" | "staff" }, { container }) => {
     const s = service(container)
     const previous = (await s.retrieveTournamentRegistration(input.id, { relations: ["tournament"] })) as Row
     if (input.by === "player" && new Date(previous.tournament.starts_at).getTime() <= Date.now()) {
       throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "This tournament has already started.")
     }
     const r = await s.updateTournamentRegistrations({ id: input.id, status: input.status } as never)
-    return new StepResponse(r as Row, { id: input.id, status: previous.status as string })
+    // Only the first cancellation of a paid place returns the pass (the refund ref is unique too).
+    const refundable = previous.status === "confirmed" && input.status === "cancelled" && !!previous.pass_entry_id
+    return new StepResponse(
+      { ...(r as Row), pass_entry_id: refundable ? previous.pass_entry_id : null, pass_cost_refund: Math.max(1, Number(previous.tournament.pass_cost ?? 1)) } as Row,
+      { id: input.id, status: previous.status as string }
+    )
   },
   async (previous, { container }) => {
     if (previous) await service(container).updateTournamentRegistrations(previous as never)
@@ -200,8 +263,21 @@ const setRegistrationStatusStep = createStep(
 
 export const setRegistrationStatusWorkflow = createWorkflow(
   "set-registration-status",
-  (input: { id: string; status: "confirmed" | "cancelled"; by: "player" | "staff" }) => {
-    return new WorkflowResponse(setRegistrationStatusStep(input))
+  (input: { id: string; status: "confirmed" | "cancelled" | "withdrawn"; by: "player" | "staff" }) => {
+    const r = setRegistrationStatusStep(input)
+    // A place given up before the start (or cancelled by staff) returns its pass.
+    when("refund-tournament-pass", { r, input }, ({ r, input }) => input.status === "cancelled" && !!r.pass_entry_id && !!r.customer_id).then(() => {
+      changePassesStep(
+        transform({ r }, ({ r }) => ({
+          customer_id: r.customer_id as string,
+          delta: Number(r.pass_cost_refund ?? 1),
+          reason: "refund" as const,
+          ref: `refund:${r.pass_entry_id}`,
+          note: String(r.tournament_id ?? ""),
+        }))
+      )
+    })
+    return new WorkflowResponse(r)
   }
 )
 
@@ -227,4 +303,23 @@ const checkInPlayerStep = createStep(
 
 export const checkInPlayerWorkflow = createWorkflow("check-in-player", (input: { id: string; undo?: boolean }) => {
   return new WorkflowResponse(checkInPlayerStep(input))
+})
+
+// Someone opened a tournament page (counted once per visitor), for the funnel report.
+const recordTournamentVisitStep = createStep(
+  "record-tournament-visit",
+  async (input: { tournament_id: string; visitor: string; source: string }, { container }) => {
+    const s = service(container)
+    const [seen] = await s.listTournamentVisits({ tournament_id: input.tournament_id, visitor: input.visitor }, { take: 1, select: ["id"] })
+    if (seen) return new StepResponse({ counted: false }, null)
+    const v = await s.createTournamentVisits(input as never)
+    return new StepResponse({ counted: true }, (v as Row).id as string)
+  },
+  async (id, { container }) => {
+    if (id) await service(container).deleteTournamentVisits(id)
+  }
+)
+
+export const recordTournamentVisitWorkflow = createWorkflow("record-tournament-visit", (input: { tournament_id: string; visitor: string; source: string }) => {
+  return new WorkflowResponse(recordTournamentVisitStep(input))
 })

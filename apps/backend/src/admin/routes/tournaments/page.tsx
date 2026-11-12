@@ -27,6 +27,11 @@ const TournamentsPage = () => {
           </Text>
         </div>
         <div className="flex flex-wrap gap-2">
+          {can("tournaments.manage") && (
+            <Button size="small" variant="secondary" onClick={() => navigate("/tournaments/passes")}>
+              Tournament Passes
+            </Button>
+          )}
           {can("tournaments.checkin") && (
             <Button size="small" variant="secondary" onClick={() => navigate("/tournaments/check-in")}>
               Check in players

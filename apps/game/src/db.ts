@@ -187,7 +187,7 @@ export const activeFor = async (playerId: string) => {
   if (playerId.startsWith("cus_")) {
     try {
       const t = await pool.query(
-        `select t.id, t.title, t.handle, t.format, t.mode, t.time_control, t.starts_at, t.ends_at, t.status, r.code
+        `select t.id, t.title, t.handle, t.format, t.mode, t.time_control, t.starts_at, t.ends_at, t.status, r.ticket_code as code
            from public.tournament_registration r join public.tournament t on t.id = r.tournament_id
           where r.customer_id = $1 and r.status = 'confirmed' and r.deleted_at is null and t.deleted_at is null and t.status <> 'draft'
             and coalesce(t.ends_at, t.starts_at + interval '6 hours') > now()

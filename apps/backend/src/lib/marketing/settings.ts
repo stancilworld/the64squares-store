@@ -130,6 +130,8 @@ export type MarketingSettings = {
     template_order: string
     template_shipped: string
     template_abandoned: string
+    // Tournament reminders: {{1}} first name, {{2}} tournament, {{3}} start time, {{4}} link.
+    template_tournament?: string
     test_number: string
   }
   brevo: { enabled: boolean; list_id: string }
@@ -159,7 +161,7 @@ export const DEFAULT_MARKETING_SETTINGS: MarketingSettings = {
   snapchat: { enabled: false, pixel_id: "", capi_enabled: false },
   microsoft_ads: { enabled: false, tag_id: "", capi_enabled: false },
   linkedin: { enabled: false, partner_id: "", purchase_conversion_id: "", lead_conversion_id: "", capi_enabled: false, ad_account_id: "" },
-  whatsapp: { enabled: false, phone_number_id: "", language: "en", template_order: "", template_shipped: "", template_abandoned: "", test_number: "" },
+  whatsapp: { enabled: false, phone_number_id: "", language: "en", template_order: "", template_shipped: "", template_abandoned: "", template_tournament: "", test_number: "" },
   brevo: { enabled: false, list_id: "" },
   mailchimp: { enabled: false, audience_id: "" },
   klaviyo: { enabled: false, list_id: "" },
@@ -346,8 +348,8 @@ export const DEFS: Record<Integration, Def> = {
       ...need(ID_PATTERNS.wa_phone_id.test(s.whatsapp.phone_number_id), "Phone number ID"),
       ...need(!!k.whatsapp, "access token"),
       ...need(ID_PATTERNS.wa_language.test(s.whatsapp.language), "template language"),
-      ...need(!!(s.whatsapp.template_order || s.whatsapp.template_shipped || s.whatsapp.template_abandoned), "at least one message template name"),
-      ...[s.whatsapp.template_order, s.whatsapp.template_shipped, s.whatsapp.template_abandoned].filter((t) => t && !ID_PATTERNS.wa_template.test(t)).map(() => "valid template names"),
+      ...need(!!(s.whatsapp.template_order || s.whatsapp.template_shipped || s.whatsapp.template_abandoned || s.whatsapp.template_tournament), "at least one message template name"),
+      ...[s.whatsapp.template_order, s.whatsapp.template_shipped, s.whatsapp.template_abandoned, s.whatsapp.template_tournament ?? ""].filter((t) => t && !ID_PATTERNS.wa_template.test(t)).map(() => "valid template names"),
     ],
     depends: (s, k) => [s.whatsapp.phone_number_id, secretHash(k.whatsapp)],
     browser: false,

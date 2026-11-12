@@ -519,8 +519,8 @@ export function GameView({ id, initialPass, share = false }: Props) {
           </>
         )}
         {game.mode === "arena" && game.tournament_id ? (
-          <Link href={`/play/arena/${game.tournament_id}`} className="g-btn g-btn-primary h-[42px]">
-            Arena standings
+          <Link href={`/play/tournaments/${game.tournament_id}`} className="g-btn g-btn-primary h-[42px]">
+            Tournament standings
           </Link>
         ) : game.mode === "computer" ? (
           <Link href="/play/computer" className="g-btn g-btn-primary h-[42px]">
@@ -691,7 +691,7 @@ export function GameView({ id, initialPass, share = false }: Props) {
             )}
             <div className="grid grid-cols-2 gap-2">
               {game.mode === "arena" && game.tournament_id ? (
-                <Link href={`/play/arena/${game.tournament_id}`} className="g-btn">
+                <Link href={`/play/tournaments/${game.tournament_id}`} className="g-btn">
                   Standings
                 </Link>
               ) : (
@@ -758,7 +758,7 @@ export function GameView({ id, initialPass, share = false }: Props) {
       panel={
         <>
           <p className="hidden items-center gap-2 text-[13px] g-muted lg:flex">
-            <Link href={game.mode === "arena" && game.tournament_id ? `/play/arena/${game.tournament_id}` : "/play"} aria-label="Back" className="g-btn g-btn-ghost !min-h-[34px] !px-2 !text-[13px]">
+            <Link href={game.mode === "arena" && game.tournament_id ? `/play/tournaments/${game.tournament_id}` : "/play"} aria-label="Back" className="g-btn g-btn-ghost !min-h-[34px] !px-2 !text-[13px]">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
             </Link>
             <span className="flex-1">
