@@ -217,7 +217,8 @@ export class Tourneys {
       const { rows } = await pool.query(
         `select t.id from public.tournament t left join play.t_state s on s.tournament_id = t.id
           where t.deleted_at is null and t.mode = 'online' and t.format in ('swiss', 'knockout') and t.status = 'published'
-            and t.starts_at <= now() and (s.phase is null or s.phase = 'running') and t.starts_at > now() - interval '3 days'`
+            and t.starts_at <= now() and (s.phase is null or s.phase = 'running') and t.starts_at > now() - interval '3 days'
+            and t.id not like 'trn\\_demo\\_%'`
       )
       ids = rows.map((r) => r.id)
     } catch {
@@ -638,7 +639,7 @@ export const tourneySummaries = async (manager: GameManager) => {
               (select count(*)::int from public.tournament_registration r where r.tournament_id = t.id and r.status = 'confirmed' and r.deleted_at is null and r.checked_in_at is not null) as checked_in
          from public.tournament t left join play.t_state s on s.tournament_id = t.id
         where t.deleted_at is null and t.mode = 'online' and t.status <> 'draft'
-          and t.starts_at > now() - interval '3 days' and t.starts_at < now() + interval '30 days'`
+          and t.starts_at > now() - interval '14 days' and t.starts_at < now() + interval '30 days'`
     )
     const live = new Map<string, number>()
     for (const g of manager.liveGames()) if (g.r.tournament_id) live.set(g.r.tournament_id, (live.get(g.r.tournament_id) ?? 0) + 1)

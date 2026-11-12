@@ -61,7 +61,7 @@ export const sendTournamentReminders = async (c: MedusaContainer) => {
     `select r.id, r.email, r.phone, r.player_name, r.checked_in_at, t.title, t.handle, t.starts_at, t.check_in_minutes, t.format, t.time_control
        from tournament_registration r join tournament t on t.id = r.tournament_id
       where t.deleted_at is null and r.deleted_at is null and t.status = 'published' and t.mode = 'online' and t.reminders
-        and r.status = 'confirmed' and t.starts_at > now() and t.starts_at <= now() + interval '24 hours 5 minutes'`
+        and r.status = 'confirmed' and t.id not like 'trn\\_demo\\_%' and t.starts_at > now() and t.starts_at <= now() + interval '24 hours 5 minutes'`
   )
   let sent = 0
   for (const r of rows) {

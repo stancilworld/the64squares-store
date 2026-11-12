@@ -14,6 +14,8 @@ type Row = Record<string, any>
 type Pg = { raw: (q: string, b?: unknown[]) => Promise<{ rows: Row[] }> }
 
 const ARENA_GRACE_MS = 3 * 60_000
+// Demo events (apps/game/src/seed-demo.ts) are left exactly as they were made.
+const NOT_DEMO = "'trn\\_demo\\_%'"
 // Prizes are announced after the fair-play review; with nothing left to review this long
 // after the end, the results are made final automatically.
 export const REVIEW_HOURS = 48
@@ -69,7 +71,7 @@ export const processTournamentResults = async (c: MedusaContainer) => {
   // 1. Events the game server called off: too few players checked in.
   const { rows: low } = await pg.raw(
     `select t.id, s.note from tournament t join play.t_state s on s.tournament_id = t.id
-      where t.deleted_at is null and t.status = 'published' and s.phase = 'cancelled_low'`
+      where t.deleted_at is null and t.status = 'published' and s.phase = 'cancelled_low' and t.id not like ${NOT_DEMO}`
   )
   for (const r of low) {
     const { result } = await cancelTournamentWorkflow(c).run({ input: { id: r.id, reason: `Not enough players checked in (${r.note ?? "too few"}).` } })
@@ -83,7 +85,7 @@ export const processTournamentResults = async (c: MedusaContainer) => {
   const { rows: due } = await pg.raw(
     `select t.* from tournament t
        left join play.t_state s on s.tournament_id = t.id
-      where t.deleted_at is null and t.mode = 'online' and t.results_final_at is null
+      where t.deleted_at is null and t.mode = 'online' and t.results_final_at is null and t.id not like ${NOT_DEMO}
         and (
           (t.status = 'published' and t.format in ('swiss','knockout') and s.phase = 'finished')
           or (t.status = 'published' and t.format = 'arena' and coalesce(t.ends_at, t.starts_at + interval '1 hour') < now() - interval '${ARENA_GRACE_MS / 1000} seconds')
