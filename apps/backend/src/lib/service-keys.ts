@@ -86,7 +86,7 @@ export const KEY_DEFS: KeyDef[] = [
   { name: "GOOGLE_CLIENT_SECRET", group: "google", label: "Google Client Secret", secret: true, pattern: /^[\w-]{10,}$/, hint: "Usually starts with GOCSPX-" },
   { name: "ELEVENLABS_API_KEY", group: "voice", label: "ElevenLabs API key", secret: true, pattern: /^[\w-]{20,100}$/, hint: "From elevenlabs.io → Developers → API keys. Give it Text to Speech and User read access." },
   { name: "ELEVENLABS_VOICE_ID", group: "voice", label: "Coach voice ID", secret: false, pattern: /^[A-Za-z0-9]{10,40}$/, hint: "From elevenlabs.io → Voices → the voice's ⋯ menu → Copy voice ID. Empty for George." },
-  { name: "ELEVENLABS_MODEL", group: "voice", label: "Voice model", secret: false, pattern: /^[\w.-]{3,60}$/, hint: "Empty for eleven_flash_v2_5 (fast, half the characters). eleven_multilingual_v2 sounds richer." },
+  { name: "ELEVENLABS_MODEL", group: "voice", label: "Voice model", secret: false, pattern: /^[\w.-]{3,60}$/, hint: "Empty for eleven_flash_v2_5 (fastest, half the cost per character). eleven_v4 is the newest and most natural; eleven_v4_turbo is v4 made for speed." },
   { name: "GROQ_API_KEY", group: "ai", label: "Groq API key (free)", secret: true, pattern: /^gsk_[A-Za-z0-9]{20,}$/, hint: "From console.groq.com → API Keys. Starts with gsk_" },
   { name: "GROQ_MODEL", group: "ai", label: "Groq model", secret: false, pattern: /^[\w./:-]{3,80}$/, hint: "Leave empty for llama-3.3-70b-versatile" },
   { name: "GEMINI_API_KEY", group: "ai", label: "Google Gemini API key (free, spare)", secret: true, pattern: /^[\w-]{30,60}$/, hint: "From aistudio.google.com → Get API key. Starts with AIza" },
