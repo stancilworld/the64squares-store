@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
-import { test } from "node:test"
-import { bracketSize, buildBracket, type Entrant, finalRanking, matchState, pairSwiss, seedOrder, swissTable, type TGame } from "./tourney-rules.js"
+import { describe, it, test } from "node:test"
+import { bracketSize, buildBracket, type Entrant, finalRanking, matchState, pairRoundRobin, pairSwiss, rrRounds, rrTable, seedOrder, swissTable, type TGame } from "./tourney-rules.js"
 
 const players = (n: number): Entrant[] => Array.from({ length: n }, (_, i) => ({ id: `cus_${i + 1}`, name: `P${i + 1}`, rating: 2000 - i * 50 }))
 
@@ -162,4 +162,65 @@ test("final ranking: swiss follows the standings", () => {
   assert.equal(r.length, 3)
   assert.equal(r[2].id, "cus_3")
   assert.equal(r[2].rank, 3)
+})
+
+describe("round robin", () => {
+  const field = (n: number) => Array.from({ length: n }, (_, i) => `p${i + 1}`)
+  for (const n of [2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 16]) {
+    it(`${n} players: everyone meets everyone once, one game a round, colours balanced`, () => {
+      const ids = field(n)
+      const rounds = rrRounds(n, 1)
+      assert.equal(rounds, n % 2 ? n : n - 1)
+      const met = new Map<string, number>()
+      const whites = new Map<string, number>()
+      const byes = new Map<string, number>()
+      for (let r = 1; r <= rounds; r++) {
+        const pairs = pairRoundRobin(ids, r)
+        const seen = new Set<string>()
+        for (const p of pairs) {
+          for (const id of [p.white, p.black].filter(Boolean) as string[]) {
+            assert.ok(!seen.has(id), `round ${r}: ${id} twice`)
+            seen.add(id)
+          }
+          if (!p.black) {
+            byes.set(p.white, (byes.get(p.white) ?? 0) + 1)
+            continue
+          }
+          const key = [p.white, p.black].sort().join("-")
+          met.set(key, (met.get(key) ?? 0) + 1)
+          whites.set(p.white, (whites.get(p.white) ?? 0) + 1)
+        }
+        assert.equal(seen.size, n, `round ${r}: everyone is paired or has the bye`)
+      }
+      assert.equal(met.size, (n * (n - 1)) / 2)
+      for (const v of met.values()) assert.equal(v, 1)
+      for (const id of ids) {
+        const games = n % 2 ? n - 1 : n - 1
+        const w = whites.get(id) ?? 0
+        assert.ok(Math.abs(w - (games - w)) <= 1, `${id}: ${w} whites of ${games}`)
+        if (n % 2) assert.equal(byes.get(id), 1)
+      }
+    })
+  }
+  it("a double round robin repeats every pairing with the colours swapped", () => {
+    const ids = field(6)
+    const one = rrRounds(6, 1)
+    assert.equal(rrRounds(6, 2), 2 * one)
+    for (let r = 1; r <= one; r++) {
+      const a = pairRoundRobin(ids, r)
+      const b = pairRoundRobin(ids, r + one)
+      assert.deepEqual(b.map((p) => [p.black, p.white]), a.map((p) => [p.white, p.black]))
+    }
+  })
+  it("standings: points first, then Sonneborn-Berger, and final ranks follow them", () => {
+    const es = field(3).map((id, i) => ({ id, name: id, rating: 1500 - i }))
+    const g = (round: number, w: string, b: string | null, result: TGame["result"]): TGame => ({ round, board: 1, game_no: 1, white_id: w, black_id: b, result, forfeit: false, armageddon: false, game_id: null })
+    // Everyone beats someone: equal points; SB decides.
+    const games = [g(1, "p1", "p2", "1-0"), g(1, "p3", null, "1-0"), g(2, "p2", "p3", "1-0"), g(2, "p1", null, "1-0"), g(3, "p3", "p1", "1/2-1/2"), g(3, "p2", null, "1-0")]
+    const table = rrTable(es, games, new Set(), 3)
+    const ranks = finalRanking("round_robin", table, null)
+    assert.equal(ranks.length, 3)
+    assert.deepEqual(table.map((r) => r.id), ranks.map((r) => r.id))
+    for (let i = 1; i < table.length; i++) assert.ok(table[i - 1].points > table[i].points || (table[i - 1].points === table[i].points && table[i - 1].sb >= table[i].sb))
+  })
 })

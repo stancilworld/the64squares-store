@@ -1,9 +1,11 @@
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { deleteShowcaseAssetWorkflow, updateShowcaseAssetWorkflow } from "../../../../../workflows/showcase"
+import { refreshWebsite } from "../../../../../lib/website-cache"
 
 // POST /admin/showcase/assets/:id: rename, or set a video's still.
 export const POST = async (req: AuthenticatedMedusaRequest<{ name?: string; poster_url?: string | null }>, res: MedusaResponse) => {
   const { result } = await updateShowcaseAssetWorkflow(req.scope).run({ input: { id: req.params.id, ...req.validatedBody } })
+  await refreshWebsite(["showcase"])
   res.json({ asset: result })
 }
 

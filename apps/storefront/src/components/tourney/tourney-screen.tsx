@@ -16,7 +16,7 @@ import { PrizeClaim } from "./prize-claim"
 import { ProfileDialog } from "./profile-dialog"
 import { trafficSource, visitorId } from "./source"
 import { TourneyStats } from "./stats"
-import { SwissPairings, SwissStandings } from "./swiss"
+import { Crosstable, SwissPairings, SwissStandings } from "./swiss"
 import { nowMs } from "@/lib/clock"
 
 type Props = {
@@ -214,13 +214,15 @@ export function TourneyScreen(props: Props) {
       )
     }
     if (phase === "live" || phase === "between") {
-      const roundText = t.format === "swiss" && view?.state ? `Round ${view.state.round} of ${view.rounds ?? t.rounds ?? "?"}` : t.format === "knockout" && view?.bracket && view.state ? view.bracket.rounds[view.state.round - 1]?.name : null
+      const roundText = (t.format === "swiss" || t.format === "round_robin") && view?.state ? `Round ${view.state.round} of ${view.rounds ?? t.rounds ?? "?"}` : t.format === "knockout" && view?.bracket && view.state ? view.bracket.rounds[view.state.round - 1]?.name : null
       return (
         <div className="flex flex-wrap items-end gap-5">
           <span className="inline-flex items-center gap-2 rounded-md bg-[#ff3b3b] px-3 py-1.5 text-[15px] font-extrabold text-white">
             <span className="h-2 w-2 animate-pulse rounded-full bg-white motion-reduce:animate-none" /> LIVE{roundText ? ` · ${roundText}` : ""}
           </span>
-          {t.paused && <span className="rounded-md bg-white/15 px-3 py-1.5 text-[14px] font-bold">Paused by the arbiter</span>}
+          {(t.format === "arena" ? (arena?.paused ?? t.paused) : (view?.paused ?? t.paused)) && (
+            <span className="rounded-md bg-white/15 px-3 py-1.5 text-[14px] font-bold">Paused by the arbiter: no new games start for now</span>
+          )}
           {phase === "between" && view?.state?.next_round_at && (
             <span>
               <span className="mb-1 block text-[13px] font-semibold text-white/70">Next round in</span>
@@ -411,11 +413,13 @@ export function TourneyScreen(props: Props) {
   // ---------------------------------------------------------------- tabs
 
   const isKo = t.format === "knockout"
-  const isSwiss = t.format === "swiss"
+  const isRR = t.format === "round_robin"
+  // Round robin is run like Swiss rounds, on a fixed schedule.
+  const isSwiss = t.format === "swiss" || isRR
   const tabs = [
     { id: "overview", label: "Overview" },
     ...(isKo ? [{ id: "bracket", label: "Bracket" }] : []),
-    ...(isSwiss ? [{ id: "standings", label: "Standings" }, { id: "pairings", label: "Pairings" }] : []),
+    ...(isSwiss ? [{ id: "standings", label: "Standings" }, ...(isRR ? [{ id: "crosstable", label: "Crosstable" }] : []), { id: "pairings", label: "Pairings" }] : []),
     ...(t.format === "arena" ? [{ id: "standings", label: "Leaderboard" }] : []),
     { id: "live", label: `Live${view?.live.length ? ` (${view.live.length})` : ""}` },
     { id: "players", label: `Players (${props.players.length || view?.entrants.length || 0})` },
@@ -469,6 +473,7 @@ export function TourneyScreen(props: Props) {
                 {t.capacity ? ` / ${t.capacity}` : ""} players
               </span>
               {t.format === "swiss" && <span>{t.rounds ?? "Auto"} rounds</span>}
+              {isRR && <span>{t.rounds === 2 ? "Everyone plays everyone twice" : "Everyone plays everyone"}</span>}
               {isKo && <span>{t.knockout_games === 1 ? "Single-game matches" : `Best of ${t.knockout_games}`}</span>}
             </p>
             <div className="mt-6">{status}</div>
@@ -621,7 +626,8 @@ export function TourneyScreen(props: Props) {
 
         {tab === "bracket" && view && <Bracket view={view} meId={meId} />}
         {tab === "bracket" && !view?.bracket?.rounds.length && <p className="g-muted py-8 text-center">The bracket is drawn when the tournament starts, seeded by rating.</p>}
-        {tab === "standings" && isSwiss && view && <SwissStandings view={view} meId={meId} />}
+        {tab === "standings" && isSwiss && view && <SwissStandings view={view} meId={meId} roundRobin={isRR} />}
+        {tab === "crosstable" && view && <Crosstable view={view} meId={meId} />}
         {tab === "standings" && t.format === "arena" && (arena ? <ArenaTable arena={arena} meId={meId} /> : <p className="g-muted py-8 text-center">Loading the leaderboard…</p>)}
         {tab === "pairings" && view && <SwissPairings view={view} meId={meId} />}
         {tab === "live" && <LiveBoards boards={view?.live ?? []} offset={offset} />}

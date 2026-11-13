@@ -14,8 +14,8 @@ const MARK: Record<string, { label: string; cls: string }> = {
   B: { label: "B", cls: "bg-[var(--g-accent)]/70 text-black" },
 }
 
-// Swiss standings with tie-breaks and each player's round-by-round results.
-export function SwissStandings({ view, meId }: { view: TourneyView; meId: string | null }) {
+// Swiss (and round-robin) standings with tie-breaks and each player's round-by-round results.
+export function SwissStandings({ view, meId, roundRobin = false }: { view: TourneyView; meId: string | null; roundRobin?: boolean }) {
   const rows = view.standings ?? []
   if (!rows.length) return <p className="g-muted py-6 text-center">Standings appear after the first round.</p>
   const rounds = view.rounds ?? 0
@@ -28,9 +28,11 @@ export function SwissStandings({ view, meId }: { view: TourneyView; meId: string
             <th className="py-2 font-semibold">Player</th>
             <th className="py-2 font-semibold">Rounds</th>
             <th className="w-14 py-2 text-right font-semibold">Points</th>
-            <th className="w-16 py-2 text-right font-semibold" title="Buchholz (cut 1): opponents' points">
-              Buch.
-            </th>
+            {!roundRobin && (
+              <th className="w-16 py-2 text-right font-semibold" title="Buchholz (cut 1): opponents' points">
+                Buch.
+              </th>
+            )}
             <th className="w-14 py-2 text-right font-semibold" title="Sonneborn-Berger">
               SB
             </th>
@@ -66,14 +68,14 @@ export function SwissStandings({ view, meId }: { view: TourneyView; meId: string
                 </span>
               </td>
               <td className="py-2.5 text-right text-[17px] font-extrabold tabular-nums">{half(r.points)}</td>
-              <td className="py-2.5 text-right tabular-nums text-[var(--g-muted)]">{half(r.buchholz)}</td>
+              {!roundRobin && <td className="py-2.5 text-right tabular-nums text-[var(--g-muted)]">{half(r.buchholz)}</td>}
               <td className="py-2.5 text-right tabular-nums text-[var(--g-muted)]">{half(r.sb)}</td>
             </tr>
           ))}
         </tbody>
       </table>
       <p className="mt-3 text-[12px] text-[var(--g-muted)]">
-        Ties are split by Buchholz (cut 1), then Sonneborn-Berger, then wins. B: a bye (1 point). Tap a result to replay the game.
+        {roundRobin ? "Ties are split by Sonneborn-Berger, then wins." : "Ties are split by Buchholz (cut 1), then Sonneborn-Berger, then wins."} B: a bye (1 point). Tap a result to replay the game.
       </p>
     </div>
   )
@@ -136,6 +138,68 @@ export function SwissPairings({ view, meId }: { view: TourneyView; meId: string 
           )
         })}
       </ul>
+    </div>
+  )
+}
+
+// Round robin: everyone's result against everyone, in standings order. Read across: the row
+// player's score against each column player (two results in a double round robin).
+export function Crosstable({ view, meId }: { view: TourneyView; meId: string | null }) {
+  const rows = view.standings ?? []
+  if (!rows.length) return <p className="g-muted py-6 text-center">The crosstable fills in as games finish.</p>
+  const cell = "h-9 min-w-9 border border-[var(--g-line)] px-1 text-center"
+  return (
+    <div className="overflow-x-auto">
+      <table className="border-collapse text-[13px]">
+        <thead>
+          <tr className="text-[12px] text-[var(--g-muted)]">
+            <th className="sticky left-0 z-10 bg-[var(--g-bg)] pr-3 text-left font-semibold">Player</th>
+            {rows.map((r, i) => (
+              <th key={r.id} className={`${cell} font-semibold ${r.id === meId ? "text-[var(--g-accent)]" : ""}`} title={r.name}>
+                {i + 1}
+              </th>
+            ))}
+            <th className="w-14 pl-3 text-right font-semibold">Points</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={r.id} className={r.withdrawn ? "opacity-50" : ""}>
+              <th scope="row" className={`sticky left-0 z-10 max-w-[180px] truncate bg-[var(--g-bg)] py-1 pr-3 text-left font-semibold ${r.id === meId ? "text-[var(--g-accent)]" : ""}`}>
+                <span className="mr-2 inline-block w-5 text-right tabular-nums text-[var(--g-muted)]">{i + 1}</span>
+                {r.name}
+              </th>
+              {rows.map((c) => {
+                if (c.id === r.id) return <td key={c.id} className={`${cell} bg-white/[0.08]`} aria-label="—" />
+                const met = r.sheet.filter((x) => x.opponent === c.id)
+                return (
+                  <td key={c.id} className={`${cell} ${met.length ? "" : "text-white/20"}`} title={`${r.name} v ${c.name}`}>
+                    {met.length ? (
+                      <span className="flex justify-center gap-0.5">
+                        {met.map((x) => {
+                          const m = MARK[x.mark]
+                          const chip = <span className={`grid h-6 min-w-6 place-items-center rounded px-1 text-[12px] font-bold ${m?.cls ?? ""}`}>{m?.label ?? "?"}</span>
+                          return x.game_id ? (
+                            <Link key={x.round} href={`/play/analysis/${x.game_id}`} aria-label={`Round ${x.round}: replay`}>
+                              {chip}
+                            </Link>
+                          ) : (
+                            <span key={x.round}>{chip}</span>
+                          )
+                        })}
+                      </span>
+                    ) : (
+                      "·"
+                    )}
+                  </td>
+                )
+              })}
+              <td className="pl-3 text-right text-[16px] font-extrabold tabular-nums">{half(r.points)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-3 text-[12px] text-[var(--g-muted)]">Read across: each player&apos;s result against the numbered player above. Tap a result to replay the game.</p>
     </div>
   )
 }

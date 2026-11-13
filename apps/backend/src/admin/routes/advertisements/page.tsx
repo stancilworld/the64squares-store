@@ -136,7 +136,7 @@ function Editor({ data, start, onClose, onSaved }: { data: ShowcaseData; start: 
         : sdk.client.fetch("/admin/showcase", { method: "POST", body: { ...body, placement: "play_hero" } })
     },
     onSuccess: (_r, status) => {
-      toast.success(status === "live" ? "Saved. It's on the website (within a few minutes)." : "Saved")
+      toast.success(status === "live" ? "Saved. It's on the website now." : "Saved")
       qc.invalidateQueries({ queryKey: ["showcase"] })
       onSaved()
       onClose()

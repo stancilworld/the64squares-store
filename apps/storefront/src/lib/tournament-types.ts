@@ -170,6 +170,8 @@ export type TourneyView = {
   stats: TStats
   games: { id: string; white: { id: string; name: string; rating: number | null }; black: { id: string; name: string; rating: number | null }; result: string; reason: string; moves: number; ended_at: number | null }[]
   rounds?: number
+  // Round robin: how many times each pair plays (1 or 2).
+  cycles?: number
   standings?: SwissStanding[]
   pairings?: { round: number; games: { board: number; white: TSide; black: TSide; result: string | null; forfeit: boolean; game_id: string | null; live: boolean; fixed: boolean }[] }[]
   bracket?: { size: number; total_rounds: number; rounds: { round: number; name: string; matches: BracketMatch[] }[] }

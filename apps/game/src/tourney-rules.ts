@@ -1,5 +1,5 @@
-// Swiss and knockout tournaments: the pure rules (pairing, standings, tie-breaks, brackets),
-// kept apart from the database so they can be tested on their own.
+// Swiss, round-robin and knockout tournaments: the pure rules (pairing, standings, tie-breaks,
+// brackets), kept apart from the database so they can be tested on their own.
 
 export type Result = "1-0" | "0-1" | "1/2-1/2"
 // A tournament game (or a bye) as stored in play.t_game.
@@ -301,17 +301,52 @@ export const buildBracket = (seeded: Entrant[], games: TGame[], opts: { games: n
   return { size, totalRounds, rounds }
 }
 
+// ---------------------------------------------------------------- Round robin
+
+// Everyone plays everyone: once, or twice (colours reversed) in a double round robin. An odd
+// field gets a bye each round, so everyone sits out once per cycle (a bye scores 1 point, the
+// same for everyone).
+export const rrRounds = (players: number, cycles: number) => (players + (players % 2) - 1) * Math.max(1, cycles)
+
+// Berger tables (the circle method): the last seed stays put, the others turn one place a
+// round. Seeds in rating order; the same seeding always gives the same schedule.
+export const pairRoundRobin = (seeded: string[], round: number): SwissPairing[] => {
+  const ids: (string | null)[] = [...seeded]
+  if (ids.length % 2) ids.push(null)
+  const n = ids.length
+  const cycle = n - 1
+  const r = (round - 1) % cycle
+  const second = Math.floor((round - 1) / cycle) % 2 === 1
+  const ring = Array.from({ length: cycle }, (_, i) => ids[(i + r * (n / 2)) % cycle])
+  const pairs: [string | null, string | null][] = [r % 2 === 0 ? [ring[0], ids[n - 1]] : [ids[n - 1], ring[0]]]
+  for (let i = 1; i < n / 2; i++) pairs.push([ring[i], ring[cycle - i]])
+  return pairs.flatMap(([w, b]): SwissPairing[] => {
+    if (second) [w, b] = [b, w]
+    if (w && b) return [{ white: w, black: b }]
+    const one = w ?? b
+    return one ? [{ white: one, black: null }] : []
+  })
+}
+
+// Round-robin standings: points, then Sonneborn-Berger, then wins (Buchholz says nothing when
+// everyone meets everyone).
+export const compareRR = (a: SwissRow, b: SwissRow) =>
+  b.points - a.points || b.sb - a.sb || b.wins - a.wins || b.blacks - a.blacks || b.rating - a.rating || a.name.localeCompare(b.name)
+
+export const rrTable = (entrants: Entrant[], games: TGame[], withdrawn: Set<string>, rounds: number) => swissTable(entrants, games, withdrawn, rounds).sort(compareRR)
+
 export type FinalRank = { id: string; rank: number; score: number }
 
-// The final placings. Swiss: the standings order (tied players share nothing; tie-breaks
+// The final placings. Swiss and round robin: the standings order (tied players share nothing; tie-breaks
 // already split them). Knockout: the champion 1st, the losing finalist 2nd, then everyone
 // out in the same round shares a place (both losing semi-finalists are 3rd, and so on).
 export const finalRanking = (
-  format: "swiss" | "knockout",
+  format: "swiss" | "round_robin" | "knockout",
   table: SwissRow[] | null,
   bracket: { rounds: { matches: Match[] }[]; totalRounds: number } | null
 ): FinalRank[] => {
   if (format === "swiss") return [...(table ?? [])].sort(compareSwiss).map((r, i) => ({ id: r.id, rank: i + 1, score: r.points }))
+  if (format === "round_robin") return [...(table ?? [])].sort(compareRR).map((r, i) => ({ id: r.id, rank: i + 1, score: r.points }))
   if (!bracket) return []
   const out: FinalRank[] = []
   const placed = new Set<string>()

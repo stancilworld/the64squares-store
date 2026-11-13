@@ -14,7 +14,7 @@ import { randomBytes } from "node:crypto"
 import { applyResult, emptyStanding, type Standing } from "./arena-rules.js"
 import { pool } from "./db.js"
 import { migrateTourney } from "./tourney.js"
-import { buildBracket, type Entrant, finalRanking, matchState, pairSwiss, type Result, swissTable, type TGame } from "./tourney-rules.js"
+import { buildBracket, type Entrant, finalRanking, matchState, pairRoundRobin, pairSwiss, type Result, rrRounds, rrTable, swissTable, type TGame } from "./tourney-rules.js"
 
 const DEMO = "trn_demo_"
 const HOUR = 3600_000
@@ -106,7 +106,7 @@ type Demo = {
   id: string
   title: string
   handle: string
-  format: "arena" | "swiss" | "knockout"
+  format: "arena" | "swiss" | "round_robin" | "knockout"
   tc: string
   starts: number
   minutes: number
@@ -134,7 +134,7 @@ const prizeSets = {
 }
 
 const description = (d: Demo) =>
-  `This is a demo tournament, made up to show how tournaments look on The 64 Squares. ${d.format === "arena" ? "Play as many games as you can before the clock runs out." : d.format === "swiss" ? "Everyone plays every round against players on the same score." : "Win your match to go through; lose and you're out."}`
+  `This is a demo tournament, made up to show how tournaments look on The 64 Squares. ${d.format === "arena" ? "Play as many games as you can before the clock runs out." : d.format === "swiss" ? "Everyone plays every round against players on the same score." : d.format === "round_robin" ? "Everyone plays everyone once." : "Win your match to go through; lose and you're out."}`
 
 const cert = () => {
   const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
@@ -227,6 +227,30 @@ const swiss = async (d: Demo, field: Player[], upTo: number) => {
   ])
   if (!finished) return null
   const ranks = finalRanking("swiss", swissTable(seeded, games, new Set(), rounds), null)
+  for (const r of ranks) await pool.query(`insert into play.t_final (tournament_id, player_id, rank, score) values ($1,$2,$3,$4)`, [d.id, r.id, r.rank, r.score])
+  return new Map(ranks.map((r) => [r.id, { rank: r.rank, score: r.score }]))
+}
+
+// A round robin played to the end: everyone against everyone, on Berger tables.
+const roundRobin = async (d: Demo, field: Player[]) => {
+  const seeded = await entrantsOf(d, field)
+  const byId = new Map(seeded.map((e) => [e.id, e]))
+  const games: TGame[] = []
+  const rounds = rrRounds(seeded.length, 1)
+  for (let r = 1; r <= rounds; r++) {
+    for (const [i, p] of pairRoundRobin(seeded.map((e) => e.id), r).entries()) {
+      if (!p.black) {
+        games.push({ round: r, board: i + 1, game_no: 1, white_id: p.white, black_id: null, result: "1-0", forfeit: false, armageddon: false, game_id: null })
+        continue
+      }
+      const result = play(byId.get(p.white)!, byId.get(p.black)!)
+      const id = await saveGame(d.id, d.tc, byId.get(p.white)!, byId.get(p.black)!, result, d.starts + (r - 1) * 12 * 60_000)
+      games.push({ round: r, board: i + 1, game_no: 1, white_id: p.white, black_id: p.black, result, forfeit: false, armageddon: false, game_id: id })
+    }
+  }
+  await saveTGames(d, games)
+  await pool.query(`insert into play.t_state (tournament_id, phase, round, started_at, finished_at) values ($1,'finished',$2,$3,$4)`, [d.id, rounds, new Date(d.starts), new Date(d.starts + d.minutes * 60_000)])
+  const ranks = finalRanking("round_robin", rrTable(seeded, games, new Set(), rounds), null)
   for (const r of ranks) await pool.query(`insert into play.t_final (tournament_id, player_id, rank, score) values ($1,$2,$3,$4)`, [d.id, r.id, r.rank, r.score])
   return new Map(ranks.map((r) => [r.id, { rank: r.rank, score: r.score }]))
 }
@@ -330,6 +354,7 @@ const main = async () => {
     { id: `${DEMO}swiss_open`, title: "Demo · Rapid Swiss Open", handle: "demo-rapid-swiss-open", format: "swiss", tc: "10+5", rounds: 5, starts: at(-2, 18), minutes: 150, summary: "Five rounds of rapid.", tagline: "Win a handmade walnut board", status: "completed", field: 16, prizes: prizeSets.big },
     { id: `${DEMO}ko_cup`, title: "Demo · Knockout Cup", handle: "demo-knockout-cup", format: "knockout", tc: "5+3", ko_games: 2, starts: at(-1, 19), minutes: 120, summary: "Sixteen players, two-game matches, sudden death.", tagline: "Lose and you're out", status: "completed", field: 16, prizes: prizeSets.big },
     { id: `${DEMO}ko_bullet`, title: "Demo · Bullet Knockout", handle: "demo-bullet-knockout", format: "knockout", tc: "1+0", starts: at(-5, 21), minutes: 30, summary: "Eight players, one game per match.", tagline: "Fast hands only", status: "completed", field: 11, prizes: prizeSets.small },
+    { id: `${DEMO}rr_masters`, title: "Demo · Club Masters (round robin)", handle: "demo-club-masters", format: "round_robin", tc: "5+3", starts: at(-6, 18), minutes: 100, summary: "Eight players, everyone plays everyone.", tagline: "Seven rounds, no hiding", status: "completed", field: 8, prizes: prizeSets.small },
     { id: `${DEMO}swiss_live`, title: "Demo · Thursday Swiss (live)", handle: "demo-thursday-swiss-live", format: "swiss", tc: "3+2", rounds: 5, starts: now - 45 * 60_000, minutes: 90, summary: "A blitz Swiss under way.", tagline: "Round 3 being played", status: "published", field: 14, prizes: prizeSets.small },
     { id: `${DEMO}arena_live`, title: "Demo · Evening Arena (live)", handle: "demo-evening-arena-live", format: "arena", tc: "3+0", starts: now - 25 * 60_000, minutes: 60, summary: "Join any time while it's on.", tagline: "On fire: double points", status: "published", field: 18, prizes: prizeSets.small },
     { id: `${DEMO}arena_next`, title: "Demo · Late Night Arena", handle: "demo-late-night-arena", format: "arena", tc: "1+0", starts: now + 3 * HOUR, minutes: 45, summary: "Bullet before bed.", tagline: "Free with a pass", status: "published", field: 9, prizes: prizeSets.small },
@@ -343,7 +368,7 @@ const main = async () => {
     await insertTournament(d, d.status === "cancelled" ? { cancel_reason: "Not enough players checked in (3 of the 4 needed)." } : {})
     let ranks: Map<string, { rank: number; score: number }> | null = null
     if (d.status === "completed") {
-      ranks = d.format === "arena" ? await arena(d, f) : d.format === "swiss" ? await swiss(d, f, d.rounds ?? 5) : await knockout(d, f)
+      ranks = d.format === "arena" ? await arena(d, f) : d.format === "swiss" ? await swiss(d, f, d.rounds ?? 5) : d.format === "round_robin" ? await roundRobin(d, f) : await knockout(d, f)
     } else if (d.id.endsWith("swiss_live")) {
       await swiss(d, f, 2)
     } else if (d.id.endsWith("arena_live")) {

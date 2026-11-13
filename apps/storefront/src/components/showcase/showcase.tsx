@@ -120,6 +120,8 @@ function ActionView({ ad, signedIn, given, onGiven }: { ad: Ad; signedIn: boolea
     if (r.ok) {
       onGiven(r.given)
       setNote(r.message)
+      // The level bar shows the boost straight away.
+      if (r.given.kind === "xp_boost") window.dispatchEvent(new CustomEvent("t64:xp-boost", { detail: { factor: r.given.factor, ends_at: r.given.until } }))
     } else setNote(r.error)
   }
   const btn = "g-btn g-btn-primary ad-btn"

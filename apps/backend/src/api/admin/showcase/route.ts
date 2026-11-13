@@ -4,6 +4,7 @@ import { SHOWCASE_MODULE } from "../../../modules/showcase"
 import type ShowcaseModuleService from "../../../modules/showcase/service"
 import { createShowcaseAdWorkflow } from "../../../workflows/showcase"
 import type { ShowcaseAdBodyType } from "../validators"
+import { refreshWebsite } from "../../../lib/website-cache"
 
 type Row = Record<string, any>
 
@@ -32,5 +33,6 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
 // POST /admin/showcase: a new advert.
 export const POST = async (req: AuthenticatedMedusaRequest<ShowcaseAdBodyType>, res: MedusaResponse) => {
   const { result } = await createShowcaseAdWorkflow(req.scope).run({ input: req.validatedBody })
+  await refreshWebsite(["showcase"])
   res.json({ ad: result })
 }

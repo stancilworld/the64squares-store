@@ -7,6 +7,7 @@ import { GIcon } from "@/components/play-shell/icons"
 import { GAME_URL, tcText } from "@/lib/game-types"
 import { MiniBoard } from "@/components/chess/mini-board"
 import { positionAt, puzzleApi } from "@/lib/puzzles"
+import { nowMs } from "@/lib/clock"
 import { TITLE_COLOURS } from "@/lib/profile-types"
 import { Showcase } from "@/components/showcase/showcase"
 import type { Showcase as ShowcaseData } from "@/lib/showcase-types"
@@ -47,6 +48,38 @@ const greeting = () => {
 }
 
 // The Play home screen: a big Play button, the player's level and ratings, and the ways to play.
+// An XP boost that's on: how big, and how long is left. Also picks up a boost claimed on
+// this page (the advert window announces it).
+function XpBoost({ initial }: { initial: { factor: number; ends_at: string } | null }) {
+  const [boost, setBoost] = useState(initial)
+  const [now, setNow] = useState(0)
+  useEffect(() => {
+    const t = setTimeout(() => setBoost((b) => b ?? initial), 0)
+    return () => clearTimeout(t)
+  }, [initial])
+  useEffect(() => {
+    const on = (e: Event) => setBoost((e as CustomEvent<{ factor: number; ends_at: string }>).detail)
+    window.addEventListener("t64:xp-boost", on)
+    const tick = () => setNow(nowMs())
+    const first = setTimeout(tick, 0)
+    const t = setInterval(tick, 60_000)
+    return () => {
+      window.removeEventListener("t64:xp-boost", on)
+      clearTimeout(first)
+      clearInterval(t)
+    }
+  }, [])
+  const left = boost && now ? new Date(boost.ends_at).getTime() - now : 0
+  if (!boost || left <= 0) return null
+  const h = Math.floor(left / 3600_000)
+  const m = Math.floor((left % 3600_000) / 60_000)
+  return (
+    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-[var(--g-accent)] px-2 py-0.5 text-[11px] font-extrabold text-black" title={`Every game earns ${boost.factor}x XP until ${new Date(boost.ends_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", day: "numeric", month: "short" })}`}>
+      {boost.factor}x XP · {h ? `${h}h ${m}m` : `${m}m`} left
+    </span>
+  )
+}
+
 export function PlayHub({ meId, myName, signedIn, token, showcase }: { meId: string | null; myName: string | null; signedIn: boolean; token: string | null; showcase: ShowcaseData }) {
   const [live, setLive] = useState<Live | null>(null)
   const [hello, setHello] = useState("Welcome back")
@@ -163,7 +196,8 @@ export function PlayHub({ meId, myName, signedIn, token, showcase }: { meId: str
               <div className="mt-4">
                 <div className="flex justify-between text-[12px] font-semibold">
                   <span className="g-muted">Level {level?.level ?? 1}</span>
-                  <span className="g-muted">
+                  <XpBoost initial={profile?.xp_boost ?? null} />
+                  <span className="ml-auto g-muted">
                     {level ? `${level.into} / ${level.needed} XP` : "…"}
                   </span>
                 </div>

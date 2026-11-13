@@ -19,6 +19,8 @@ type Tournament = {
   time_control: string
   starts_at: number
   ends_at: number
+  // Staff paused it from the admin: no new games start (games being played carry on).
+  paused: boolean
 }
 
 type Arena = {
@@ -63,7 +65,7 @@ export const migrateArena = async () => {
 
 const loadTournament = async (idOrHandle: string): Promise<Tournament | null> => {
   const { rows } = await pool.query(
-    `select id, title, handle, format, mode, status, time_control, starts_at, ends_at
+    `select id, title, handle, format, mode, status, time_control, starts_at, ends_at, paused
        from public.tournament
       where (id = $1 or handle = $1) and deleted_at is null and status <> 'draft'`,
     [idOrHandle]
@@ -81,6 +83,7 @@ const loadTournament = async (idOrHandle: string): Promise<Tournament | null> =>
     time_control: r.time_control,
     starts_at: starts,
     ends_at: r.ends_at ? new Date(r.ends_at).getTime() : starts + DEFAULT_LENGTH_MS,
+    paused: !!r.paused,
   }
 }
 
@@ -166,6 +169,7 @@ const view = (a: Arena, now = Date.now()) => ({
   starts_at: a.t.starts_at,
   ends_at: a.t.ends_at,
   phase: phase(a, now),
+  paused: a.t.paused,
   server_now: now,
   standings: rank([...a.standings.values()])
     .slice(0, 100)
@@ -262,7 +266,7 @@ export const registerArena = (
 const broadcast = (io: Server, a: Arena) => io.to(`arena:${a.t.id}`).emit("arena:state", view(a))
 
 const pairArena = async (io: Server, manager: GameManager, a: Arena) => {
-  if (phase(a) !== "live" || a.pairing) return
+  if (phase(a) !== "live" || a.pairing || a.t.paused) return
   a.pairing = true
   try {
     await pairNow(io, manager, a)
@@ -326,6 +330,17 @@ export const startArenas = async (io: Server, manager: GameManager) => {
   const lastPhase = new Map<string, string>()
   setInterval(() => {
     for (const a of arenas.values()) {
+      // Live arenas re-read their tournament often, so a pause (or new times) from the admin
+      // takes effect within seconds.
+      if (phase(a) === "live" && Date.now() - a.loadedAt > 5000) {
+        a.loadedAt = Date.now()
+        void loadTournament(a.t.id).then((t) => {
+          if (!t) return
+          const changed = t.paused !== a.t.paused || t.ends_at !== a.t.ends_at || t.status !== a.t.status
+          a.t = t
+          if (changed) broadcast(io, a)
+        })
+      }
       const p = phase(a)
       if (lastPhase.get(a.t.id) !== p) {
         lastPhase.set(a.t.id, p)

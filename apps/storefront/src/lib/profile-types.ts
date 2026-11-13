@@ -23,6 +23,8 @@ export type FullProfile = PublicProfile & {
   ratings: { speed: "bullet" | "blitz" | "rapid" | "classical"; rating: number; provisional: boolean; games: number }[]
   stats: { people: Results; computer: Results }
   fair_play_closed?: boolean
+  // An XP boost on now (2x XP and the like, claimed from an advert).
+  xp_boost?: { factor: number; ends_at: string } | null
 }
 
 export const TITLE_COLOURS: Record<string, string> = {

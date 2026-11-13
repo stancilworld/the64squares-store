@@ -95,7 +95,7 @@ export const STATUS_LABELS: Record<TournamentStatus, { label: string; color: "gr
 const FORMATS: [Tournament["format"], string, string][] = [
   ["arena", "Arena", "Play as many games as you can in a fixed time; quick re-pairing. Best for online."],
   ["swiss", "Swiss", "Fixed rounds; players with similar scores meet. Standard for opens."],
-  ["round_robin", "Round robin", "Everyone plays everyone. For small groups."],
+  ["round_robin", "Round robin", "Everyone plays everyone (8 players: 7 rounds). For small groups."],
   ["knockout", "Knockout", "Lose and you're out."],
 ]
 
@@ -354,9 +354,23 @@ export function TournamentDrawer({ tournament, open, onClose }: { tournament: To
             <Field label="Time control" htmlFor="t-tc" hint="Minutes + seconds per move, e.g. 3+2.">
               <Input id="t-tc" value={form.time_control} onChange={(e) => set("time_control", e.target.value)} />
             </Field>
-            <Field label="Rounds" htmlFor="t-rounds" hint="Leave empty for Arena.">
-              <Input id="t-rounds" type="number" min={1} value={form.rounds ?? ""} onChange={(e) => set("rounds", intOrNull(e.target.value))} />
-            </Field>
+            {form.format === "round_robin" ? (
+              <Field label="Each pair plays" htmlFor="t-rounds" hint="Rounds follow from the number of players.">
+                <Select value={form.rounds === 2 ? "2" : "1"} onValueChange={(v) => set("rounds", v === "2" ? 2 : null)}>
+                  <Select.Trigger id="t-rounds">
+                    <Select.Value />
+                  </Select.Trigger>
+                  <Select.Content>
+                    <Select.Item value="1">Once</Select.Item>
+                    <Select.Item value="2">Twice (once with each colour)</Select.Item>
+                  </Select.Content>
+                </Select>
+              </Field>
+            ) : (
+              <Field label="Rounds" htmlFor="t-rounds" hint={form.format === "swiss" ? "Empty: enough to find a clear winner." : "Leave empty for Arena and Knockout."}>
+                <Input id="t-rounds" type="number" min={1} value={form.rounds ?? ""} onChange={(e) => set("rounds", intOrNull(e.target.value))} />
+              </Field>
+            )}
             <Field label="Places" htmlFor="t-cap" hint="Empty = no limit.">
               <Input id="t-cap" type="number" min={1} value={form.capacity ?? ""} onChange={(e) => set("capacity", intOrNull(e.target.value))} />
             </Field>

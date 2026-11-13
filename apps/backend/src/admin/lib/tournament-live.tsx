@@ -64,7 +64,7 @@ const phaseOf = (t: Tournament, e: Engine | undefined) => {
   if (t.status === "completed") return t.results_final_at ? { label: "Results final", color: "green" as const, text: "Prizes confirmed." } : { label: "Fair-play review", color: "orange" as const, text: "Results are provisional until the prize places are reviewed." }
   const started = new Date(t.starts_at).getTime() <= Date.now()
   if (!started) return { label: "Not started", color: "grey" as const, text: "" }
-  if (t.format === "arena") return { label: "Live", color: "red" as const, text: `${e?.arena.length ?? 0} players have played.` }
+  if (t.format === "arena") return { label: t.paused ? "Paused" : "Live", color: t.paused ? ("orange" as const) : ("red" as const), text: `${e?.arena.length ?? 0} players have played.${t.paused ? " The clock keeps running to the end time." : ""}` }
   if (!e?.state) return { label: "Starting", color: "orange" as const, text: "Pairing the first round…" }
   if (e.state.phase === "finished") return { label: "Finished", color: "blue" as const, text: "Results are being written." }
   if (e.state.phase === "cancelled_low") return { label: "Too few players", color: "red" as const, text: e.state.note ?? "" }
@@ -108,11 +108,9 @@ export function ControlRoom({ t, engine }: { t: Tournament; engine: Engine | und
                 Start now
               </Button>
             )}
-            {t.format !== "arena" && (
-              <Button size="small" variant="secondary" isLoading={control.isPending} onClick={() => control.mutate({ action: t.paused ? "resume" : "pause" })}>
-                {t.paused ? "Resume pairing" : "Pause pairing"}
-              </Button>
-            )}
+            <Button size="small" variant="secondary" isLoading={control.isPending} onClick={() => control.mutate({ action: t.paused ? "resume" : "pause" })}>
+              {t.paused ? "Resume pairing" : "Pause pairing"}
+            </Button>
             <Button size="small" variant="danger" onClick={() => setCancelling((c) => !c)}>
               Call it off
             </Button>

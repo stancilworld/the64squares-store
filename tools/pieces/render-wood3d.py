@@ -5,6 +5,9 @@ RES = int(os.environ.get("RES", 400))
 # "tabletop": seen from the player's side and above, standing on the board with a soft shadow
 # (tall images: the piece rises above its square). "upright": the old side view.
 STYLE = os.environ.get("STYLE", "tabletop")
+# "wood" (the board's pieces) or "ivory": polished ivory and charcoal in the site's colours,
+# with an amber rim light (the Play menu art and the 3D scene).
+FINISH = os.environ.get("FINISH", "wood")
 TALL = 1.5
 # World units across one square (the base is 0.81 across, about 65% of a square).
 SQUARE = 1.25
@@ -171,6 +174,21 @@ def wood(name, light, dark, scale=2.2):
     bsdf.inputs["Emission Strength"].default_value = 0.0
     return m
 
+def polished(name, colour):
+    # Ivory and charcoal: smooth, no grain, a satin clear coat that catches the light.
+    m = bpy.data.materials.new(name); m.use_nodes = True
+    bsdf = m.node_tree.nodes["Principled BSDF"]
+    bsdf.inputs["Base Color"].default_value = (*colour, 1)
+    bsdf.inputs["Roughness"].default_value = 0.42 if name == "w" else 0.36
+    bsdf.inputs["Specular IOR Level"].default_value = 0.5
+    bsdf.inputs["Coat Weight"].default_value = 0.35 if name == "w" else 0.55
+    bsdf.inputs["Coat Roughness"].default_value = 0.25
+    if name == "w":
+        # A little light through the surface, as ivory has.
+        bsdf.inputs["Subsurface Weight"].default_value = 0.08
+        bsdf.inputs["Subsurface Radius"].default_value = (0.08, 0.06, 0.04)
+    return m
+
 def srgb(h):
     h = h.lstrip("#"); c = [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
     return tuple((v / 12.92) if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in c)
@@ -217,6 +235,16 @@ def scene():
         ld = bpy.data.lights.new(kind, "AREA"); ld.energy = energy; ld.size = size
         lo = bpy.data.objects.new(kind, ld); lo.location = loc; lo.rotation_euler = rot; sc.collection.objects.link(lo)
     # Same rig, dimmed and softened to match the tabletop pictures' satin look.
+    if FINISH == "ivory":
+        # A soft key, a cool fill, and the site's amber as a rim from behind on the right.
+        world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.85, 0.86, 0.9, 1)
+        world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.22
+        light("key", (-3, -4, 5), 420, 4.0, (math.radians(45), 0, math.radians(-35)))
+        light("fill", (4, -3, 2), 90, 4.5, (math.radians(70), 0, math.radians(50)))
+        rim = bpy.data.lights.new("amber", "AREA"); rim.energy = 1100; rim.size = 2.0; rim.color = (1.0, 0.62, 0.12)
+        ro = bpy.data.objects.new("amber", rim); ro.location = (2.4, 3.4, 2.0); ro.rotation_euler = (math.radians(-60), 0, math.radians(140)); sc.collection.objects.link(ro)
+        light("rim", (-2, 4, 4), 380, 3.0, (math.radians(-45), 0, math.radians(-160)))
+        return
     light("key", (-3, -4, 5), 380, 4.0, (math.radians(45), 0, math.radians(-35)))
     light("fill", (4, -3, 2), 120, 4.5, (math.radians(70), 0, math.radians(50)))
     light("rim", (1, 4, 4), 360, 3.0, (math.radians(-45), 0, math.radians(170)))
@@ -227,6 +255,8 @@ BUILD = {"P": pawn, "R": rook, "N": knight, "B": bishop, "Q": queen, "K": king}
 # the grain. (They were #e3ac68/#c98a4b: saturated orange that rendered as gold.)
 MATS = {"w": ("#d4be9c", "#bea580"), "b": ("#503a2d", "#382a23")}
 ROUGHNESS = {"w": 0.70, "b": 0.68}
+# FINISH=ivory: the site's warm white and charcoal (as in the 3D scene).
+IVORY = {"w": "#e9e1d2", "b": "#34312e"}
 
 def main():
   OUT = sys.argv[sys.argv.index("--") + 1]
@@ -235,7 +265,7 @@ def main():
     for code, fn in BUILD.items():
         if ONLY and f"{colour}{code}" != ONLY: continue
         reset(); scene()
-        mat = wood(colour, srgb(MATS[colour][0]), srgb(MATS[colour][1]))
+        mat = polished(colour, srgb(IVORY[colour])) if FINISH == "ivory" else wood(colour, srgb(MATS[colour][0]), srgb(MATS[colour][1]))
         for o in fn():
             o.data.materials.clear(); o.data.materials.append(mat)
         if code == "N":

@@ -60,6 +60,7 @@ const TYPES = [
   { value: "all", label: "All types" },
   { value: "arena", label: "Arena" },
   { value: "swiss", label: "Swiss" },
+  { value: "round_robin", label: "Round robin" },
   { value: "knockout", label: "Knockout" },
 ]
 const SPEEDS = ["All controls", "Bullet", "Blitz", "Rapid", "Classical"]
@@ -204,10 +205,10 @@ export function TournamentTimeline({ events, initialDay }: { events: TimelineEve
         </p>
       )}
       <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-[var(--g-muted)]">
-        {(["arena", "swiss", "knockout"] as const).map((f) => (
+        {(["arena", "swiss", "round_robin", "knockout"] as const).map((f) => (
           <span key={f} className="inline-flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-sm" style={{ background: FORMAT_COLOUR[f] }} />
-            {f === "arena" ? "Arena: play as many games as you can" : f === "swiss" ? "Swiss: fixed rounds, nobody is knocked out" : "Knockout: lose a match and you're out"}
+            {f === "arena" ? "Arena: play as many games as you can" : f === "swiss" ? "Swiss: fixed rounds, nobody is knocked out" : f === "round_robin" ? "Round robin: everyone plays everyone" : "Knockout: lose a match and you're out"}
           </span>
         ))}
         <span>Times in India time (IST).</span>

@@ -12,7 +12,11 @@ rook 80, pawn 76; 2.5% bottom margin) and save as 240 px WebP into
 `apps/storefront/public/pieces/wood3d/`. Change `MATS` for other finishes.
 
 The Play menu art in `apps/storefront/public/play-art/` (wK, bK, wN, wR, wP, bQ) comes from
-the same script with `RES = 800`, cropped to the piece and saved as 520 px WebP.
+the same script in polished ivory and charcoal with an amber rim light, matching the 3D scene:
+
+    FINISH=ivory STYLE=upright RES=800 ./bl/bin/python render-wood3d.py -- out wK
+
+then each is scaled to the same height and position as before and saved as 520 px WebP.
 
 The board uses a second render of the set, `STYLE=tabletop` (the default): seen from the
 player's side and above (46°), standing on an invisible floor that keeps a soft shadow, 400 x

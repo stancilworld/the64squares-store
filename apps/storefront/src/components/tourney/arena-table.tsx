@@ -17,6 +17,8 @@ export type ArenaState = {
   starts_at: number
   ends_at: number
   phase: "before" | "live" | "over" | "cancelled"
+  // Staff paused it: no new games start.
+  paused?: boolean
   server_now: number
   standings: ArenaRow[]
   playing_now: number

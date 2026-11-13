@@ -87,7 +87,7 @@ export const processTournamentResults = async (c: MedusaContainer) => {
        left join play.t_state s on s.tournament_id = t.id
       where t.deleted_at is null and t.mode = 'online' and t.results_final_at is null and t.id not like ${NOT_DEMO}
         and (
-          (t.status = 'published' and t.format in ('swiss','knockout') and s.phase = 'finished')
+          (t.status = 'published' and t.format in ('swiss','round_robin','knockout') and s.phase = 'finished')
           or (t.status = 'published' and t.format = 'arena' and coalesce(t.ends_at, t.starts_at + interval '1 hour') < now() - interval '${ARENA_GRACE_MS / 1000} seconds')
           or (t.status = 'completed' and t.results_at > now() - interval '7 days')
         )`

@@ -3,7 +3,7 @@ import type { Server, Socket } from "socket.io"
 import { pool } from "./db.js"
 import { type Game, parseTimeControl, type Player } from "./game.js"
 import type { GameManager } from "./manager.js"
-import { buildBracket, type Entrant, finalRanking, matchState, pairSwiss, swissTable, type TGame } from "./tourney-rules.js"
+import { buildBracket, type Entrant, finalRanking, matchState, pairRoundRobin, pairSwiss, rrRounds, rrTable, swissTable, type TGame } from "./tourney-rules.js"
 
 // Swiss and knockout tournaments, run by this server from the store's tournament settings
 // (public.tournament, read only) and its checked-in players. Everything the event needs to
@@ -162,6 +162,9 @@ const speedOfTc = (tc: string) => {
 }
 
 // How many Swiss rounds: as set, else enough to find a clear winner (log2 of the field).
+// Round robin: "rounds" set to 2 means everyone plays everyone twice.
+export const rrCycles = (t: Pick<T, "rounds">) => (t.rounds === 2 ? 2 : 1)
+
 export const swissRounds = (t: Pick<T, "rounds">, players: number) => t.rounds ?? Math.max(3, Math.min(11, Math.ceil(Math.log2(Math.max(2, players)))))
 
 const busy = new Set<string>()
@@ -216,7 +219,7 @@ export class Tourneys {
     try {
       const { rows } = await pool.query(
         `select t.id from public.tournament t left join play.t_state s on s.tournament_id = t.id
-          where t.deleted_at is null and t.mode = 'online' and t.format in ('swiss', 'knockout') and t.status = 'published'
+          where t.deleted_at is null and t.mode = 'online' and t.format in ('swiss', 'round_robin', 'knockout') and t.status = 'published'
             and t.starts_at <= now() and (s.phase is null or s.phase = 'running') and t.starts_at > now() - interval '3 days'
             and t.id not like 'trn\\_demo\\_%'`
       )
@@ -287,6 +290,43 @@ export class Tourneys {
       for (const [i, p] of pairs.entries()) {
         if (!p.black) {
           await pool.query(`insert into play.t_game (tournament_id, round, board, white_id, black_id, result) values ($1,$2,$3,$4,null,'1-0') on conflict do nothing`, [t.id, next, i + 1, p.white])
+          continue
+        }
+        await this.createGame(t, next, i + 1, 1, byId.get(p.white)!, byId.get(p.black)!, false)
+      }
+      return this.changed(t.id)
+    }
+
+    if (t.format === "round_robin") {
+      // Everyone plays everyone (twice when rounds is 2): the schedule is fixed by the seeds.
+      const rounds = rrRounds(entrants.length, rrCycles(t))
+      if (state.round > 0 && !roundDone(state.round)) return
+      if (state.round >= rounds) return this.finish(t.id)
+      if (state.round > 0) {
+        if (!state.round_done_at) {
+          await pool.query("update play.t_state set round_done_at = now() where tournament_id = $1", [t.id])
+          return this.changed(t.id)
+        }
+        if (Date.now() - state.round_done_at < breakMs) return
+      }
+      if (t.paused) return
+      if (entrants.filter((e) => !withdrawn.has(e.id)).length < 2) return this.finish(t.id)
+      const next = state.round + 1
+      const seeded = [...entrants].sort((a, b) => a.seed - b.seed)
+      const pairs = pairRoundRobin(seeded.map((e) => e.id), next)
+      await pool.query("update play.t_state set round = $2, round_done_at = null where tournament_id = $1", [t.id, next])
+      const byId = new Map(entrants.map((e) => [e.id, e]))
+      for (const [i, p] of pairs.entries()) {
+        if (!p.black) {
+          await pool.query(`insert into play.t_game (tournament_id, round, board, white_id, black_id, result) values ($1,$2,$3,$4,null,'1-0') on conflict do nothing`, [t.id, next, i + 1, p.white])
+          continue
+        }
+        // A player who has left loses their remaining games without playing them.
+        const wOut = withdrawn.has(p.white)
+        const bOut = withdrawn.has(p.black)
+        if (wOut || bOut) {
+          const result = wOut && bOut ? "1/2-1/2" : wOut ? "0-1" : "1-0"
+          await pool.query(`insert into play.t_game (tournament_id, round, board, game_no, white_id, black_id, result, forfeit) values ($1,$2,$3,1,$4,$5,$6,true) on conflict do nothing`, [t.id, next, i + 1, p.white, p.black, result])
           continue
         }
         await this.createGame(t, next, i + 1, 1, byId.get(p.white)!, byId.get(p.black)!, false)
@@ -377,7 +417,7 @@ export class Tourneys {
     await pool.query("update play.t_game set result = $2, forfeit = $3, ended_at = now() where game_id = $1 and fixed_by is null", [g.r.id, result ?? "1/2-1/2", forfeit])
     if (absent) {
       const { rows: tr } = await pool.query("select format from public.tournament where id = $1", [row.tournament_id])
-      if (tr[0]?.format === "swiss") {
+      if (tr[0]?.format === "swiss" || tr[0]?.format === "round_robin") {
         await pool.query(`insert into play.t_withdrawn (tournament_id, player_id, reason) values ($1,$2,'no-show') on conflict do nothing`, [row.tournament_id, absent])
       }
     }
@@ -477,6 +517,22 @@ export class Tourneys {
         })),
       }
     }
+    if (t.format === "round_robin") {
+      const rounds = rrRounds(entrants.length, rrCycles(t))
+      const table = rrTable(entrants, games, withdrawn, rounds)
+      const byRound = new Map<number, typeof games>()
+      for (const g of games) byRound.set(g.round, [...(byRound.get(g.round) ?? []), g])
+      return {
+        ...base,
+        rounds,
+        cycles: rrCycles(t),
+        standings: table.map((r, i) => ({ rank: i + 1, ...r })),
+        pairings: [...byRound.entries()].map(([round, gs]) => ({
+          round,
+          games: gs.map((g) => ({ board: g.board, white: side(g.white_id), black: side(g.black_id), result: g.black_id === null ? "bye" : g.result, forfeit: g.forfeit, game_id: g.game_id, live: !!g.game_id && liveIds.has(g.game_id), fixed: !!g.fixed_by })),
+        })),
+      }
+    }
     if (t.format === "knockout") {
       const b = buildBracket(entrants, games, { games: t.knockout_games, armageddon: t.armageddon })
       return {
@@ -504,12 +560,14 @@ export class Tourneys {
 // Run again after staff correct a result.
 export const saveFinal = async (tid: string) => {
   const t = await loadT(tid)
-  if (!t || (t.format !== "swiss" && t.format !== "knockout")) return
+  if (!t || !["swiss", "round_robin", "knockout"].includes(t.format)) return
   const [entrants, games, withdrawn] = await Promise.all([loadEntrants(t.id), loadGames(t.id), loadWithdrawn(t.id)])
   const ranks =
     t.format === "swiss"
       ? finalRanking("swiss", swissTable(entrants, games, withdrawn, swissRounds(t, entrants.length)), null)
-      : finalRanking("knockout", null, buildBracket(entrants, games, { games: t.knockout_games, armageddon: t.armageddon }))
+      : t.format === "round_robin"
+        ? finalRanking("round_robin", rrTable(entrants, games, withdrawn, rrRounds(entrants.length, rrCycles(t))), null)
+        : finalRanking("knockout", null, buildBracket(entrants, games, { games: t.knockout_games, armageddon: t.armageddon }))
   await pool.query("delete from play.t_final where tournament_id = $1", [t.id])
   for (const r of ranks) {
     await pool.query("insert into play.t_final (tournament_id, player_id, rank, score) values ($1,$2,$3,$4)", [t.id, r.id, r.rank, r.score])
