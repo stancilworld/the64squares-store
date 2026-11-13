@@ -56,6 +56,8 @@ import {
   RegistrationResultBody,
   TournamentControlBody,
   LobbyAdminBody,
+  CommentaryLineBody,
+  CommentarySettingBody,
   PassRulesBody,
   PassGrantBody,
   TournamentVisitBody,
@@ -536,6 +538,16 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/admin/tournaments/:id/control",
       middlewares: [validateAndTransformBody(TournamentControlBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/commentary",
+      middlewares: [validateAndTransformBody(CommentarySettingBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/internal/commentary",
+      middlewares: [validateAndTransformBody(CommentaryLineBody)],
     },
     {
       method: ["POST"],

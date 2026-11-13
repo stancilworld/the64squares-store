@@ -19,6 +19,7 @@ import { playSound, soundForSan } from "@/lib/chess/sounds"
 import type { PlayPass } from "@/lib/play"
 import type { PublicProfile } from "@/lib/profile-types"
 import { usePlayPass } from "./use-play-pass"
+import { CommentaryPanel } from "@/components/commentary/commentary-panel"
 import { type ChatMsg, GameChat } from "./game-chat"
 import { ShareGame } from "./share-game"
 import { useBoardSettings } from "@/lib/chess/settings"
@@ -47,6 +48,8 @@ export function GameView({ id, initialPass, share = false }: Props) {
   const meId = pass?.me.id ?? null
   const router = useRouter()
   const socket = useRef<Socket | null>(null)
+  // The same connection, for the commentary panel (spectators).
+  const [sock, setSock] = useState<Socket | null>(null)
   const [game, setGame] = useState<GameState | null>(null)
   const gameRef = useRef<GameState | null>(null)
   const [receivedAt, setReceivedAt] = useState(0)
@@ -188,6 +191,7 @@ export function GameView({ id, initialPass, share = false }: Props) {
   useEffect(() => {
     const s = io(GAME_URL, { path: "/game/socket.io", auth: token ? { token } : {}, transports: ["websocket", "polling"] })
     socket.current = s
+    s.on("connect", () => setSock(s))
     const watch = () =>
       s.emit("game:watch", id, (res: { ok: boolean; game?: GameState; presence?: Presence | null; chat?: ChatMsg[]; error?: string }) => {
         if (res.ok && res.game) {
@@ -817,6 +821,7 @@ export function GameView({ id, initialPass, share = false }: Props) {
             )}
           </p>
           {statusCard}
+          {!myColour && game.mode !== "computer" && <CommentaryPanel socket={sock} gameId={id} showBoard={false} />}
           {canChat && <GameChat messages={chat} me={myColour} canType={canType} onSend={sendChat} muted={muted} onMute={() => setMuted((m) => !m)} />}
           <MovePanel moves={game.moves} ply={shownPly} onGo={goTo} onFlip={() => setFlipped((f) => !f)} className="order-first lg:order-none" />
         </>

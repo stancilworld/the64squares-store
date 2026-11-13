@@ -1099,3 +1099,19 @@ export const ShowcaseCountBody = z.object({ what: z.enum(["views", "clicks"]) })
 export const CoachVoiceBody = z
   .object({ text: z.string().trim().min(2).max(320).regex(/^[\p{L}\p{N} .,!?'’:;()+\-–—]+$/u, "Only plain text") })
   .strict()
+
+// The game server asking for a live commentary line (secret checked in the route).
+export const CommentaryLineBody = z.object({
+  facts: z.record(z.string(), z.unknown()).refine((f) => JSON.stringify(f).length < 4000, "Too long"),
+  fallback: z.string().min(1).max(400),
+  voice: z.boolean(),
+})
+export type CommentaryLineBodyType = z.infer<typeof CommentaryLineBody>
+
+// Live commentary on or off for the whole site, a tournament or one game; voice = featured.
+export const CommentarySettingBody = z.object({
+  scope: z.string().regex(/^(site|tourney:[A-Za-z0-9_]{3,60}|game:[A-Za-z0-9]{6,20})$/),
+  enabled: z.boolean(),
+  voice: z.boolean(),
+})
+export type CommentarySettingBodyType = z.infer<typeof CommentarySettingBody>

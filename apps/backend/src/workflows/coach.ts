@@ -8,7 +8,8 @@ import type CoachModuleService from "../modules/coach/service"
 // The coach saying a sentence: the kept clip if there is one, otherwise a new one from
 // ElevenLabs (within the player's daily allowance), kept for next time.
 
-type Input = { customer_id: string; text: string; voice: VoiceKeys }
+// limit: characters a day for this customer (the coach's default, or live commentary's).
+type Input = { customer_id: string; text: string; voice: VoiceKeys; limit?: number }
 type Row = Record<string, any>
 
 const cs = (c: { resolve: (k: string) => unknown }) => c.resolve(COACH_MODULE) as CoachModuleService
@@ -25,7 +26,7 @@ const speakCoachStep = createStep(
     }
     const day = indiaDay()
     const [use] = (await s.listCoachUsages({ customer_id: input.customer_id, day })) as Row[]
-    if ((use?.chars ?? 0) + input.text.length > DAILY_CHARS) {
+    if ((use?.chars ?? 0) + input.text.length > (input.limit ?? DAILY_CHARS)) {
       throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "The coach's voice is resting for today. You'll hear your browser's voice until tomorrow.")
     }
     const audio = await synthesize(input.voice, input.text)

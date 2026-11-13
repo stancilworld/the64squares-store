@@ -66,6 +66,7 @@ export const PERMISSIONS: Permission[] = [
   { key: "tournaments.manage", group: "Tournaments", label: "Manage tournaments", description: "Create, edit, publish, cancel and delete tournaments.", default: false },
   { key: "fairplay.review", group: "Tournaments", label: "Fair play review", description: "See players flagged by the anti-cheat checks and clear, warn or ban them.", default: false },
   { key: "tournaments.moderate", group: "Tournaments", label: "Moderate tournament lobbies", description: "Choose lobby moderators, read every lobby chat (including questions to the arbiter), delete messages and change chat settings.", default: false },
+  { key: "commentary.manage", group: "Tournaments", label: "Live commentary", description: "Switch the AI commentary on or off for live games and tournaments, and choose featured (voiced) matches.", default: false },
   { key: "tournaments.checkin", group: "Tournaments", label: "Players & check-in", description: "See who registered (names, emails, phones), download the list, check players in at the door, cancel a place.", default: true },
 
   // Settings
@@ -176,6 +177,7 @@ const RULES: Rule[] = [
   r("any", /^\/tournament-checkin(\/|$)/, "tournaments.checkin"),
   r("any", /^\/tournaments\/[^/]+\/lobby(\/|$)/, "tournaments.moderate"),
   r("any", /^\/lobby-moderators(\/|$)/, "tournaments.moderate"),
+  r("any", /^\/commentary(\/|$)/, "commentary.manage"),
   r("write", /^\/tournaments\/[^/]+\/registrations\/[^/]+\/result$/, "tournaments.manage"),
   r("any", /^\/tournament-passes(\/|$)/, "tournaments.manage"),
   r("any", /^\/tournaments\/[^/]+\/registrations(\/|$)/, "tournaments.checkin"),

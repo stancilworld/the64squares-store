@@ -18,6 +18,7 @@ import { migrateFriends, registerFriends } from "./friends.js"
 import { xpForGame } from "./levels.js"
 import { activeBoost, addXp, ensureProfile, getProfile, getProfiles, migrateProfiles, publicProfile, readAvatar, removeAvatar, searchProfiles, setAvatar, updateProfile } from "./profiles.js"
 import { Lobbies, migrateLobby } from "./lobby.js"
+import { Commentary, migrateCommentary } from "./commentary.js"
 import { houseBoard, registerSeek, SEEK_TIME_CONTROLS, seekCounts, seekList, startSeeking } from "./seek.js"
 import { HouseDriver } from "./house/driver.js"
 import { isHouse } from "./house/persona.js"
@@ -231,6 +232,7 @@ const io = new Server(server, {
 const room = (id: string) => `game:${id}`
 const manager = new GameManager((view) => {
   io.to(room(view.id)).emit("game:state", view)
+  commentary?.onState(view)
   if (view.status === "finished" || view.status === "aborted") {
     presence.delete(view.id)
     setTimeout(() => dropChat(view.id), 15 * 60_000).unref()
@@ -242,6 +244,9 @@ const tourneys = new Tourneys(io, manager)
 
 // Tournament lobbies: chat between moderators, players and spectators.
 const lobbyList = new Lobbies(io)
+
+// Live commentary for spectators (switched on in the admin).
+const commentary: Commentary | null = new Commentary(io, manager)
 
 // House Players' moves, chat, draw answers and rematches.
 const house = new HouseDriver(io, manager)
@@ -525,6 +530,7 @@ io.on("connection", (socket) => {
   registerArena(io, socket, manager, me, limited)
   tourneys.register(socket, me, limited)
   lobbyList.register(socket, me, limited)
+  commentary?.register(socket, me, limited)
   registerSeek(io, socket, manager, me, limited)
   registerFriends(io, socket, manager, me, limited)
   registerChat(io, socket, manager, me)
@@ -542,6 +548,8 @@ const main = async () => {
   await migrateFide()
   await migrateLobby()
   await lobbyList.listen()
+  await migrateCommentary()
+  await commentary?.start()
   startFairPlay(manager)
   // FIDE rankings: downloaded monthly in the background.
   if (process.env.FIDE_RANKINGS !== "off") startFide()

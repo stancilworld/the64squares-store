@@ -15,6 +15,7 @@ import { nowMs } from "@/lib/clock"
 import { GAME_URL } from "@/lib/game-types"
 import { checkInToTournament } from "@/lib/tournament-actions"
 import { eventTime, type LiveBoard, speedLabel, type Ticket, type Tournament, type TourneyView } from "@/lib/tournament-types"
+import { CommentaryPanel } from "@/components/commentary/commentary-panel"
 import { LobbyChat } from "./lobby-chat"
 import { type Channel, type LobbyJoin, type LobbyMe, type LobbyMsg, type LobbySettings, type Person, type Presence, ROLE_LABEL, type Role, SEND_ERROR } from "./lobby-types"
 
@@ -61,7 +62,8 @@ const FORMATS: Record<string, { colour: string; piece: string; name: string; tab
   },
 }
 
-type Tab = "live" | "table" | "rules" | "chat"
+type Tab = "live" | "commentary" | "table" | "rules" | "chat"
+type OnAir = { game_id: string; white: { name: string }; black: { name: string }; voice: boolean }
 
 function Avatar({ p, size = 30 }: { p: Person; size?: number }) {
   return p.avatar_url ? (
@@ -184,13 +186,25 @@ export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTi
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [rejoin, setRejoin] = useState(0)
+  const [sock, setSock] = useState<Socket | null>(null)
+  const [onAir, setOnAir] = useState<OnAir[]>([])
+  const [airGame, setAirGame] = useState<string | null>(null)
   const now = useNow()
   const n = (now ?? nowMs()) + offset
 
   useEffect(() => {
     const s = io(GAME_URL, { path: "/game/socket.io", auth: token ? { token } : {}, transports: ["websocket", "polling"] })
     socket.current = s
+    s.on("connect", () => setSock(s))
+    // Games with live commentary in this tournament (featured, with voice, first).
+    const air = () =>
+      s.emit("commentary:list", t.id, (r: { ok: boolean; games?: OnAir[] }) => {
+        if (r.ok && r.games) setOnAir([...r.games].sort((a, b) => Number(b.voice) - Number(a.voice)))
+      })
+    const airTimer = setInterval(air, 20_000)
+    s.on("commentary:started", (d: { tournament_id: string | null }) => d.tournament_id === t.id && air())
     s.on("connect", () => {
+      air()
       s.emit("lobby:join", t.id, (res: LobbyJoin | { ok: false; error: string }) => {
         if (!res.ok) return setError("The lobby couldn't open. Please reload the page.")
         setJoin(res)
@@ -245,6 +259,7 @@ export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTi
     s.on("tourney:paired", go)
     s.on("arena:paired", go)
     return () => {
+      clearInterval(airTimer)
       s.disconnect()
     }
   }, [t.id, t.format, token, router])
@@ -379,8 +394,10 @@ export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTi
     )
   })()
 
+  const airId = onAir.some((g) => g.game_id === airGame) ? airGame : (onAir[0]?.game_id ?? null)
   const tabs: [Tab, string][] = [
     ["live", `Live boards${view?.live.length ? ` (${view.live.length})` : ""}`],
+    ...(onAir.length || tab === "commentary" ? ([["commentary", "Commentary"]] as [Tab, string][]) : []),
     ["table", f.table],
     ["rules", "Rules & guide"],
     ["chat", "Chat"],
@@ -461,6 +478,24 @@ export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTi
           </div>
           <div className={`lobby-panel ${tab === "chat" ? "lobby-panel-chatmode" : ""}`}>
             {tab === "live" && (view?.live.length ? <LiveBoards boards={view.live} offset={offset} /> : <p className="lobby-empty">{running ? "No games on right now. The next round's boards appear here." : "The boards appear here when the games start."}</p>)}
+            {tab === "commentary" &&
+              (airId && role !== "player" ? (
+                <div className="flex flex-col gap-3">
+                  {onAir.length > 1 && (
+                    <div className="lobby-rules-nav" role="tablist" aria-label="Games with commentary">
+                      {onAir.map((g) => (
+                        <button key={g.game_id} type="button" role="tab" aria-selected={g.game_id === airId} onClick={() => setAirGame(g.game_id)}>
+                          {g.white.name} – {g.black.name}
+                          {g.voice ? " ★" : ""}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <CommentaryPanel key={airId} socket={sock} gameId={airId} />
+                </div>
+              ) : (
+                <p className="lobby-empty">{role === "player" ? "Commentary is for spectators while games are on, so it can't help anyone playing. Watch the replays after your games." : "No game has commentary right now."}</p>
+              ))}
             {tab === "table" && table}
             {tab === "rules" && <Rules t={t} chapters={chapters} how={f.how} />}
           </div>

@@ -37,17 +37,32 @@ export const write = async (c: MedusaContainer, task: WriteTask, topic: string, 
   ]
     .filter(Boolean)
     .join("\n\n")
+  const answer = await askAi(c, providers, SYSTEM, prompt, { temperature: 0.7, maxTokens: 1200, timeoutMs: 40_000, label: "Writing helper" })
+  if (answer) return { ok: true as const, provider: answer.provider, text: answer.text }
+  return { ok: false as const, reason: "failed" as const }
+}
+
+type Provider = Awaited<ReturnType<typeof getServiceKeys>>["ai"][number]
+
+// One question to the free AI keys, Groq first, then Gemini. null if none answered.
+export const askAi = async (
+  c: MedusaContainer,
+  providers: Provider[],
+  system: string,
+  prompt: string,
+  o: { temperature: number; maxTokens: number; timeoutMs: number; label: string }
+): Promise<{ provider: Provider["provider"]; text: string } | null> => {
   const logger = c.resolve(ContainerRegistrationKeys.LOGGER)
   for (const p of providers) {
     try {
-      const signal = AbortSignal.timeout(40_000)
+      const signal = AbortSignal.timeout(o.timeoutMs)
       let out = ""
       if (p.provider === "groq") {
         const base = (process.env.GROQ_API_BASE || "https://api.groq.com").replace(/\/$/, "")
         const r = await fetch(`${base}/openai/v1/chat/completions`, {
           method: "POST",
           headers: { "content-type": "application/json", authorization: `Bearer ${p.key}` },
-          body: JSON.stringify({ model: p.model, temperature: 0.7, max_tokens: 1200, messages: [{ role: "system", content: SYSTEM }, { role: "user", content: prompt }] }),
+          body: JSON.stringify({ model: p.model, temperature: o.temperature, max_tokens: o.maxTokens, messages: [{ role: "system", content: system }, { role: "user", content: prompt }] }),
           signal,
         })
         if (!r.ok) throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, `Groq ${r.status}`)
@@ -57,17 +72,17 @@ export const write = async (c: MedusaContainer, task: WriteTask, topic: string, 
         const r = await fetch(`${base}/v1beta/models/${encodeURIComponent(p.model)}:generateContent`, {
           method: "POST",
           headers: { "content-type": "application/json", "x-goog-api-key": p.key },
-          body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM }] }, contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 1200 } }),
+          body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: o.temperature, maxOutputTokens: o.maxTokens } }),
           signal,
         })
         if (!r.ok) throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, `Gemini ${r.status}`)
         out = ((await r.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] }).candidates?.[0]?.content?.parts?.map((x) => x.text ?? "").join("") ?? ""
       }
       out = out.replace(/\*\*/g, "").replace(/^#+\s*/gm, "").trim()
-      if (out) return { ok: true as const, provider: p.provider, text: out }
+      if (out) return { provider: p.provider, text: out }
     } catch (e) {
-      logger.warn(`Writing helper: ${p.provider} didn't answer (${(e as Error).message})`)
+      logger.warn(`${o.label}: ${p.provider} didn't answer (${(e as Error).message})`)
     }
   }
-  return { ok: false as const, reason: "failed" as const }
+  return null
 }

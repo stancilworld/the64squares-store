@@ -17,4 +17,7 @@ export const config = {
   // Where this server is reached from browsers (for picture links), and where pictures are kept.
   publicUrl: (process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 9200}`).replace(/\/$/, ""),
   avatarDir: process.env.AVATAR_DIR || path.resolve("uploads/avatars"),
+  // The backend (live commentary's writer and voice), and the secret both share.
+  backendUrl: (process.env.BACKEND_URL || "http://localhost:9000").replace(/\/$/, ""),
+  internalSecret: process.env.GAME_INTERNAL_SECRET || (process.env.NODE_ENV === "production" ? "" : "local-internal-secret"),
 }

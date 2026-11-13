@@ -651,6 +651,22 @@ html[data-focus] .play-main {
 .lobby-enter:hover { background: color-mix(in srgb, var(--fc) 32%, #1b1b1b); }
 .lobby .rule-text h2 { color: var(--fc); }
 
+/* Live commentary (spectators): delayed board and the commentator's lines. */
+.commentary { display: flex; flex-direction: column; gap: 10px; border-radius: 14px; padding: 12px 14px; background: linear-gradient(160deg, color-mix(in srgb, var(--fc, #ffb300) 12%, var(--g-panel)) 0%, var(--g-panel) 55%); border: 1px solid color-mix(in srgb, var(--fc, #ffb300) 35%, var(--g-line)); }
+.commentary-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.commentary-live { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 15px; }
+.commentary-delay { font-size: 12.5px; color: var(--g-muted); flex: 1; }
+.commentary-listen { font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--g-line); }
+.commentary-listen[aria-pressed="true"] { background: var(--fc, var(--g-accent)); color: #111; border-color: transparent; }
+.commentary-board { max-width: 420px; width: 100%; align-self: center; display: flex; flex-direction: column; gap: 6px; }
+.commentary-side { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; }
+.commentary-clock { font-variant-numeric: tabular-nums; padding: 1px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); }
+.commentary-clock-on { background: #fff; color: #111; }
+.commentary-now { font-size: 17px; line-height: 1.5; font-weight: 600; padding: 10px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.25); border-left: 3px solid var(--fc, var(--g-accent)); }
+.commentary-feed { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.5; color: #d9d6cf; }
+.commentary-move { color: var(--g-muted); font-variant-numeric: tabular-nums; }
+.commentary-end { font-weight: 700; }
+
 /* Rule book (/play/rules): chapter list beside the page, chips on phones. */
 .rule-book { display: grid; gap: 16px; }
 @media (min-width: 900px) { .rule-book { grid-template-columns: 240px 1fr; align-items: start; } .rule-toc { position: sticky; top: 16px; flex-direction: column; } }

@@ -54,6 +54,15 @@ PREVIEW_SECRET=$(tr -d '[:space:]' < "$PREVIEW_FILE")
 if ! grep -q '^T64_PREVIEW_SECRET=' "$SERVER/.env"; then
   printf '\nT64_PREVIEW_SECRET=%s\n' "$PREVIEW_SECRET" >> "$SERVER/.env"
 fi
+# Live commentary: one random secret shared by the game server (asks for lines) and the backend (writes them).
+INTERNAL_FILE="$BASE/internal.secret"
+if [ ! -s "$INTERNAL_FILE" ]; then
+  (umask 077 && openssl rand -hex 32 > "$INTERNAL_FILE")
+fi
+INTERNAL_SECRET=$(tr -d '[:space:]' < "$INTERNAL_FILE")
+if ! grep -q '^GAME_INTERNAL_SECRET=' "$SERVER/.env"; then
+  printf '\nGAME_INTERNAL_SECRET=%s\n' "$INTERNAL_SECRET" >> "$SERVER/.env"
+fi
 # No separate install here: the built server lives inside the repo, so it uses the packages
 # already installed above from package-lock.json.
 rm -rf "$SERVER/node_modules"
@@ -85,8 +94,8 @@ PLAY_SECRET=$(tr -d '[:space:]' < "$PLAY_FILE")
 backend_env() { grep -m1 "^$1=" "$APP/apps/backend/.env" | cut -d= -f2-; }
 (
   umask 077
-  printf 'DATABASE_URL=%s\nSTORE_CORS=%s\nPLAY_TOKEN_SECRET=%s\nPUBLIC_URL=%s\nAVATAR_DIR=%s\n' \
-    "$(backend_env DATABASE_URL)" "$(backend_env STORE_CORS)" "$PLAY_SECRET" "https://$API_DOMAIN" "$BASE/uploads/avatars" > "$BASE/game.env"
+  printf 'DATABASE_URL=%s\nSTORE_CORS=%s\nPLAY_TOKEN_SECRET=%s\nPUBLIC_URL=%s\nAVATAR_DIR=%s\nBACKEND_URL=%s\nGAME_INTERNAL_SECRET=%s\n' \
+    "$(backend_env DATABASE_URL)" "$(backend_env STORE_CORS)" "$PLAY_SECRET" "https://$API_DOMAIN" "$BASE/uploads/avatars" "http://localhost:$BACKEND_PORT" "$INTERNAL_SECRET" > "$BASE/game.env"
 )
 install -d -o "$APP_USER" -g "$APP_USER" "$BASE/uploads/avatars"
 # A native chess engine makes the fair-play checks faster; without it the bundled one is used.
