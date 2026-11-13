@@ -50,8 +50,12 @@ export function useMyProfile(meId: string | null) {
   return profile
 }
 
-export type Seeker = { tc: string; rating: number; avatar_url: string | null; guest: boolean; since: number }
-export type Lobby = { playing: number; online?: number; seeking?: Record<string, number>; seekers?: Seeker[]; house_ready?: number }
+type PlayerCard = { name: string; username: string | null; avatar_url: string | null; city: string | null; title: string | null; level: number | null }
+// Someone waiting for a game right now.
+export type Seeker = PlayerCard & { tc: string; rating: number; guest: boolean; since: number }
+// A House Player (computer opponent) free to play, offered on the board when few people wait.
+export type HouseCard = PlayerCard & { id: string; tc: string; speed: string; rating: number }
+export type Lobby = { playing: number; online?: number; seeking?: Record<string, number>; seekers?: Seeker[]; house?: HouseCard[]; house_ready?: number }
 
 export function useLobby() {
   const [lobby, setLobby] = useState<Lobby | null>(null)

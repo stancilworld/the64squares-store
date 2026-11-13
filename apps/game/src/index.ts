@@ -17,7 +17,7 @@ import { banOf, migrateFairPlay, registerFairPlay, startFairPlay } from "./fairp
 import { migrateFriends, registerFriends } from "./friends.js"
 import { xpForGame } from "./levels.js"
 import { activeBoost, addXp, ensureProfile, getProfile, getProfiles, migrateProfiles, publicProfile, readAvatar, removeAvatar, searchProfiles, setAvatar, updateProfile } from "./profiles.js"
-import { registerSeek, SEEK_TIME_CONTROLS, seekCounts, seekList, startSeeking } from "./seek.js"
+import { houseBoard, registerSeek, SEEK_TIME_CONTROLS, seekCounts, seekList, startSeeking } from "./seek.js"
 import { HouseDriver } from "./house/driver.js"
 import { isHouse } from "./house/persona.js"
 import { houseCount, migrateHouse, personaOf, seedHouse } from "./house/store.js"
@@ -203,6 +203,7 @@ const server = http.createServer(async (req, res) => {
           online: online.size,
           seeking: seekCounts(),
           seekers: await seekList(),
+          house: await houseBoard(manager),
           time_controls: SEEK_TIME_CONTROLS,
           house_ready: Math.max(0, houseTotal - busyHouse),
         }),

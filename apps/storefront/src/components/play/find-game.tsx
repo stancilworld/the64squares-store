@@ -8,9 +8,9 @@ import { Avatar } from "@/components/play/avatar"
 import { GAME_URL, SPEED_LABEL, TIME_CONTROLS, speedOf } from "@/lib/game-types"
 import type { PlayPass } from "@/lib/play"
 import type { PublicProfile } from "@/lib/profile-types"
-import { useLobby, useMyProfile } from "./menu/screen"
+import { type HouseCard, useLobby, useMyProfile } from "./menu/screen"
 import { GIcon } from "@/components/play-shell/icons"
-import { OpponentBoard } from "./menu/opponent-board"
+import { OpponentBoard, SPEEDS, type SpeedKey } from "./menu/opponent-board"
 import { usePlayPass } from "./use-play-pass"
 
 const TIPS = [
@@ -29,7 +29,8 @@ type HouseOffer = { opponent: PublicProfile & { rating: number; house: true; cou
 // Seconds the notice shows before the game starts by itself.
 const HOUSE_COUNTDOWN = 6
 
-// Play online: choose a time control, then wait in the pool for a player of similar rating.
+// Play online: start a game (choose a time, then wait in the pool for a player of similar
+// rating), or pick someone waiting, or a House Player, from the board below.
 export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
   const pass = usePlayPass(initialPass)
   const token = pass?.token ?? null
@@ -68,6 +69,22 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
       }
     })
   }, [router])
+  // A House Player picked from the board: straight into a game with them.
+  const playHouse = useCallback(
+    (h: HouseCard) => {
+      setError(null)
+      setStarting(true)
+      socket.current?.emit("seek:house-play", { house_id: h.id, tc: h.tc }, (res: { ok: boolean; error?: string; game_id?: string }) => {
+        setStarting(false)
+        if (res.ok && res.game_id) router.push(`/play/${res.game_id}`)
+        else if (res.error === "in-game") setError({ text: "You're already in a game.", game: res.game_id })
+        else if (res.error === "busy") setError({ text: `${h.name} has just started another game. Pick someone else.` })
+        else if (res.error === "fair-play-ban") setError({ text: "Your account is closed for rated games after a fair-play review." })
+        else setError({ text: "Couldn't start the game. Please try again." })
+      })
+    },
+    [router]
+  )
   const keepWaiting = () => {
     socket.current?.emit("seek:house-later", null, () => {})
     setOffer(null)
@@ -209,25 +226,36 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
     )
   }
 
-  return (
-    <div className="menu-stage mx-auto flex max-w-[1240px] flex-col gap-8 pb-24 lg:pb-6">
-      <div className="menu-rise">
-        <h1 className="lobby-title">Choose an opponent</h1>
-        <p className="g-muted mt-2 text-[14px]">
-          Players waiting right now. Pick one to play them, or choose a time below and start.
-          {lobby ? (
-            <>
-              {" "}
-              <span className="text-[var(--g-good)]">●</span> {lobby.playing} {lobby.playing === 1 ? "game" : "games"} on now.
-            </>
-          ) : null}
-        </p>
-      </div>
-      <OpponentBoard seekers={lobby?.seekers ?? []} onPick={(t) => join(t)} disabled={!token} />
+  const pickSpeed = (k: SpeedKey) => {
+    const first = TIME_CONTROLS.find((t) => {
+      const [mm, ii] = t.tc.split("+").map(Number)
+      return speedOf(mm * 60000, ii * 1000) === k
+    })
+    if (first) setTc(first.tc)
+  }
 
-      <section className="menu-rise [animation-delay:120ms]">
-        <h2 className="mb-3 text-[22px] font-semibold tracking-[-0.02em]">Start your game</h2>
-        <div className="start-bar">
+  return (
+    <div className="menu-stage mx-auto flex max-w-[1240px] flex-col gap-6 pb-24 lg:pb-6">
+      {/* Start your game: the main thing on the page. */}
+      <section className="start-hero menu-rise" style={{ "--sp": SPEEDS[speed as SpeedKey]?.colour ?? "var(--g-accent)" } as React.CSSProperties}>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="start-title">Start your game</h1>
+            <p className="g-muted mt-1 text-[14px]">
+              Pick a time and press Start: you&apos;re paired with a player near your level.
+              {lobby ? (
+                <>
+                  {" "}
+                  <span className="text-[var(--g-good)]">●</span> {lobby.playing} {lobby.playing === 1 ? "game" : "games"} on now.
+                </>
+              ) : null}
+            </p>
+          </div>
+          <Link href="/play/rules" className="start-rules">
+            <GIcon name="news" size={16} /> Rule book
+          </Link>
+        </div>
+        <div className="start-bar mt-4">
           <div className="start-modes">
             <span className="start-mode" aria-current="true">
               <GIcon name="user" size={18} /> Human
@@ -257,8 +285,17 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
             <div className="start-times" role="radiogroup" aria-label="Time control">
               {TIME_CONTROLS.map((t) => {
                 const [min, inc] = t.tc.split("+")
+                const [mm, ii] = t.tc.split("+").map(Number)
                 return (
-                  <button key={t.tc} type="button" role="radio" aria-checked={tc === t.tc} onClick={() => setTc(t.tc)} className="start-time">
+                  <button
+                    key={t.tc}
+                    type="button"
+                    role="radio"
+                    aria-checked={tc === t.tc}
+                    onClick={() => setTc(t.tc)}
+                    className="start-time"
+                    style={{ "--sp": SPEEDS[speedOf(mm * 60000, ii * 1000) as SpeedKey].colour } as React.CSSProperties}
+                  >
                     <span className="text-[22px] font-semibold leading-none">{min}</span>
                     <span className="mt-1 text-[11px] text-[var(--g-muted)]">{inc === "0" ? "min" : `+${inc}`}</span>
                   </button>
@@ -267,7 +304,7 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
             </div>
           </div>
           <button type="button" onClick={play} disabled={!token} className="start-go">
-            Start
+            Start{" "}
             <br />
             game
           </button>
@@ -282,7 +319,45 @@ export function FindGame({ initialPass }: { initialPass: PlayPass | null }) {
             )}
           </p>
         )}
+        {/* The kinds of game: tap one to pick its time. */}
+        <div className="mt-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          {(Object.keys(SPEEDS) as SpeedKey[]).map((k) => (
+            <button key={k} type="button" onClick={() => pickSpeed(k)} className="speed-tile" data-on={speed === k || undefined} style={{ "--sp": SPEEDS[k].colour } as React.CSSProperties}>
+              <span className="flex items-baseline justify-between gap-2">
+                <span className="text-[16px] font-extrabold" style={{ color: SPEEDS[k].colour }}>
+                  {SPEEDS[k].label}
+                </span>
+                <span className="text-[12px] font-semibold text-[var(--g-muted)]">{SPEEDS[k].time}</span>
+              </span>
+              <span className="mt-1 block text-[13px] leading-snug text-white/75">{SPEEDS[k].about}</span>
+            </button>
+          ))}
+        </div>
+        <p className="mt-3 text-[12.5px] leading-relaxed text-[var(--g-muted)]">
+          <b className="text-white/80">Rated</b> games change your rating and earn XP; guests play <b className="text-white/80">casual</b> games. Prefer practice?{" "}
+          <Link href="/play/computer" className="text-[var(--g-accent)] underline underline-offset-2">
+            Play the computer
+          </Link>{" "}
+          at eight levels, or{" "}
+          <Link href="/play/friend" className="text-[var(--g-accent)] underline underline-offset-2">
+            send a friend a link
+          </Link>
+          . New to chess? The{" "}
+          <Link href="/play/rules" className="text-[var(--g-accent)] underline underline-offset-2">
+            rule book
+          </Link>{" "}
+          explains everything.
+        </p>
       </section>
+
+      <OpponentBoard
+        seekers={lobby?.seekers ?? []}
+        house={lobby?.house ?? []}
+        onPick={(t) => join(t)}
+        onHouse={playHouse}
+        disabled={!token || starting}
+        guest={!!pass?.me.guest}
+      />
     </div>
   )
 }

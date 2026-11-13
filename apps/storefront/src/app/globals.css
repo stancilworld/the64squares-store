@@ -544,6 +544,118 @@ html[data-focus] .play-main {
   background: var(--g-accent);
   color: #111;
 }
+/* Play online: the highlighted start block (its glow takes the chosen speed's colour) and
+   the opponent cards (each in its speed's colour). */
+/* Rule book (/play/rules): chapter list beside the page, chips on phones. */
+.rule-book { display: grid; gap: 16px; }
+@media (min-width: 900px) { .rule-book { grid-template-columns: 240px 1fr; align-items: start; } .rule-toc { position: sticky; top: 16px; flex-direction: column; } }
+.rule-toc { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.rule-toc-item { display: flex; flex-direction: column; gap: 2px; flex: none; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--g-line); background: var(--g-panel); }
+.rule-toc-item:hover { border-color: rgba(255, 179, 0, 0.45); }
+.rule-toc-item[aria-current="page"] { border-color: var(--g-accent); box-shadow: inset 3px 0 0 var(--g-accent); }
+.rule-toc-label { font-weight: 700; font-size: 14.5px; }
+.rule-toc-about { color: var(--g-muted); font-size: 12.5px; }
+@media (max-width: 899px) { .rule-toc-about { display: none; } }
+.rule-page { padding: 24px clamp(18px, 4vw, 40px) 32px; }
+.rule-page-title { font-size: clamp(24px, 3vw, 30px); font-weight: 800; letter-spacing: -0.01em; margin-bottom: 18px; }
+.rule-text { max-width: 68ch; font-size: 16px; line-height: 1.65; color: #e9e6df; }
+.rule-text h2 { color: var(--g-accent); font-size: 19px; font-weight: 750; }
+.rule-text strong { color: #fff; }
+.rule-text a { color: var(--g-accent); }
+
+.start-hero {
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--sp) 45%, var(--g-line));
+  border-radius: 14px;
+  padding: 22px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--sp) 16%, transparent), transparent 55%),
+    linear-gradient(180deg, #262626, #1f1f1f);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.3), 0 18px 50px -24px color-mix(in srgb, var(--sp) 55%, transparent);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+@media (max-width: 639px) { .start-hero { padding: 16px; border-radius: 12px; } }
+.start-title { font-size: clamp(28px, 4vw, 44px); font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.start-rules {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--g-line);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.start-rules:hover { border-color: var(--g-accent); color: var(--g-accent); }
+.start-hero .start-time[aria-checked="true"] { background: var(--sp); }
+.speed-tile {
+  border: 1px solid var(--g-line);
+  border-left: 4px solid var(--sp);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgb(0 0 0 / 0.18);
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+}
+.speed-tile:hover { background: color-mix(in srgb, var(--sp) 10%, transparent); }
+.speed-tile[data-on] { background: color-mix(in srgb, var(--sp) 14%, transparent); border-color: color-mix(in srgb, var(--sp) 60%, transparent); border-left-color: var(--sp); }
+.speed-tile:focus-visible, .pick-card:focus-visible { outline: 2px solid var(--sp); outline-offset: 2px; }
+.pick-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--g-line);
+  border-radius: 12px;
+  padding: 14px 14px 14px 18px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--sp) 9%, #232323), #232323 60%);
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.pick-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--sp) 70%, transparent);
+  box-shadow: 0 12px 30px -16px color-mix(in srgb, var(--sp) 70%, transparent);
+}
+.pick-card:disabled { opacity: 0.6; }
+.pick-band { position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--sp); }
+.pick-speed {
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: var(--sp);
+  color: #121212;
+  font-size: 12px;
+  font-weight: 800;
+}
+.pick-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--g-line);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--g-muted);
+}
+.pick-house { color: #c7b8ff; border-color: rgb(155 140 255 / 0.4); }
+.pick-go {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  opacity: 0;
+  border-radius: 8px;
+  padding: 5px 14px;
+  background: var(--sp);
+  color: #121212;
+  font-size: 13px;
+  font-weight: 800;
+  transition: opacity 0.15s;
+}
+.pick-card:hover .pick-go, .pick-card:focus-visible .pick-go { opacity: 1; }
+@media (hover: none) { .pick-go { display: none; } }
+@media (prefers-reduced-motion: reduce) { .pick-card, .pick-card:hover:not(:disabled) { transition: none; transform: none; } }
+
 .start-bar {
   display: flex;
   align-items: stretch;

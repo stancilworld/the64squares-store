@@ -105,20 +105,47 @@ export const seekCounts = () => {
   return counts
 }
 
-// Who's waiting right now, for the lobby board: time control, rating and picture only (no
-// names), so a visitor can pick a waiting player's time control and be paired with them.
-const pictures = new Map<string, { url: string | null; at: number }>()
+// Who's waiting right now, for the Play online board: their public profile (name, picture,
+// city, level), rating and time control, so a visitor can pick one and be paired with them.
+type Card = { name: string; username: string | null; avatar_url: string | null; city: string | null; title: string | null; level: number | null }
+const cards = new Map<string, { card: Card; at: number }>()
+const cardOf = async (id: string): Promise<Card> => {
+  const hit = cards.get(id)
+  if (hit && Date.now() - hit.at < 10 * 60_000) return hit.card
+  const p = isGuest(id) ? null : await getProfile(id).catch(() => null)
+  const pub = p ? publicProfile(p) : null
+  const card: Card = pub
+    ? { name: pub.display_name, username: pub.username, avatar_url: pub.avatar_url, city: pub.city ?? null, title: pub.level?.title ?? null, level: pub.level?.level ?? null }
+    : { name: "Guest", username: null, avatar_url: null, city: null, title: null, level: null }
+  cards.set(id, { card, at: Date.now() })
+  return card
+}
 export const seekList = async () => {
-  const out: { tc: string; rating: number; avatar_url: string | null; guest: boolean; since: number }[] = []
+  const out: (Card & { tc: string; rating: number; provisional: boolean; guest: boolean; since: number })[] = []
   for (const s of [...seeks.values()].slice(0, 60)) {
-    let pic = pictures.get(s.player.id)
-    if (!pic || Date.now() - pic.at > 10 * 60_000) {
-      const p = isGuest(s.player.id) ? null : await getProfile(s.player.id).catch(() => null)
-      pic = { url: p ? publicProfile(p).avatar_url : null, at: Date.now() }
-      pictures.set(s.player.id, pic)
-    }
-    out.push({ tc: s.tc, rating: Math.round(s.rating), avatar_url: pic.url, guest: isGuest(s.player.id), since: s.since })
+    out.push({ ...(await cardOf(s.player.id)), tc: s.tc, rating: Math.round(s.rating), provisional: false, guest: isGuest(s.player.id), since: s.since })
   }
+  return out
+}
+
+// House Players free right now, a few per speed at different strengths, for the board when
+// few people are waiting. Clearly marked as computer opponents on the page.
+const SPEED_TC: Record<string, string> = { bullet: "1+0", blitz: "3+2", rapid: "10+0", classical: "30+0" }
+let houseBoardCache: { at: number; list: unknown[] } | null = null
+export const houseBoard = async (manager: GameManager) => {
+  if (houseBoardCache && Date.now() - houseBoardCache.at < 30_000) return houseBoardCache.list
+  const busy = busyHouse(manager)
+  const out: unknown[] = []
+  for (const [speed, tc] of Object.entries(SPEED_TC)) {
+    for (const target of [1200, 1550, 1900]) {
+      const id = await pickHouse({ forPlayer: "-", speed: speed as never, target, busy })
+      if (!id) continue
+      busy.add(id)
+      const [card, r] = await Promise.all([cardOf(id), getRating(id, speed as never)])
+      out.push({ ...card, id, tc, speed, rating: Math.round(r.rating) })
+    }
+  }
+  houseBoardCache = { at: Date.now(), list: out }
   return out
 }
 
@@ -168,6 +195,35 @@ export const registerSeek = (io: Server, socket: Socket, manager: GameManager, m
       // Always answer, so the page never waits forever; the player goes back to the pool.
       console.error("house game failed to start", e)
       seeks.set(player.id, { ...s, offer: null, houseAt: Date.now() + 3000 })
+      reply({ ok: false, error: "failed" })
+    }
+  })
+
+  // A House Player picked from the board: a game against them straight away.
+  socket.on("seek:house-play", async (input: { house_id?: unknown; tc?: unknown }, ack: unknown) => {
+    if (typeof ack !== "function" || limited(socket, ack)) return
+    const reply = ack as Ack
+    const player = me()
+    if (!player) return reply({ ok: false, error: "sign-in" })
+    const houseId = String(input?.house_id ?? "")
+    const tc = String(input?.tc ?? "")
+    const parsed = SEEK_TIME_CONTROLS.includes(tc) ? parseTimeControl(tc) : null
+    if (!parsed || !isHouse(houseId)) return reply({ ok: false, error: "bad-request" })
+    if (await banOf(player.id)) return reply({ ok: false, error: "fair-play-ban" })
+    const live = manager.liveFor(player.id)
+    if (live.length) return reply({ ok: false, error: "in-game", game_id: live[0] })
+    if (busyHouse(manager).has(houseId)) return reply({ ok: false, error: "busy" })
+    const profile = await getProfile(houseId)
+    if (!profile) return reply({ ok: false, error: "bad-request" })
+    seeks.delete(player.id)
+    houseBoardCache = null
+    try {
+      const house = { id: houseId, name: profile.display_name ?? "Player" }
+      const [white, black] = crypto.randomInt(2) ? [player, house] : [house, player]
+      const g = await manager.createPaired(white, black, parsed.initial_ms, parsed.increment_ms, { mode: "online" })
+      reply({ ok: true, game_id: g.r.id })
+    } catch (e) {
+      console.error("house game failed to start", e)
       reply({ ok: false, error: "failed" })
     }
   })

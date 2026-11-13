@@ -203,7 +203,7 @@ async function Hub() {
 export default function PlayTournamentsPage() {
   return (
     <div className="mx-auto max-w-[1180px] pb-10">
-      <PanelHeader title="Tournaments" />
+      <PanelHeader title="Tournaments" right={<Link href="/play/rules?ch=tournament-rules" className="g-btn g-btn-ghost !min-h-[36px] !px-3 !text-[13px]">Rule book</Link>} />
       <div className="mt-5">
         <Suspense fallback={<Loading text="Loading tournaments…" />}>
           <Hub />
