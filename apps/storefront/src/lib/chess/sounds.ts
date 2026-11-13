@@ -6,7 +6,7 @@ export type SoundName = "move" | "capture" | "check" | "castle" | "start" | "end
 
 const cache = new Map<string, HTMLAudioElement>()
 
-// Wooden pieces on a wooden board (made by scripts/wood-sounds.py). A move has three slightly
+// Wooden pieces on a wooden board (made by scripts/wood-sounds.py; bump ?v= when they change). A move has three slightly
 // different knocks, picked at random, so repeated moves don't sound mechanical.
 const MOVE_VARIANTS = ["move", "move2", "move3"]
 
@@ -16,7 +16,7 @@ export const playSound = (name: SoundName) => {
     const file = name === "move" ? MOVE_VARIANTS[Math.floor(Math.random() * MOVE_VARIANTS.length)] : name
     let a = cache.get(file)
     if (!a) {
-      a = new Audio(`/sounds/${file}.mp3`)
+      a = new Audio(`/sounds/${file}.mp3?v=2`)
       a.preload = "auto"
       cache.set(file, a)
     }
