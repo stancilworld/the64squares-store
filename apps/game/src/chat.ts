@@ -20,8 +20,8 @@ const BAD_RE = new RegExp(`\\b(${BAD.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g,
 // Phone numbers, links and emails aren't allowed (keeps players from being contacted off the site).
 const CONTACT_RE = /(https?:\/\/\S+|www\.\S+|\b[\w.-]+@[\w-]+\.\w+|\b\d[\d\s-]{7,}\d\b|\b[\w-]+\.(com|in|net|org|me|io|gg)\b)/gi
 
-export const cleanText = (raw: string) => {
-  const t = raw.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 140)
+export const cleanText = (raw: string, max = 140) => {
+  const t = raw.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max)
   return t.replace(BAD_RE, (m) => "*".repeat(Math.min(m.length, 6))).replace(CONTACT_RE, "•••")
 }
 

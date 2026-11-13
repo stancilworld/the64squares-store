@@ -141,6 +141,14 @@ export function TourneyScreen(props: Props) {
     return "live"
   }, [t, view, arena, now, offset, starts, ticket])
 
+  // The lobby opens with check-in (30 minutes before at least) and closes an hour after the end.
+  const lobbyOpen = (() => {
+    if (phase === "cancelled") return false
+    const at = (now ?? nowMs()) + offset
+    const end = view?.state?.finished_at ?? (t.ends_at ? new Date(t.ends_at).getTime() : null) ?? starts + 6 * 3600_000
+    return at >= starts - Math.max(30, t.check_in_minutes ?? 0) * 60_000 && at < end + 3600_000
+  })()
+
   const registered = ticket?.status === "confirmed"
   const myLive = meId ? view?.live.find((b) => b.white?.id === meId || b.black?.id === meId) : undefined
   const myGame = myLive?.game_id ?? arenaYou?.game_id ?? null
@@ -477,6 +485,13 @@ export function TourneyScreen(props: Props) {
               {isKo && <span>{t.knockout_games === 1 ? "Single-game matches" : `Best of ${t.knockout_games}`}</span>}
             </p>
             <div className="mt-6">{status}</div>
+            {lobbyOpen && (
+              <Link href={`/play/tournaments/${t.handle}/lobby`} className="lobby-enter mt-5" style={{ "--fc": colour } as React.CSSProperties}>
+                <span className="lobby-dot lobby-dot-live" aria-hidden="true" />
+                Enter the lobby
+                <span className="text-[13px] font-semibold opacity-75">Live boards, chat and moderators</span>
+              </Link>
+            )}
           </div>
           <div className="rounded-xl border border-white/10 bg-[#1f1f1f]/95 p-5 shadow-2xl backdrop-blur">
             {panel}

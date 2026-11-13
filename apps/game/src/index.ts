@@ -17,6 +17,7 @@ import { banOf, migrateFairPlay, registerFairPlay, startFairPlay } from "./fairp
 import { migrateFriends, registerFriends } from "./friends.js"
 import { xpForGame } from "./levels.js"
 import { activeBoost, addXp, ensureProfile, getProfile, getProfiles, migrateProfiles, publicProfile, readAvatar, removeAvatar, searchProfiles, setAvatar, updateProfile } from "./profiles.js"
+import { Lobbies, migrateLobby } from "./lobby.js"
 import { houseBoard, registerSeek, SEEK_TIME_CONTROLS, seekCounts, seekList, startSeeking } from "./seek.js"
 import { HouseDriver } from "./house/driver.js"
 import { isHouse } from "./house/persona.js"
@@ -93,7 +94,8 @@ const server = http.createServer(async (req, res) => {
     if (path === "/me/active" && req.method === "GET") {
       const player = await playerFromToken(bearer(req))
       if (!player) return json(res, 401, { error: "sign-in" }, origin)
-      return json(res, 200, await activeFor(player.id), origin)
+      const [active, lobbies] = await Promise.all([activeFor(player.id), lobbyList.openFor(player.id).catch(() => [])])
+      return json(res, 200, { ...active, lobbies }, origin)
     }
     if (path === "/profile/avatar" && (req.method === "POST" || req.method === "DELETE")) {
       const player = await playerFromToken(bearer(req))
@@ -237,6 +239,9 @@ const manager = new GameManager((view) => {
 
 // Swiss and knockout tournaments (and every tournament's live boards and stats).
 const tourneys = new Tourneys(io, manager)
+
+// Tournament lobbies: chat between moderators, players and spectators.
+const lobbyList = new Lobbies(io)
 
 // House Players' moves, chat, draw answers and rematches.
 const house = new HouseDriver(io, manager)
@@ -519,6 +524,7 @@ io.on("connection", (socket) => {
 
   registerArena(io, socket, manager, me, limited)
   tourneys.register(socket, me, limited)
+  lobbyList.register(socket, me, limited)
   registerSeek(io, socket, manager, me, limited)
   registerFriends(io, socket, manager, me, limited)
   registerChat(io, socket, manager, me)
@@ -534,6 +540,8 @@ const main = async () => {
   await migrateMissions()
   await migrateHouse()
   await migrateFide()
+  await migrateLobby()
+  await lobbyList.listen()
   startFairPlay(manager)
   // FIDE rankings: downloaded monthly in the background.
   if (process.env.FIDE_RANKINGS !== "off") startFide()

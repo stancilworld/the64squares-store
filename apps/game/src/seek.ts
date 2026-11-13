@@ -109,7 +109,7 @@ export const seekCounts = () => {
 // city, level), rating and time control, so a visitor can pick one and be paired with them.
 type Card = { name: string; username: string | null; avatar_url: string | null; city: string | null; title: string | null; level: number | null }
 const cards = new Map<string, { card: Card; at: number }>()
-const cardOf = async (id: string): Promise<Card> => {
+export const cardOf = async (id: string): Promise<Card> => {
   const hit = cards.get(id)
   if (hit && Date.now() - hit.at < 10 * 60_000) return hit.card
   const p = isGuest(id) ? null : await getProfile(id).catch(() => null)

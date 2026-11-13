@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { SPEED_LABEL, speedOf, tcText } from "@/lib/game-types"
-import { type LiveGame, type LiveTournament, tournamentHref, useLiveNow, whenText } from "@/lib/chess/live-now"
+import { type LiveGame, type LiveLobby, type LiveTournament, lobbyHref, tournamentHref, useLiveNow, whenText } from "@/lib/chess/live-now"
 import type { PlayPass } from "@/lib/play"
 import { GIcon } from "./icons"
 
@@ -33,6 +33,29 @@ function GameRow({ g }: { g: LiveGame }) {
         </span>
       </span>
       <span className="text-[13px] font-extrabold text-[var(--g-accent)]">Return</span>
+    </Link>
+  )
+}
+
+const LOBBY_COLOUR: Record<string, string> = { arena: "#ffb300", swiss: "#35c6d4", knockout: "#ff5d5d", round_robin: "#9b8cff" }
+
+function LobbyRow({ t }: { t: LiveLobby }) {
+  const c = LOBBY_COLOUR[t.format] ?? "var(--g-accent)"
+  return (
+    <Link href={lobbyHref(t)} className="mx-2 flex items-center gap-3 rounded-lg px-3 py-3" style={{ background: `color-mix(in srgb, ${c} 16%, transparent)` }}>
+      <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-md text-black" style={{ background: c }}>
+        <GIcon name="trophy" size={19} />
+        <span className="live-dot absolute -right-1 -top-1" aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[15px] font-semibold">{t.title}</span>
+        <span className="g-muted block truncate text-[12px]">
+          {FORMAT[t.format] ?? t.format} {t.time_control} · {t.moderating ? "You're moderating" : "You're playing"}
+        </span>
+      </span>
+      <span className="shrink-0 text-[13px] font-extrabold" style={{ color: c }}>
+        Enter lobby
+      </span>
     </Link>
   )
 }
@@ -67,7 +90,8 @@ export function ActiveGames({ pass, compact = false, folded = false }: { pass: P
   // Placed against the window, beside the button: the side menu scrolls, which would clip it.
   const [at, setAt] = useState<{ left: number; top: number } | null>(null)
   const games = data?.games ?? []
-  const mine = (data?.tournaments.length ?? 0) + games.length
+  const lobbies = data?.lobbies ?? []
+  const mine = (data?.tournaments.length ?? 0) + games.length + lobbies.length
   const playing = games.length > 0
   const total = mine + (data?.events.length ?? 0)
 
@@ -166,6 +190,16 @@ export function ActiveGames({ pass, compact = false, folded = false }: { pass: P
                   <div className="flex flex-col gap-2">
                     {games.map((g) => (
                       <GameRow key={g.id} g={g} />
+                    ))}
+                  </div>
+                </>
+              )}
+              {lobbies.length > 0 && (
+                <>
+                  <Section title={lobbies.length === 1 ? "Lobby open" : "Lobbies open"} />
+                  <div className="flex flex-col gap-2">
+                    {lobbies.map((t) => (
+                      <LobbyRow key={t.id} t={t} />
                     ))}
                   </div>
                 </>

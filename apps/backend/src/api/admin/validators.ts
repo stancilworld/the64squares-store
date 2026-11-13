@@ -643,6 +643,21 @@ export const TournamentControlBody = z.discriminatedUnion("action", [
 ])
 export type TournamentControlBodyType = z.infer<typeof TournamentControlBody>
 
+// Tournament lobby from the admin: moderators, messages and chat settings.
+export const LobbyAdminBody = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("add_moderator"), email: z.string().trim().email().max(200), all: z.boolean().optional() }),
+  z.object({ action: z.literal("remove_moderator"), player_id: z.string().regex(/^cus_[A-Za-z0-9]+$/), all: z.boolean().optional() }),
+  z.object({ action: z.literal("delete_message"), id: z.string().regex(/^\d{1,18}$/) }),
+  z.object({
+    action: z.literal("settings"),
+    players_chat: z.enum(["open", "quick", "off"]).optional(),
+    spectator_chat: z.enum(["open", "slow", "off"]).optional(),
+    pinned: z.string().trim().max(400).nullable().optional(),
+  }),
+  z.object({ action: z.literal("lift_mute"), player_id: z.string().regex(/^cus_[A-Za-z0-9]+$/) }),
+])
+export type LobbyAdminBodyType = z.infer<typeof LobbyAdminBody>
+
 // Staff give or take Tournament Passes (with a reason the player sees).
 export const PassGrantBody = z
   .object({

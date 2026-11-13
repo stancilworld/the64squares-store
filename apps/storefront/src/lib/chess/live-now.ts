@@ -28,7 +28,9 @@ export type LiveTournament = {
   ends_at: string | null
   players?: number
 }
-export type LiveNow = { games: LiveGame[]; tournaments: LiveTournament[]; events: LiveTournament[] }
+// A tournament lobby open now that this player plays in or moderates.
+export type LiveLobby = LiveTournament & { moderating: boolean }
+export type LiveNow = { games: LiveGame[]; lobbies: LiveLobby[]; tournaments: LiveTournament[]; events: LiveTournament[] }
 
 const listeners = new Set<() => void>()
 let snapshot: LiveNow | null = null
@@ -78,10 +80,12 @@ const load = () => {
     ])
     const games: LiveGame[] = (me?.games ?? []).filter((g: LiveGame) => g.id)
     if (mine && !games.some((g) => g.id === mine.id)) games.unshift(mine)
-    const tournaments: LiveTournament[] = me?.tournaments ?? []
-    const joined = new Set(tournaments.map((t) => t.id))
+    const lobbies: LiveLobby[] = me?.lobbies ?? []
+    const inLobby = new Set(lobbies.map((t) => t.id))
+    const tournaments: LiveTournament[] = (me?.tournaments ?? []).filter((t: LiveTournament) => !inLobby.has(t.id))
+    const joined = new Set([...inLobby, ...tournaments.map((t) => t.id)])
     const events: LiveTournament[] = (ev?.events ?? []).filter((t: LiveTournament) => !joined.has(t.id))
-    snapshot = { games, tournaments, events }
+    snapshot = { games, lobbies, tournaments, events }
     emit()
   })().finally(() => {
     loading = null
@@ -128,5 +132,5 @@ export const whenText = (t: LiveTournament) => {
     : d.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })
 }
 
-export const tournamentHref = (t: LiveTournament) =>
-  t.mode === "online" && t.format === "arena" ? `/play/arena/${t.handle}` : `/tournaments/${t.handle}`
+export const tournamentHref = (t: LiveTournament) => (t.mode === "online" ? `/play/tournaments/${t.handle}` : `/tournaments/${t.handle}`)
+export const lobbyHref = (t: LiveTournament) => `/play/tournaments/${t.handle}/lobby`

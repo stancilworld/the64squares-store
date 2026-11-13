@@ -6,6 +6,7 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import { BACKEND_URL, sdk } from "../../../lib/sdk"
 import { useStoreUrl } from "../../../lib/site"
 import { useMe } from "../../../lib/staff"
+import { LobbyPanel } from "../../../lib/tournament-lobby"
 import { ControlRoom, FunnelPanel, GamesPanel, MessagePanel, ResultsPanel, useEngine } from "../../../lib/tournament-live"
 import { formatEventDate, type Registration, STATUS_LABELS, type Tournament, TournamentDrawer } from "../../../lib/tournaments"
 
@@ -256,6 +257,7 @@ const TournamentPage = () => {
         </Container>
       )}
 
+      {ev.mode === "online" && can("tournaments.moderate") && ev.status !== "draft" && <LobbyPanel t={ev} storeUrl={storeUrl} />}
       {ev.mode === "online" && can("tournaments.manage") && ev.status !== "draft" && <MessagePanel t={ev} />}
       {ev.mode === "online" && can("tournaments.manage") && <FunnelPanel t={ev} />}
 
