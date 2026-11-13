@@ -75,6 +75,7 @@ import {
   UpdateShowcaseAssetBody,
   ShowcaseDefaultBody,
   ShowcaseCountBody,
+  CoachVoiceBody,
 } from "./admin/validators"
 import { staffGuard } from "./staff-guard"
 import { activityRecorder, signInRecorder } from "../lib/activity"
@@ -489,6 +490,11 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/store/showcase/:id/count",
       middlewares: [validateAndTransformBody(ShowcaseCountBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/coach/voice",
+      middlewares: [authenticate("customer", ["bearer", "session"]), validateAndTransformBody(CoachVoiceBody)],
     },
     {
       method: ["POST"],

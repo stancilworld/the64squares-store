@@ -2,7 +2,9 @@
 
 import { Chess } from "chess.js"
 import Link from "next/link"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { coachIntro, coachLine, coachSummary, keyMoment } from "@/lib/chess/coach"
+import { useCoachVoice } from "./coach-voice"
 import { Board } from "@/components/chess/board"
 import { PlayLayout } from "@/components/chess/play-layout"
 import { GIcon } from "@/components/play-shell/icons"
@@ -103,14 +105,62 @@ export function ReviewView({ game }: { game: ReviewGame }) {
   const reviewed = useMemo(() => (evals ? reviewGame(sans, evals) : []), [evals, sans])
   const total = sans.length
 
+  // The coach: a line for every move, an opening word and the turning point.
+  const ctx = useMemo(() => ({ me: game.me ?? null, white: game.white, black: game.black }), [game.me, game.white, game.black])
+  const lines = useMemo(() => (evals ? reviewed.map((r, i) => coachLine(r, evals[i], evals[i + 1], ctx, i + 1)) : []), [reviewed, evals, ctx])
+  const intro = useMemo(() => (evals && reviewed.length ? coachIntro(ctx, gameAccuracy(reviewed, "w") ?? 0, gameAccuracy(reviewed, "b") ?? 0, game.result, reviewed) : null), [evals, reviewed, ctx, game.result])
+  const summary = useMemo(() => (reviewed.length ? coachSummary(reviewed, ctx) : null), [reviewed, ctx])
+  const voice = useCoachVoice()
+  const [touring, setTouring] = useState(false)
+  // Which guided review is running (stepping by hand or stopping starts a new count).
+  const tour = useRef(0)
+
   const go = useCallback(
-    (p: number) => {
+    (p: number, fromTour = false) => {
       const n = Math.max(0, Math.min(total, p))
       setPly(n)
       if (n > 0) playSound(soundForSan(sans[n - 1]))
+      if (fromTour) return
+      // Stepping by hand stops the guided review; the coach says this move's line.
+      tour.current++
+      setTouring(false)
+      if (n > 0 && lines[n - 1]) void voice.say(lines[n - 1].say)
+      else voice.stop()
     },
-    [total, sans]
+    [total, sans, lines, voice]
   )
+
+  // "Play review": the coach goes through the game, stopping to talk at the moments that
+  // matter (mistakes, blunders, brilliant and great moves) and moving briskly through the rest.
+  const playReview = useCallback(async () => {
+    const mine = ++tour.current
+    setTouring(true)
+    const live = () => mine === tour.current
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+    let p = ply >= total ? 0 : ply
+    if (p === 0) {
+      setPly(0)
+      if (intro) await voice.say(intro.say, true)
+    }
+    while (live() && p < total) {
+      p++
+      go(p, true)
+      const r = reviewed[p - 1]
+      const next = reviewed.findIndex((m, i) => i >= p && keyMoment(m, i === total - 1))
+      if (next >= 0 && lines[next]) void voice.prefetch(lines[next].say)
+      if (r && keyMoment(r, p === total)) await voice.say(lines[p - 1].say, true)
+      else await wait(850)
+      if (live()) await wait(350)
+    }
+    if (live() && summary) await voice.say(summary.say, true)
+    if (live()) setTouring(false)
+  }, [ply, total, intro, summary, voice, go, reviewed, lines])
+
+  const stopReview = useCallback(() => {
+    tour.current++
+    setTouring(false)
+    voice.stop()
+  }, [voice])
 
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
@@ -212,18 +262,48 @@ export function ReviewView({ game }: { game: ReviewGame }) {
                   </span>
                   <span className="ml-auto font-mono text-[14px] text-[var(--g-muted)]">{cur.evalAfter}</span>
                 </p>
-                {showBest && cur.bestSan && (
-                  <p className="g-muted mt-1.5 text-[14px]">
-                    Best was <b className="text-[#9ccf6b]">{cur.bestSan}</b> (green arrow).
-                  </p>
-                )}
-                {cur.kind === "brilliant" && <p className="g-muted mt-1.5 text-[14px]">A strong sacrifice: the piece can be taken, but that loses.</p>}
-                {cur.kind === "miss" && <p className="g-muted mt-1.5 text-[14px]">The opponent had just slipped, and this let them off.</p>}
-                {cur.kind === "book" && <p className="g-muted mt-1.5 text-[14px]">A normal opening move.</p>}
+                {(() => {
+                  const l = lines[ply - 1]
+                  const text = l ? (l.detail ?? l.text) : ""
+                  return text ? <p className="mt-1.5 text-[14px] leading-relaxed text-white/80">{text}</p> : null
+                })()}
+                {showBest && cur.bestSan && <p className="g-muted mt-1 text-[12px]">The green arrow shows {cur.bestSan}.</p>}
               </>
+            ) : intro ? (
+              <p className="text-[14px] leading-relaxed text-white/80">{intro.text}</p>
             ) : (
               <p className="g-muted text-[14px]">Use the arrows (or ← → on the keyboard) to go through the game. Coloured symbols show how good each move was.</p>
             )}
+            {ply === total && summary && total > 0 && <p className="mt-2 text-[13px] font-semibold text-[var(--g-accent)]">{summary.text}</p>}
+          </div>
+
+          {/* The coach: a guided review, read aloud. */}
+          <div className="flex items-center gap-2">
+            {touring ? (
+              <button type="button" onClick={stopReview} className="g-btn flex-1 !min-h-[44px]">
+                <span aria-hidden="true">■</span> Stop the review
+              </button>
+            ) : (
+              <button type="button" onClick={() => void playReview()} className="g-btn g-btn-primary flex-1 !min-h-[44px]">
+                <span aria-hidden="true">▶</span> {ply > 0 && ply < total ? "Play review from here" : "Play review"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (voice.on) voice.stop()
+                voice.toggle()
+              }}
+              aria-pressed={voice.on}
+              aria-label={voice.on ? "Coach voice on (turn off)" : "Coach voice off (turn on)"}
+              title={voice.on ? "Coach voice on" : "Coach voice off"}
+              className={`g-btn !min-h-[44px] !w-[52px] !px-0 ${voice.speaking ? "ring-2 ring-[var(--g-accent)]" : ""}`}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M11 5 6 9H3v6h3l5 4z" />
+                {voice.on ? <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /> : <path d="m22 9-6 6M16 9l6 6" />}
+              </svg>
+            </button>
           </div>
 
           <Graph reviewed={reviewed} ply={ply} onPick={go} />
@@ -231,17 +311,21 @@ export function ReviewView({ game }: { game: ReviewGame }) {
       )}
 
       <div className="grid grid-cols-5 gap-1.5">
-        {[
-          ["⏮", () => go(0), "First move"],
-          ["◀", () => go(ply - 1), "Previous move"],
-          ["▶", () => go(ply + 1), "Next move"],
-          ["⏭", () => go(total), "Last move"],
-          ["⇅", () => setFlipped((f) => !f), "Flip board"],
-        ].map(([icon, f, label]) => (
-          <button key={label as string} type="button" aria-label={label as string} onClick={f as () => void} className="g-btn !min-h-[44px] !px-0 text-[16px]">
-            {icon as string}
-          </button>
-        ))}
+        <button type="button" aria-label="First move" onClick={() => go(0)} className="g-btn !min-h-[44px] !px-0 text-[16px]">
+          ⏮
+        </button>
+        <button type="button" aria-label="Previous move" onClick={() => go(ply - 1)} className="g-btn !min-h-[44px] !px-0 text-[16px]">
+          ◀
+        </button>
+        <button type="button" aria-label="Next move" onClick={() => go(ply + 1)} className="g-btn !min-h-[44px] !px-0 text-[16px]">
+          ▶
+        </button>
+        <button type="button" aria-label="Last move" onClick={() => go(total)} className="g-btn !min-h-[44px] !px-0 text-[16px]">
+          ⏭
+        </button>
+        <button type="button" aria-label="Flip board" onClick={() => setFlipped((f) => !f)} className="g-btn !min-h-[44px] !px-0 text-[16px]">
+          ⇅
+        </button>
       </div>
 
       {evals && (

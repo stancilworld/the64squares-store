@@ -1079,3 +1079,8 @@ export const UpdateShowcaseAssetBody = z.object({ name: z.string().trim().min(1)
 export const ShowcaseDefaultBody = z.object({ visual: ShowcaseVisual }).strict()
 
 export const ShowcaseCountBody = z.object({ what: z.enum(["views", "clicks"]) }).strict()
+
+// The game review coach's sentences: plain words, numbers, squares and punctuation.
+export const CoachVoiceBody = z
+  .object({ text: z.string().trim().min(2).max(320).regex(/^[\p{L}\p{N} .,!?'’:;()+\-–—]+$/u, "Only plain text") })
+  .strict()

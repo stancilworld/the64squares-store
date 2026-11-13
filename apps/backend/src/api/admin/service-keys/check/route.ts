@@ -1,5 +1,6 @@
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { testAiProviders } from "../../../../lib/chatbot"
+import { testVoice } from "../../../../lib/coach-voice"
 import { sendEmail } from "../../../../lib/emails"
 import { testMailbox } from "../../../../lib/mailbox"
 import { requireOwner } from "../../../../lib/owner-check"
@@ -7,7 +8,7 @@ import { OWNER_EMAIL } from "../../../../lib/permissions"
 import { verifyPayments } from "../../../../modules/payu/payu"
 import { clearServiceKeyCache, getServiceKeys } from "../../../../lib/service-keys"
 
-type Service = "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "delhivery" | "mailbox" | "ai"
+type Service = "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "delhivery" | "mailbox" | "ai" | "voice"
 
 const timeout = (ms: number) => {
   const c = new AbortController()
@@ -75,6 +76,10 @@ export const POST = async (req: AuthenticatedMedusaRequest<{ service: Service }>
           ? { ok: true, message: `Test email sent to ${OWNER_EMAIL}. Check the inbox (and spam).` }
           : { ok: false, message: "Resend refused the email. Check the API key, and that the sender's domain shows Verified in Resend." }
       )
+    }
+    if (service === "voice") {
+      if (!keys.voice) return res.json({ ok: false, message: "Add the ElevenLabs API key first, then Save." })
+      return res.json(await testVoice(keys.voice))
     }
     if (service === "ai") {
       return res.json(await testAiProviders(req.scope))

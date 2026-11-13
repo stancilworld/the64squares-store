@@ -9,7 +9,7 @@ import { sdk } from "./sdk"
 
 type KeyRow = {
   name: string
-  group: "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai"
+  group: "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai" | "voice"
   label: string
   secret: boolean
   hint: string
@@ -27,7 +27,7 @@ type View = {
   payu_webhook_url: string
   google_redirect_url: string
 }
-type TestService = "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "delhivery" | "mailbox" | "ai"
+type TestService = "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "delhivery" | "mailbox" | "ai" | "voice"
 
 const QUERY = ["service-keys"]
 
@@ -389,6 +389,14 @@ export function KeysEditor() {
           Customers' names, emails, phone numbers and order numbers are never sent to them.
         </Text>
         <TestButton service="ai" label="Test the AI" />
+      </Block>
+
+      <Block
+        title="Game review coach voice (ElevenLabs)"
+        intro="Optional. The game review's coach reads its explanations aloud in this voice, for signed-in players (each sentence is made once and kept, so repeats cost nothing). Without a key, players hear their browser's own voice."
+      >
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">{rows("voice").map(field)}</div>
+        <TestButton service="voice" label="Test the voice" />
       </Block>
 
       <Block title="Sign in with Google" intro="Optional. Shoppers can always sign in with an email code or password.">

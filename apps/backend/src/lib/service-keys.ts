@@ -51,10 +51,13 @@ export type KeyName =
   | "BREVO_API_KEY"
   | "MAILCHIMP_API_KEY"
   | "KLAVIYO_API_KEY"
+  | "ELEVENLABS_API_KEY"
+  | "ELEVENLABS_VOICE_ID"
+  | "ELEVENLABS_MODEL"
 
 export type KeyDef = {
   name: KeyName
-  group: "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai" | "marketing"
+  group: "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai" | "marketing" | "voice"
   label: string
   secret: boolean
   pattern: RegExp
@@ -81,6 +84,9 @@ export const KEY_DEFS: KeyDef[] = [
   { name: "MAILBOX_SMTP", group: "mailbox", label: "Outgoing server (SMTP)", secret: false, pattern: /^[a-z0-9.-]+:\d{2,5}$/i, hint: "Leave empty for GoDaddy: smtpout.secureserver.net:465" },
   { name: "GOOGLE_CLIENT_ID", group: "google", label: "Google Client ID", secret: false, pattern: /^[\w.-]+\.apps\.googleusercontent\.com$/, hint: "Ends with .apps.googleusercontent.com" },
   { name: "GOOGLE_CLIENT_SECRET", group: "google", label: "Google Client Secret", secret: true, pattern: /^[\w-]{10,}$/, hint: "Usually starts with GOCSPX-" },
+  { name: "ELEVENLABS_API_KEY", group: "voice", label: "ElevenLabs API key", secret: true, pattern: /^[\w-]{20,100}$/, hint: "From elevenlabs.io → Developers → API keys. Give it Text to Speech and User read access." },
+  { name: "ELEVENLABS_VOICE_ID", group: "voice", label: "Coach voice ID", secret: false, pattern: /^[A-Za-z0-9]{10,40}$/, hint: "From elevenlabs.io → Voices → the voice's ⋯ menu → Copy voice ID. Empty for George." },
+  { name: "ELEVENLABS_MODEL", group: "voice", label: "Voice model", secret: false, pattern: /^[\w.-]{3,60}$/, hint: "Empty for eleven_flash_v2_5 (fast, half the characters). eleven_multilingual_v2 sounds richer." },
   { name: "GROQ_API_KEY", group: "ai", label: "Groq API key (free)", secret: true, pattern: /^gsk_[A-Za-z0-9]{20,}$/, hint: "From console.groq.com → API Keys. Starts with gsk_" },
   { name: "GROQ_MODEL", group: "ai", label: "Groq model", secret: false, pattern: /^[\w./:-]{3,80}$/, hint: "Leave empty for llama-3.3-70b-versatile" },
   { name: "GEMINI_API_KEY", group: "ai", label: "Google Gemini API key (free, spare)", secret: true, pattern: /^[\w-]{30,60}$/, hint: "From aistudio.google.com → Get API key. Starts with AIza" },
@@ -221,6 +227,8 @@ export type ServiceKeys = {
   marketing: Partial<Record<string, string>>
   // The chat bot's AI helpers (free plans), tried in this order.
   ai: { provider: "groq" | "gemini"; key: string; model: string }[]
+  // The game review coach's voice (ElevenLabs).
+  voice: { key: string; voiceId: string; model: string } | null
 }
 
 export const getServiceKeys = async (container?: MedusaContainer): Promise<ServiceKeys> =>
@@ -275,6 +283,9 @@ export const keysFromStored = (stored: Stored): ServiceKeys => {
     metaCapiToken: get("META_CAPI_TOKEN"),
     ga4ApiSecret: get("GA4_API_SECRET"),
     marketing: Object.fromEntries(KEY_DEFS.filter((d) => d.group === "marketing").map((d) => [d.name, get(d.name)])),
+    voice: get("ELEVENLABS_API_KEY")
+      ? { key: get("ELEVENLABS_API_KEY")!, voiceId: get("ELEVENLABS_VOICE_ID") || "JBFqnCBsd6RMkjVDRZzb", model: get("ELEVENLABS_MODEL") || "eleven_flash_v2_5" }
+      : null,
     ai: [
       ...(get("GROQ_API_KEY") ? [{ provider: "groq" as const, key: get("GROQ_API_KEY")!, model: get("GROQ_MODEL") || "llama-3.3-70b-versatile" }] : []),
       ...(get("GEMINI_API_KEY") ? [{ provider: "gemini" as const, key: get("GEMINI_API_KEY")!, model: get("GEMINI_MODEL") || "gemini-flash-lite-latest" }] : []),
