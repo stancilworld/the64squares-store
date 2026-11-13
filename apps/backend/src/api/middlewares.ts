@@ -68,6 +68,13 @@ import {
   MarketingDeleteBody,
   WebhookBody,
   WebhookUpdateBody,
+  ShowcaseAdBody,
+  UpdateShowcaseAdBody,
+  ShowcaseOrderBody,
+  ShowcaseAssetBody,
+  UpdateShowcaseAssetBody,
+  ShowcaseDefaultBody,
+  ShowcaseCountBody,
 } from "./admin/validators"
 import { staffGuard } from "./staff-guard"
 import { activityRecorder, signInRecorder } from "../lib/activity"
@@ -447,6 +454,51 @@ export default defineMiddlewares({
       method: ["POST"],
       matcher: "/store/tournaments/:handle/register",
       middlewares: [authenticate("customer", ["bearer", "session"]), validateAndTransformBody(TournamentRegisterBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/showcase",
+      middlewares: [validateAndTransformBody(ShowcaseAdBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/showcase/ads/:id",
+      middlewares: [validateAndTransformBody(UpdateShowcaseAdBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/showcase/order",
+      middlewares: [validateAndTransformBody(ShowcaseOrderBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/showcase/assets",
+      middlewares: [validateAndTransformBody(ShowcaseAssetBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/showcase/assets/:id",
+      middlewares: [validateAndTransformBody(UpdateShowcaseAssetBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/admin/showcase/default",
+      middlewares: [validateAndTransformBody(ShowcaseDefaultBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/showcase/:id/count",
+      middlewares: [validateAndTransformBody(ShowcaseCountBody)],
+    },
+    {
+      method: ["POST"],
+      matcher: "/store/showcase/:id/claim",
+      middlewares: [authenticate("customer", ["bearer", "session"])],
+    },
+    {
+      method: ["GET"],
+      matcher: "/store/showcase/claims",
+      middlewares: [authenticate("customer", ["bearer", "session"])],
     },
     {
       method: ["POST"],

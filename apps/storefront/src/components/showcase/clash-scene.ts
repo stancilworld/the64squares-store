@@ -1,7 +1,7 @@
-// The "Play online" scene, live in 3D (three.js, loaded only here): pieces thrown up by a clash
-// in the middle of a graphite board, turning slowly in smoke and amber light while the view goes
-// round the board. The pointer tilts the view and draws the pieces apart; dragging spins it;
-// pressing sends out a burst of sparks on the way to the game.
+// "Clash of pieces", a 3D design for the advert windows (scene-view.tsx), live in 3D (three.js,
+// loaded only here): pieces thrown up by a clash in the middle of a graphite board, turning
+// slowly in smoke and amber light while the view goes round the board. The pointer tilts the
+// view and draws the pieces apart; dragging spins it; pressing sends out a burst of sparks.
 //
 // Pieces: /play-art/pieces.glb (tools/pieces/export-glb.py), one mesh per piece, standing on
 // its base, in board squares of 1.25 (so they're scaled by 0.8 to squares of 1 here).

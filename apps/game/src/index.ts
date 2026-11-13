@@ -16,7 +16,7 @@ import { FIDE_LISTS, FIDE_SPEEDS, type FideList, type FideSpeed } from "./fide-r
 import { banOf, migrateFairPlay, registerFairPlay, startFairPlay } from "./fairplay.js"
 import { migrateFriends, registerFriends } from "./friends.js"
 import { xpForGame } from "./levels.js"
-import { addXp, ensureProfile, getProfile, getProfiles, migrateProfiles, publicProfile, readAvatar, removeAvatar, searchProfiles, setAvatar, updateProfile } from "./profiles.js"
+import { activeBoost, addXp, ensureProfile, getProfile, getProfiles, migrateProfiles, publicProfile, readAvatar, removeAvatar, searchProfiles, setAvatar, updateProfile } from "./profiles.js"
 import { registerSeek, SEEK_TIME_CONTROLS, seekCounts, seekList, startSeeking } from "./seek.js"
 import { HouseDriver } from "./house/driver.js"
 import { isHouse } from "./house/persona.js"
@@ -58,12 +58,12 @@ const bearer = (req: http.IncomingMessage) => /^Bearer (.+)$/.exec(req.headers.a
 const fullProfile = async (idOrUsername: string) => {
   const p = await getProfile(idOrUsername)
   if (!p) return null
-  const [ratings, stats] = await Promise.all([ratingsFor(p.player_id), playerStats(p.player_id)])
+  const [ratings, stats, xp_boost] = await Promise.all([ratingsFor(p.player_id), playerStats(p.player_id), activeBoost(p.player_id)])
   const ban = await banOf(p.player_id)
   const house = isHouse(p.player_id)
   // A House Player is "online" while it's in a game.
   const on = house ? manager.liveFor(p.player_id).length > 0 : online.has(p.player_id)
-  return { ...publicProfile(p), ratings, stats, online: on, fair_play_closed: !!ban, house }
+  return { ...publicProfile(p), ratings, stats, online: on, fair_play_closed: !!ban, house, xp_boost }
 }
 
 // Plain web endpoints: a health check, a game's PGN, and a player's recent games.

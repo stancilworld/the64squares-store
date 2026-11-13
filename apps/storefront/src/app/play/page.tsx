@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 import { PlayHub } from "@/components/play/play-hub"
 import { getPlayPass } from "@/lib/play"
+import { getShowcase } from "@/lib/showcase"
 import { Loading } from "./loading-text"
 import { seoMetadata } from "@/lib/seo"
 
@@ -14,8 +15,8 @@ export const generateMetadata = (): Promise<Metadata> =>
   })
 
 async function Hub() {
-  const pass = await getPlayPass()
-  return <PlayHub meId={pass?.me.id ?? null} myName={pass?.me.name ?? null} signedIn={!!pass} token={pass?.token ?? null} />
+  const [pass, showcase] = await Promise.all([getPlayPass(), getShowcase("play_hero")])
+  return <PlayHub meId={pass?.me.id ?? null} myName={pass?.me.name ?? null} signedIn={!!pass} token={pass?.token ?? null} showcase={showcase} />
 }
 
 export default function PlayPage() {

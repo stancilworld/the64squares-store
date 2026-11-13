@@ -25,6 +25,17 @@ export const migrateProfiles = async () => {
     );
     create unique index if not exists profile_username_idx on play.profile (lower(username));
     create index if not exists profile_xp_idx on play.profile (xp desc);
+    -- XP boosts (2x XP for a day and the like), given by the shop's adverts
+    -- (backend workflows/showcase.ts). While one is on, XP earned is multiplied.
+    create table if not exists play.xp_boost (
+      id bigserial primary key,
+      player_id text not null,
+      factor numeric(4, 2) not null,
+      ends_at timestamptz not null,
+      source text not null default '',
+      created_at timestamptz not null default now()
+    );
+    create index if not exists xp_boost_player_idx on play.xp_boost (player_id, ends_at);
   `)
 }
 
@@ -175,7 +186,18 @@ export const readAvatar = async (file: string) => {
   }
 }
 
+// The XP boost on for a player now (the biggest, if several), or null.
+export const activeBoost = async (playerId: string): Promise<{ factor: number; ends_at: string } | null> => {
+  if (isGuest(playerId)) return null
+  const { rows } = await pool.query(
+    "select factor, ends_at from play.xp_boost where player_id = $1 and ends_at > now() order by factor desc, ends_at desc limit 1",
+    [playerId]
+  )
+  return rows[0] ? { factor: Number(rows[0].factor), ends_at: new Date(rows[0].ends_at).toISOString() } : null
+}
+
 export const addXp = async (playerId: string, xp: number) => {
   if (isGuest(playerId) || xp <= 0) return
-  await pool.query("update play.profile set xp = xp + $2 where player_id = $1", [playerId, Math.round(xp)])
+  const boost = await activeBoost(playerId)
+  await pool.query("update play.profile set xp = xp + $2 where player_id = $1", [playerId, Math.round(xp * (boost?.factor ?? 1))])
 }

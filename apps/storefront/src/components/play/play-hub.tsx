@@ -8,7 +8,8 @@ import { GAME_URL, tcText } from "@/lib/game-types"
 import { MiniBoard } from "@/components/chess/mini-board"
 import { positionAt, puzzleApi } from "@/lib/puzzles"
 import { TITLE_COLOURS } from "@/lib/profile-types"
-import { ChessStage } from "./chess-stage"
+import { Showcase } from "@/components/showcase/showcase"
+import type { Showcase as ShowcaseData } from "@/lib/showcase-types"
 import { DailyMissions } from "./menu/missions"
 import { ART, useLobby, useMyProfile } from "./menu/screen"
 
@@ -46,7 +47,7 @@ const greeting = () => {
 }
 
 // The Play home screen: a big Play button, the player's level and ratings, and the ways to play.
-export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null; myName: string | null; signedIn: boolean; token: string | null }) {
+export function PlayHub({ meId, myName, signedIn, token, showcase }: { meId: string | null; myName: string | null; signedIn: boolean; token: string | null; showcase: ShowcaseData }) {
   const [live, setLive] = useState<Live | null>(null)
   const [hello, setHello] = useState("Welcome back")
   const profile = useMyProfile(signedIn ? meId : null)
@@ -109,8 +110,8 @@ export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null
       )}
 
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr]">
-        {/* Play online: one button (all the time controls are on the Online screen) and a
-            chess scene that answers the mouse. */}
+        {/* Play online: one button (all the time controls are on the Online screen) beside the
+            advert window. */}
         <section className="menu-hero menu-rise grid overflow-hidden lg:col-start-1 lg:row-start-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]" aria-label="Play online">
           <div className="order-2 flex flex-col justify-center p-5 sm:order-1 sm:p-7">
             <h1 className="font-display text-[26px] leading-[1.05] sm:text-[34px]">
@@ -135,7 +136,8 @@ export function PlayHub({ meId, myName, signedIn, token }: { meId: string | null
             </Link>
             <p className="g-muted mt-2.5 text-center text-[13px]">{signedIn ? "Rated games count for your rating and XP." : "Play as a guest, or sign up to get a rating."}</p>
           </div>
-          <ChessStage href="/play/online" label="Play online" className="order-1 h-[210px] !rounded-none sm:order-2 sm:h-auto sm:min-h-[280px] lg:min-h-[300px]" />
+          {/* The advert window (Advertisements in the admin); with none on, its default screen. */}
+          <Showcase data={showcase} signedIn={signedIn} className="order-1 h-[230px] sm:order-2 sm:h-auto sm:min-h-[280px] lg:min-h-[300px]" />
         </section>
 
         {/* Player card */}

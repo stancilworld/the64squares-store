@@ -59,6 +59,7 @@ export const PERMISSIONS: Permission[] = [
   { key: "content.news_publish", group: "Website", label: "Publish news", description: "Put news live, edit live articles, delete articles. Without this, articles stay drafts for the admin to publish.", default: false },
   { key: "content.contact", group: "Website", label: "Edit Contact page", description: "The ways to reach you, the form's questions, and where messages are emailed.", default: false },
   { key: "content.chatbot", group: "Website", label: "Edit the chat bot", description: "The chat bubble on the website: its answers, buttons, WhatsApp handover and AI.", default: false },
+  { key: "content.adverts", group: "Website", label: "Play screen adverts", description: "Adverts in the Play screen's main window: pictures, videos and 3D designs, their buttons, coupons and rewards, and the default screen.", default: false },
   { key: "content.help", group: "Website", label: "Edit help pages", description: "Delivery, Returns & warranty, FAQs, Privacy, Terms.", default: false },
 
   // Tournaments
@@ -152,6 +153,7 @@ const RULES: Rule[] = [
   r("any", /^\/chatbot\/chats(\/|$)/, "messages.view"),
   r("write", /^\/chatbot(\/|$)/, "content.chatbot"),
   r("write", /^\/pages(\/|$)/, "content.help"),
+  r("any", /^\/showcase(\/|$)/, "content.adverts"),
   r("write", /^\/posts(\/|$)/, "content.blog"),
   r("write", /^\/news(\/|$)/, "content.news"),
   r("any", /^\/content-hub(\/|$)/, "content.blog"),

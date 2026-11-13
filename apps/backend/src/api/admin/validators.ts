@@ -1,6 +1,7 @@
 import { z } from "@medusajs/framework/zod"
 import { FILE_TYPE_KEYS, MAX_ALLOWED_MB } from "../../lib/upload-limits"
 import { PERMISSION_KEYS } from "../../lib/permissions"
+import { SCENE_KEYS } from "../../lib/showcase"
 
 const nullableText = z.string().nullable().optional()
 
@@ -976,3 +977,105 @@ export const ContentAssistBody = z.object({
   text: z.string().max(8000).optional(),
 })
 export type ContentAssistBodyType = z.infer<typeof ContentAssistBody>
+
+// ---------------------------------------------------------------- adverts (lib/showcase.ts)
+
+const AdUrl = z
+  .string()
+  .trim()
+  .max(500)
+  .refine((u) => /^\/(?!\/)/.test(u) || /^https:\/\/[^\s]+$/i.test(u), "Use a page of the website (starting with /) or a full https:// address")
+
+const ShowcaseVisual = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("scene"), scene: z.enum(SCENE_KEYS) }).strict(),
+  z
+    .object({
+      kind: z.literal("asset"),
+      asset_id: z.string().regex(/^adart_[A-Za-z0-9]+$/),
+      mobile_asset_id: z.string().regex(/^adart_[A-Za-z0-9]+$/).nullable().optional(),
+      fit: z.enum(["cover", "contain"]).optional(),
+      focus: z.string().regex(/^\d{1,3}% \d{1,3}%$/).optional(),
+    })
+    .strict(),
+])
+
+const ShowcaseAction = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("none") }).strict(),
+  z.object({ kind: z.literal("link"), label: z.string().trim().min(1).max(40), url: AdUrl }).strict(),
+  z
+    .object({
+      kind: z.literal("coupon"),
+      code: z.string().trim().min(2).max(40).regex(/^[A-Za-z0-9_-]+$/, "Codes use letters, numbers, - and _"),
+      label: z.string().trim().max(40).optional(),
+      url: AdUrl.optional(),
+      members_only: z.boolean().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("reward"),
+      label: z.string().trim().min(1).max(40),
+      reward: z.discriminatedUnion("type", [
+        z.object({ type: z.literal("xp_boost"), factor: z.number().min(1.5).max(5), hours: z.number().int().min(1).max(168) }).strict(),
+        z.object({ type: z.literal("passes"), count: z.number().int().min(1).max(10) }).strict(),
+      ]),
+    })
+    .strict(),
+])
+
+const adFields = {
+  name: z.string().trim().min(1).max(120),
+  status: z.enum(["draft", "live", "paused"]),
+  placement: z.enum(["play_hero"]),
+  starts_at: z.string().datetime({ offset: true }).nullable(),
+  ends_at: z.string().datetime({ offset: true }).nullable(),
+  audience: z.enum(["everyone", "guests", "members"]),
+  visual: ShowcaseVisual,
+  tag: z.string().trim().max(40).nullable(),
+  headline: z.string().trim().max(90).nullable(),
+  body: z.string().trim().max(200).nullable(),
+  theme: z.enum(["light", "dark"]),
+  align: z.enum(["left", "center", "right"]),
+  position: z.enum(["top", "middle", "bottom"]),
+  scrim: z.boolean(),
+  countdown_to: z.string().datetime({ offset: true }).nullable(),
+  countdown_label: z.string().trim().max(40).nullable(),
+  action: ShowcaseAction,
+  max_claims: z.number().int().min(1).max(1_000_000).nullable(),
+}
+type Window = { starts_at?: string | null; ends_at?: string | null }
+const adChecks = <T extends z.ZodType<Window>>(s: T) =>
+  s.refine((b: Window) => !b.starts_at || !b.ends_at || new Date(b.ends_at) > new Date(b.starts_at), {
+    message: "The end must be after the start",
+    path: ["ends_at"],
+  })
+
+export const ShowcaseAdBody = adChecks(
+  z
+    .object({ ...adFields })
+    .partial()
+    .required({ name: true, visual: true })
+    .strict()
+)
+export const UpdateShowcaseAdBody = adChecks(z.object({ ...adFields }).partial().strict())
+export type ShowcaseAdBodyType = z.infer<typeof ShowcaseAdBody>
+
+export const ShowcaseOrderBody = z.object({ ids: z.array(z.string().regex(/^ad_[A-Za-z0-9]+$/)).min(1).max(200) }).strict()
+
+export const ShowcaseAssetBody = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    kind: z.enum(["image", "video"]),
+    url: z.string().trim().url().max(1000),
+    poster_url: z.string().trim().url().max(1000).nullable().optional(),
+    mime: z.string().max(80).nullable().optional(),
+    size: z.number().int().min(0).nullable().optional(),
+    width: z.number().int().min(1).max(20000).nullable().optional(),
+    height: z.number().int().min(1).max(20000).nullable().optional(),
+  })
+  .strict()
+export const UpdateShowcaseAssetBody = z.object({ name: z.string().trim().min(1).max(120).optional(), poster_url: z.string().trim().url().max(1000).nullable().optional() }).strict()
+
+export const ShowcaseDefaultBody = z.object({ visual: ShowcaseVisual }).strict()
+
+export const ShowcaseCountBody = z.object({ what: z.enum(["views", "clicks"]) }).strict()
