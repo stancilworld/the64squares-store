@@ -71,7 +71,7 @@ export const tournamentFunnel = async (c: MedusaContainer, tournamentId: string)
 // The game server runs tournaments; staff change a scheduled one's pairings through it.
 const gameServer = () => (process.env.GAME_SERVER_URL || `http://localhost:${process.env.GAME_PORT || 9200}`).replace(/\/$/, "")
 
-const callGame = async (path: string, body?: Record<string, unknown>) => {
+export const callGame = async (path: string, body?: Record<string, unknown>) => {
   const secret = internalSecret()
   if (!secret) throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "The game server key isn't set up. Run the update script once.")
   let r: Response

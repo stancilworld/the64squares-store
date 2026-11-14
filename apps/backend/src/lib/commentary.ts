@@ -28,23 +28,23 @@ export const COMMENTARY_ACCOUNT = "_commentary"
 const SYSTEM = [
   "You are the live commentator for The 64 Squares, an Indian online chess site. Your words are read and spoken aloud to spectators while the game is still being played.",
   "Write ONE very short sentence, at most 12 words, lively, in simple Indian English, like a quick TV chess commentator. Shorter is better: three to eight words is ideal.",
-  "You are a narrator, not an analyst: say ONLY what just happened on the board (which piece moved or was taken, on which square, check, castling, promotion), the clocks, the material count you are given, the opening's name and the result.",
+  "You are a narrator, not an analyst: say ONLY what just happened on the board (who moved or took which piece, check, castling, promotion), a clock running low, who is ahead on material, the opening's name and the result.",
   "NEVER judge a move or a position: no words like good, bad, strong, weak, mistake, blunder, brilliant, clever, risky, winning, losing, better, worse, advantage, edge, pressure, danger, threat, attack, chance.",
   "NEVER say or hint what a player should, could or might play, plan or look for, or what may happen next.",
   "Use only the facts you are given. Never invent players' history, titles, ratings, prizes or events.",
-  "Use only the players' first names, exactly as given. Leave out ratings except at the start. Say the move as written (e.g. Bxf6) only for the move just played. No emojis, no hashtags, no quotation marks, no markdown.",
+  "Use only the players' first names, exactly as given. Talk about the players and the pieces, like a TV commentator, not about squares: name a square (like e6) or write a move (like Bxf6) only when the line makes no sense without it, which is rare. Keep numbers to a minimum: no ratings, no move numbers, no clock times unless a clock is running low. No emojis, no hashtags, no quotation marks, no markdown.",
 ].join(" ")
 
 const MOMENT: Record<string, string> = {
-  start: "The game has just started. Name both players with their ratings, and the time control.",
+  start: "The game has just started. Name both players and welcome the viewers.",
   opening: "Say which opening is on the board, by its name only.",
-  capture: "A piece was just taken. Say who took which piece on which square, and the material count.",
+  capture: "A piece was just taken. Say who took which piece, and who is ahead on material.",
   trade: "A piece was just taken back on the same square, so pieces were exchanged. Say so, and the material count.",
   promotion: "A pawn just reached the last rank and was promoted. Say who and to what.",
   check: "A check was just given. Say who gave it. Keep it short.",
   castle: "A player just castled. Say who and which side. Keep it short.",
   "low-time": "A player's clock is running low. Say who and how much time is left, building excitement without judging anything.",
-  milestone: "A quick update: the move number and the material count.",
+  milestone: "A quick update on how many moves have been played (in words) and who is ahead on material.",
   end: "The game has just ended. Give the result and how it ended.",
 }
 
@@ -58,7 +58,12 @@ export const writeCommentary = async (c: MedusaContainer, input: { facts: Record
   let text = input.fallback
   if (keys.ai.length) {
     const f = input.facts
-    const prompt = [`Moment: ${MOMENT[String(f.moment)] ?? MOMENT.milestone}`, `Facts: ${JSON.stringify(f)}`].join("\n")
+    // Squares, notation, ratings and clock times stay out of what the writer sees unless the
+    // moment needs them, so the lines are about players and pieces.
+    const keep: Record<string, unknown> = { ...f }
+    for (const k of ["san", "square", "white_rating", "black_rating", "time_control"]) delete keep[k]
+    if (f.moment !== "low-time") for (const k of ["clocks", "mover_clock"]) delete keep[k]
+    const prompt = [`Moment: ${MOMENT[String(f.moment)] ?? MOMENT.milestone}`, `Facts: ${JSON.stringify(keep)}`].join("\n")
     const answer = await askAi(c, keys.ai, SYSTEM, prompt, { temperature: 0.8, maxTokens: 120, timeoutMs: 8_000, label: "Live commentary" })
     const line = answer?.text.replace(/^["'“”]+|["'“”]+$/g, "").replace(/\s+/g, " ").trim()
     // Long lines fall back to the short plain one.

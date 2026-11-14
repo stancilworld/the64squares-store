@@ -140,11 +140,14 @@ const server = http.createServer(async (req, res) => {
     if (path === "/health") return send(res, 200, JSON.stringify({ ok: true, live_games: manager.liveCount() }), "application/json", origin)
     // Staff tools from the admin (through the backend, with the shared secret): a scheduled
     // tournament's pairings before a round starts.
+    // Who's connected right now (admin → Online now).
+    if (path === "/internal/online" && req.method === "GET") {
+      if (!internalAllowed(req)) return json(res, 401, { error: "not-allowed" })
+      return json(res, 200, await onlineNow())
+    }
     const tm = /^\/internal\/tourney\/([\w-]{3,80})\/(view|swap|seeds|reset)$/.exec(path)
     if (tm) {
-      const want = config.internalSecret
-      const got = req.headers["x-t64-game-secret"]
-      if (!want || typeof got !== "string" || got.length !== want.length || !crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want))) return json(res, 401, { error: "not-allowed" })
+      if (!internalAllowed(req)) return json(res, 401, { error: "not-allowed" })
       const [, tid, action] = tm
       if (action === "view" && req.method === "GET") return json(res, 200, { view: await tourneys.view(tid) })
       if (req.method !== "POST") return json(res, 405, { error: "method" })
@@ -254,6 +257,66 @@ const io = new Server(server, {
 })
 
 const room = (id: string) => `game:${id}`
+
+// The backend's calls (with the shared secret).
+const internalAllowed = (req: http.IncomingMessage) => {
+  const want = config.internalSecret
+  const got = req.headers["x-t64-game-secret"]
+  return !!want && typeof got === "string" && got.length === want.length && crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want))
+}
+
+// Everyone connected to Play right now: signed-in players with what they're doing (playing,
+// in a tournament lobby, watching a game), and how many visitors aren't signed in.
+const onlineNow = async () => {
+  const now = Date.now()
+  type Person = { id: string; name: string; since: number; lobbies: Set<string>; watching: Set<string> }
+  const people = new Map<string, Person>()
+  let guests = 0
+  for (const s of io.sockets.sockets.values()) {
+    const p = s.data.player as Player | null
+    if (!p || isGuest(p.id)) {
+      guests++
+      continue
+    }
+    const e = people.get(p.id) ?? { id: p.id, name: p.name, since: s.data.since ?? now, lobbies: new Set<string>(), watching: new Set<string>() }
+    e.since = Math.min(e.since, s.data.since ?? now)
+    for (const r of s.rooms) {
+      const lm = /^lobby:([^:]+)$/.exec(r)
+      if (lm) e.lobbies.add(lm[1])
+      const gm = /^game:([A-Za-z0-9]+)$/.exec(r)
+      if (gm) e.watching.add(gm[1])
+    }
+    people.set(p.id, e)
+  }
+  const tids = new Set<string>()
+  const rows = [...people.values()].map((e) => {
+    const playing = manager.liveFor(e.id).flatMap((gid) => {
+      const g = manager.live(gid)
+      if (!g) return []
+      const colour = g.colorOf(e.id)
+      const opp = colour === "w" ? g.r.black : g.r.white
+      if (g.r.tournament_id) tids.add(g.r.tournament_id)
+      return [{ game_id: gid, opponent: opp?.name ?? null, mode: g.r.mode, tournament_id: g.r.tournament_id ?? null, time_control: `${Math.round(g.r.initial_ms / 60000)}+${Math.round(g.r.increment_ms / 1000)}` }]
+    })
+    for (const t of e.lobbies) tids.add(t)
+    const mine = new Set(playing.map((g) => g.game_id))
+    return { id: e.id, name: e.name, since: e.since, playing, lobbies: [...e.lobbies], watching: [...e.watching].filter((g) => !mine.has(g) && manager.live(g)?.r.status === "active") }
+  })
+  const titles = new Map<string, { title: string; handle: string }>()
+  if (tids.size) {
+    const { rows: ts } = await pool.query("select id, title, handle from public.tournament where id = any($1)", [[...tids]])
+    for (const t of ts) titles.set(t.id, { title: t.title, handle: t.handle })
+  }
+  const named = (id: string | null) => (id ? { id, ...(titles.get(id) ?? { title: "A tournament", handle: null }) } : null)
+  return {
+    now,
+    live_games: manager.liveCount(),
+    guests,
+    players: rows
+      .map((r) => ({ ...r, playing: r.playing.map((g) => ({ ...g, tournament: named(g.tournament_id) })), lobbies: r.lobbies.map((t) => named(t)!) }))
+      .sort((a, b) => b.playing.length - a.playing.length || a.since - b.since),
+  }
+}
 const manager = new GameManager((view) => {
   io.to(room(view.id)).emit("game:state", view)
   commentary?.onState(view)
@@ -350,6 +413,7 @@ const limited = (socket: Socket, ack?: unknown) => {
 const isId = (v: unknown): v is string => typeof v === "string" && /^[A-Za-z0-9]{6,20}$/.test(v)
 
 io.on("connection", (socket) => {
+  socket.data.since = Date.now()
   const me = (): Player | null => socket.data.player ?? null
   const guard = (ack: unknown): ack is Ack => typeof ack === "function"
 

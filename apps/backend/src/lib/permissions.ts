@@ -46,6 +46,7 @@ export const PERMISSIONS: Permission[] = [
   { key: "messages.view", group: "Customers & marketing", label: "Read contact messages", description: "See messages sent with the Contact page form and mark them as answered.", default: true },
   { key: "mailbox.view", group: "Customers & marketing", label: "Read & answer the email inbox", description: "See every email sent to the shop's mailbox (e.g. info@the64squares.in) and reply from it.", default: false },
   { key: "reviews.manage", group: "Customers & marketing", label: "Product reviews", description: "Approve or hide shoppers' reviews, answer them, and add reviews received elsewhere.", default: true },
+  { key: "online.view", group: "Customers & marketing", label: "Online now", description: "See which signed-in players are on Play right now and what they're doing.", default: true },
   { key: "analytics.view", group: "Customers & marketing", label: "Analytics", description: "See visits, sales by source, campaigns, searches and Play numbers (no customer details).", default: false },
   { key: "subscribers.view", group: "Customers & marketing", label: "View newsletter subscribers", description: "See the newsletter sign-up list.", default: false },
 
@@ -165,6 +166,7 @@ const RULES: Rule[] = [
   r("write", /^\/seo(\/|$)/, "settings.branding"),
   r("any", /^\/marketing(\/|$)/, "settings.marketing"),
   r("read", /^\/analytics(\/|$)/, "analytics.view"),
+  r("read", /^\/online(\/|$)/, "online.view"),
   r("any", /^\/automations(\/|$)/, "settings.marketing"),
   r("any", /^\/push(\/|$)/, "settings.marketing"),
   r("write", /^\/checkout-settings(\/|$)/, "settings.store"),

@@ -55,6 +55,10 @@ export type Facts = {
 const VALUE: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9 }
 
 // The material count (a count of pieces, not an opinion).
+// The difference in words, not numbers.
+const MATERIAL_WORDS: Record<number, string> = { 1: "a pawn up", 2: "two pawns up", 3: "a piece up", 4: "a piece and a pawn up", 5: "a rook up" }
+const TENS = ["", "Ten", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety", "A hundred"]
+
 export const materialOf = (fen: string, white = "White", black = "Black") => {
   let w = 0
   let b = 0
@@ -65,7 +69,7 @@ export const materialOf = (fen: string, white = "White", black = "Black") => {
     else b += v
   }
   const d = Math.abs(w - b)
-  return { w, b, text: d === 0 ? "Material level" : `${w > b ? white : black} +${d}` }
+  return { w, b, text: d === 0 ? "Material is level" : `${w > b ? white : black} is ${MATERIAL_WORDS[d] ?? "ahead on material"}` }
 }
 
 export const clockText = (ms: number) => {
@@ -195,13 +199,13 @@ export const firstName = (name: string) => name.trim().split(/\s+/)[0] || name
 export const fallbackLine = (f: Facts, leftMs = 0) => {
   switch (f.moment) {
     case "start":
-      return `${f.white}${f.white_rating ? ` (${f.white_rating})` : ""} vs ${f.black}${f.black_rating ? ` (${f.black_rating})` : ""}, ${f.time_control}.`
+      return `${f.white} against ${f.black}. Here we go!`
     case "opening":
-      return `${f.opening} on the board.`
+      return `It's the ${f.opening}.`
     case "capture":
-      return `${f.mover} takes the ${f.captured} on ${f.square}${f.check ? ", check" : ""}. ${f.material}.`
+      return `${f.mover} takes the ${f.captured}${f.check ? " with check" : ""}. ${f.material}.`
     case "trade":
-      return `Trade on ${f.square}${f.check ? ", check" : ""}. ${f.material}.`
+      return `Pieces come off${f.check ? ", with check" : ""}. ${f.material}.`
     case "promotion":
       return `${f.mover} promotes to a ${f.promoted_to}!`
     case "check":
@@ -211,7 +215,7 @@ export const fallbackLine = (f: Facts, leftMs = 0) => {
     case "low-time":
       return `${f.mover}: ${leftMs ? secondsWords(leftMs) : f.mover_clock} left!`
     case "milestone":
-      return `Move ${f.move_no}. ${f.material}. Clocks ${f.clocks.white} and ${f.clocks.black}.`
+      return `${f.move_no % 10 === 0 && TENS[f.move_no / 10] ? `${TENS[f.move_no / 10]} moves in` : `Move ${f.move_no}`}. ${f.material}.`
     case "end":
       return f.result === "1/2-1/2" ? `Draw${f.reason ? ` by ${f.reason.replace(/-/g, " ")}` : ""}. Well played!` : `${f.result === "1-0" ? f.white : f.black} wins${f.reason ? ` by ${f.reason.replace(/-/g, " ")}` : ""}!`
   }

@@ -34,8 +34,8 @@ test("low time: under a minute, then under 10 seconds, once each", () => {
 })
 
 test("material is a count, clocks as m:ss", () => {
-  assert.equal(materialOf("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").text, "Material level")
-  assert.equal(materialOf("rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "Asha", "Ravi").text, "Asha +9")
+  assert.equal(materialOf("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").text, "Material is level")
+  assert.equal(materialOf("rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "Asha", "Ravi").text, "Asha is ahead on material")
   assert.equal(clockText(65_400), "1:06")
 })
 
@@ -70,16 +70,21 @@ test("plain lines only describe what happened", () => {
     promoted_to: null,
     check: false,
     opening: "Ruy Lopez",
-    material: "Asha +3",
+    material: "Asha is a piece up",
     clocks: { white: "2:10", black: "1:58" },
     mover_clock: "2:10",
   }
-  assert.equal(fallbackLine(f), "Asha takes the knight on f6. Asha +3.")
+  assert.equal(fallbackLine(f), "Asha takes the knight. Asha is a piece up.")
+  // No squares (like f6) or move notation in the plain lines.
+  for (const moment of ["start", "opening", "capture", "trade", "promotion", "check", "castle", "milestone", "end"] as const) {
+    const line = fallbackLine({ ...f, moment, castle: "kingside", promoted_to: "queen", result: "1-0", reason: "checkmate" })
+    assert.ok(!/\b[a-h][1-8]\b|Bxf6/.test(line), `${moment}: ${line}`)
+  }
   for (const moment of ["start", "opening", "capture", "trade", "promotion", "check", "castle", "low-time", "milestone", "end"] as const) {
     const line = fallbackLine({ ...f, moment, castle: "kingside", promoted_to: "queen", result: "0-1", reason: "checkmate" }, 45_000)
     assert.ok(line && !JUDGEMENT.test(line), `${moment}: ${line}`)
     // Short lines: a few words while the game goes on.
-    assert.ok(line.split(" ").length <= 12, `${moment} is too long: ${line}`)
+    assert.ok(line.split(" ").length <= 14, `${moment} is too long: ${line}`)
   }
 })
 
