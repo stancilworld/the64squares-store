@@ -82,7 +82,8 @@ const recordTournamentResultsStep = createStep(
         prize_status: prize ? (r.prize_status ?? "due") : null,
         certificate_no: t.certificates === false ? r.certificate_no : (r.certificate_no ?? certificateNo()),
       } as never)
-      if (p.completed && input.completed_passes > 0) {
+      // Free-entry tournaments give no passes for finishing.
+      if (p.completed && input.completed_passes > 0 && t.entry !== "free") {
         passes.push({ customer_id: p.customer_id, delta: input.completed_passes, reason: "completed", ref: `completed:${t.id}`, note: t.title })
       }
     }

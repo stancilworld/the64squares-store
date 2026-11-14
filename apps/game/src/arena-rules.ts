@@ -74,6 +74,10 @@ export const rankQualified = (list: Standing[], minGames: number) => {
 // Challenges: at most this many games between the same two players in one arena.
 export const MAX_GAMES_SAME_PAIR = 2
 export const CHALLENGE_MS = 30_000
+// Automatic matchmaking: a player who hasn't challenged anyone (or been challenged) for this
+// long gets a match offer, which both players must accept within OFFER_MS.
+export const AUTO_AFTER_MS = 20_000
+export const OFFER_MS = 20_000
 
 // Pairs waiting players: closest in the standings first, never the same opponent twice in
 // a row while anyone else is free. Colours go to whoever has had fewer of them.

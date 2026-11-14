@@ -472,14 +472,14 @@ export function TournamentDrawer({ tournament, open, onClose }: { tournament: To
               )}
               {form.format === "arena" && (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Field label="How players are paired" htmlFor="t-ap" hint="Automatic: paired as soon as a game ends. Challenges: players challenge each other in the lobby and accept.">
+                  <Field label="How players are paired" htmlFor="t-ap" hint="Players always challenge each other in the lobby. With match offers, a player who doesn't pick anyone within 20 seconds is offered an opponent; the game starts only when both press Accept.">
                     <Select value={form.arena_pairing} onValueChange={(v) => set("arena_pairing", v as Form["arena_pairing"])}>
                       <Select.Trigger id="t-ap">
                         <Select.Value />
                       </Select.Trigger>
                       <Select.Content>
-                        <Select.Item value="auto">Automatic</Select.Item>
-                        <Select.Item value="challenge">Challenges</Select.Item>
+                        <Select.Item value="auto">Challenges + match offers</Select.Item>
+                        <Select.Item value="challenge">Challenges only</Select.Item>
                       </Select.Content>
                     </Select>
                   </Field>

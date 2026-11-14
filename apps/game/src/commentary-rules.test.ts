@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { clockText, fallbackLine, type Facts, lowTimeMark, materialOf, type MoveInfo, momentsOf, openingOf, shouldSpeak } from "./commentary-rules.js"
+import { clockText, fallbackLine, firstName, type Facts, lowTimeMark, materialOf, type MoveInfo, momentsOf, openingOf, shouldSpeak } from "./commentary-rules.js"
 
 const mv = (o: Partial<MoveInfo>): MoveInfo => ({ ply: 10, side: "w", san: "Nf3", piece: "n", captured: null, to: "f3", promotion: null, check: false, castle: null, ...o })
 const ctx = (o: Partial<{ leftMs: number; initialMs: number; said: Set<string>; opening: string | null }> = {}) => ({ leftMs: 170_000, initialMs: 180_000, said: new Set<string>(), opening: null, ...o })
@@ -34,8 +34,8 @@ test("low time: under a minute, then under 10 seconds, once each", () => {
 })
 
 test("material is a count, clocks as m:ss", () => {
-  assert.equal(materialOf("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").text, "Material is level")
-  assert.equal(materialOf("rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "Asha", "Ravi").text, "Asha has 9 more points of material")
+  assert.equal(materialOf("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").text, "Material level")
+  assert.equal(materialOf("rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", "Asha", "Ravi").text, "Asha +9")
   assert.equal(clockText(65_400), "1:06")
 })
 
@@ -70,13 +70,20 @@ test("plain lines only describe what happened", () => {
     promoted_to: null,
     check: false,
     opening: "Ruy Lopez",
-    material: "Asha has 3 more points of material",
+    material: "Asha +3",
     clocks: { white: "2:10", black: "1:58" },
     mover_clock: "2:10",
   }
-  assert.equal(fallbackLine(f), "Asha takes Ravi's knight on f6. Asha has 3 more points of material.")
+  assert.equal(fallbackLine(f), "Asha takes the knight on f6. Asha +3.")
   for (const moment of ["start", "opening", "capture", "trade", "promotion", "check", "castle", "low-time", "milestone", "end"] as const) {
     const line = fallbackLine({ ...f, moment, castle: "kingside", promoted_to: "queen", result: "0-1", reason: "checkmate" }, 45_000)
     assert.ok(line && !JUDGEMENT.test(line), `${moment}: ${line}`)
+    // Short lines: a few words while the game goes on.
+    assert.ok(line.split(" ").length <= 12, `${moment} is too long: ${line}`)
   }
+})
+
+test("first names only", () => {
+  assert.equal(firstName("Pradyuman Singh Rajawat"), "Pradyuman")
+  assert.equal(firstName("  Asha "), "Asha")
 })

@@ -203,12 +203,6 @@ export function TourneyScreen(props: Props) {
     } else setError(res.error ?? "Couldn't cancel.")
   }
 
-  const arenaCall = (event: "arena:join" | "arena:pause") =>
-    socket.current?.emit(event, t.id, (res: { ok: boolean; you?: ArenaYou; error?: string }) => {
-      if (res.ok) setArenaYou(res.you ?? null)
-      else setError(res.error === "fair-play-ban" ? "Your account is closed for tournaments after a fair-play review." : res.error === "not-registered" ? "You're not registered for this tournament." : "That didn't work. Please try again.")
-    })
-
   // ---------------------------------------------------------------- hero
 
   const n = (now ?? nowMs()) + offset
@@ -332,18 +326,10 @@ export function TourneyScreen(props: Props) {
                 Go to your board
               </Link>
             ) : t.format === "arena" ? (
-              arenaYou?.joined ? (
-                <>
-                  <p className="mt-3 text-[15px]">Finding your next opponent… the board opens by itself.</p>
-                  <button type="button" className="g-btn mt-3 w-full" onClick={() => arenaCall("arena:pause")}>
-                    Take a break
-                  </button>
-                </>
-              ) : (
-                <button type="button" onClick={() => arenaCall("arena:join")} className="mt-4 h-[54px] w-full rounded-lg bg-[var(--g-accent)] text-[18px] font-extrabold text-black">
-                  {arenaYou?.paused ? "Join again" : "Join the arena"}
-                </button>
-              )
+              // The arena is played from the lobby: challenges and match offers appear there.
+              <Link href={`/play/tournaments/${t.handle}/lobby`} className="mt-4 flex h-[54px] w-full items-center justify-center rounded-lg bg-[var(--g-accent)] text-[18px] font-extrabold text-black">
+                Go to the lobby to play
+              </Link>
             ) : out ? (
               <p className="mt-3 text-[15px]">You&apos;re out of the running this time. Thanks for playing: watch the rest live below.</p>
             ) : t.check_in_minutes > 0 && !ticket.checked_in_at ? (

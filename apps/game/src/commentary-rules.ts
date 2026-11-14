@@ -65,7 +65,7 @@ export const materialOf = (fen: string, white = "White", black = "Black") => {
     else b += v
   }
   const d = Math.abs(w - b)
-  return { w, b, text: d === 0 ? "Material is level" : `${w > b ? white : black} has ${d} more point${d === 1 ? "" : "s"} of material` }
+  return { w, b, text: d === 0 ? "Material level" : `${w > b ? white : black} +${d}` }
 }
 
 export const clockText = (ms: number) => {
@@ -187,28 +187,32 @@ export const shouldSpeak = (m: Moment, sinceLastMs: number, pliesSinceLast: numb
 
 export const lowTimeKey = (leftMs: number, initialMs: number, side: "w" | "b") => `${lowTimeMark(leftMs, initialMs)}-${side}`
 
-// A plain line, for when the AI writer isn't connected or its line isn't safe to use.
+// "Pradyuman Singh Rajawat" → "Pradyuman": lines stay short.
+export const firstName = (name: string) => name.trim().split(/\s+/)[0] || name
+
+// A plain line, for when the AI writer isn't connected or its line isn't safe to use. Short on
+// purpose: a few words, said while the game goes on.
 export const fallbackLine = (f: Facts, leftMs = 0) => {
   switch (f.moment) {
     case "start":
-      return `${f.white}${f.white_rating ? ` (${f.white_rating})` : ""} has White against ${f.black}${f.black_rating ? ` (${f.black_rating})` : ""}, ${f.time_control}${f.tournament ? ` in the ${f.tournament}` : ""}.`
+      return `${f.white}${f.white_rating ? ` (${f.white_rating})` : ""} vs ${f.black}${f.black_rating ? ` (${f.black_rating})` : ""}, ${f.time_control}.`
     case "opening":
-      return `The opening is the ${f.opening}.`
+      return `${f.opening} on the board.`
     case "capture":
-      return `${f.mover} takes ${f.opponent}'s ${f.captured} on ${f.square}${f.check ? ", with check" : ""}. ${f.material}.`
+      return `${f.mover} takes the ${f.captured} on ${f.square}${f.check ? ", check" : ""}. ${f.material}.`
     case "trade":
-      return `${f.mover} takes back on ${f.square}${f.check ? " with check" : ""}, and pieces come off the board. ${f.material}.`
+      return `Trade on ${f.square}${f.check ? ", check" : ""}. ${f.material}.`
     case "promotion":
-      return `${f.mover}'s pawn reaches ${f.square} and becomes a ${f.promoted_to}!`
+      return `${f.mover} promotes to a ${f.promoted_to}!`
     case "check":
-      return `${f.san}, check from ${f.mover}.`
+      return `Check from ${f.mover}.`
     case "castle":
-      return `${f.mover} castles ${f.castle}.`
+      return `${f.mover} castles ${f.castle === "queenside" ? "long" : "short"}.`
     case "low-time":
-      return `${f.mover} has ${leftMs ? secondsWords(leftMs) : f.mover_clock} left on the clock.`
+      return `${f.mover}: ${leftMs ? secondsWords(leftMs) : f.mover_clock} left!`
     case "milestone":
-      return `Move ${f.move_no}. ${f.material}. On the clocks, ${f.white} ${f.clocks.white}, ${f.black} ${f.clocks.black}.`
+      return `Move ${f.move_no}. ${f.material}. Clocks ${f.clocks.white} and ${f.clocks.black}.`
     case "end":
-      return `And that's the game: ${f.result === "1/2-1/2" ? "a draw" : `${f.result === "1-0" ? f.white : f.black} wins`}${f.reason ? ` by ${f.reason.replace(/-/g, " ")}` : ""}. Well played, both.`
+      return f.result === "1/2-1/2" ? `Draw${f.reason ? ` by ${f.reason.replace(/-/g, " ")}` : ""}. Well played!` : `${f.result === "1-0" ? f.white : f.black} wins${f.reason ? ` by ${f.reason.replace(/-/g, " ")}` : ""}!`
   }
 }

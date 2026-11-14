@@ -132,6 +132,8 @@ function CasterDesk({ moderators, voice, latest, status }: { moderators: Person[
 
 type Seat = { id: string; name: string; rating: number | null; avatar_url: string | null; here: boolean; game: string | null; rank: number | null; score: string | null; out: boolean; available: boolean }
 type Challenge = { from: { id: string; name: string; score: number; games: number }; until: number }
+// A match offer from matchmaking: both players accept, then the game starts.
+type Offer = { id: string; until: number; opponent: { id: string; name: string; score: number; games: number }; accepted: boolean; theyAccepted: boolean }
 
 function ArenaFloor({
   seats,
@@ -286,6 +288,7 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
   // Challenge arenas: challenges to me, and the one I sent.
   const [incoming, setIncoming] = useState<Challenge[]>([])
   const [pending, setPending] = useState<string | null>(null)
+  const [offer, setOffer] = useState<Offer | null>(null)
   // The game on the stage (match mode), and the games already opened by themselves.
   const [gameId, setGameId] = useState<string | null>(initialGame)
   const opened = useRef(new Set<string>(initialGame ? [initialGame] : []))
@@ -367,12 +370,28 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
       setPending(null)
       if (!d.accepted) setError(`${d.by} declined your challenge.`)
     })
+    s.on("arena:offer", (o: Omit<Offer, "accepted" | "theyAccepted"> & { tournament_id: string }) => {
+      if (o.tournament_id === t.id) setOffer({ id: o.id, until: o.until, opponent: o.opponent, accepted: false, theyAccepted: false })
+    })
+    s.on("arena:offer-ready", (d: { tournament_id: string; id: string }) => {
+      if (d.tournament_id === t.id) setOffer((o) => (o && o.id === d.id ? { ...o, theyAccepted: true } : o))
+    })
+    s.on("arena:offer-gone", (d: { tournament_id: string; id: string; reason: string; missed?: string[] }) => {
+      if (d.tournament_id !== t.id) return
+      setOffer((o) => (o && o.id === d.id ? null : o))
+      if (d.reason === "declined") setError("Your opponent said no to that match. You'll get another offer soon, or challenge someone.")
+      else if (d.reason === "timeout" && meId && d.missed?.includes(meId)) {
+        setError("You didn't accept in time, so you're out of the arena for now. Press Join the arena to play again.")
+        setArenaYou((y) => (y ? { ...y, joined: false, waiting: false } : y))
+      } else if (d.reason === "timeout") setError("Your opponent didn't accept in time. You'll get another offer soon.")
+    })
     // Paired: the board opens here, with the Ready check.
     const paired = (p: { game_id: string; tournament_id: string }) => {
       if (p.tournament_id !== t.id) return
       setMine((m) => (m.includes(p.game_id) ? m : [...m, p.game_id]))
       setPending(null)
       setIncoming([])
+      setOffer(null)
       open(p.game_id)
     }
     s.on("tourney:paired", paired)
@@ -380,7 +399,7 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
     return () => {
       s.disconnect()
     }
-  }, [t.id, t.format, token, open])
+  }, [t.id, t.format, token, meId, open])
 
   // A moderator was added or removed: join again to get the new role.
   useEffect(() => {
@@ -425,7 +444,9 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
   const running = !finished && (view?.state?.phase === "running" || arena?.phase === "live" || (t.format === "arena" && n >= starts))
   const checkinOpen = !running && !finished && t.check_in_minutes > 0 && n >= starts - t.check_in_minutes * 60_000 && n < starts
   const myBoard = meId ? view?.live.find((b) => b.white?.id === meId || b.black?.id === meId) : undefined
-  const myGame = myBoard?.game_id ?? arenaYou?.game_id ?? null
+  // Arena: my game is the one I was just paired into, while the arena says I'm playing.
+  const arenaMe = meId ? arena?.standings.find((r) => r.player_id === meId) : undefined
+  const myGame = myBoard?.game_id ?? (arenaMe?.status === "playing" ? (mine.at(-1) ?? arenaYou?.game_id ?? null) : null)
 
   // Arriving (or coming back) while my game is on: it opens by itself, once.
   useEffect(() => {
@@ -478,7 +499,20 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
       else setError(res.error === "not-registered" ? "You're not registered for this tournament." : "That didn't work. Please try again.")
     })
 
-  const challengeMode = t.format === "arena" && arena?.pairing === "challenge"
+  // Players always choose their opponents in an arena.
+  const challengeMode = t.format === "arena"
+  const answerOffer = (accept: boolean) => {
+    if (!offer) return
+    if (accept) setOffer({ ...offer, accepted: true })
+    else setOffer(null)
+    socket.current?.emit("arena:offer-answer", { tid: t.id, id: offer.id, accept }, (res: { ok: boolean; error?: string }) => {
+      if (!res.ok && accept) {
+        setOffer(null)
+        setError("That match offer has expired.")
+      }
+    })
+  }
+  const liveOffer = offer && offer.until > n - offset ? offer : null
   const sendChallenge = (to: string) =>
     socket.current?.emit("arena:challenge", { tid: t.id, to }, (res: { ok: boolean; until?: number; error?: string }) => {
       if (!res.ok) {
@@ -539,9 +573,7 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
       return arenaYou?.joined ? (
         <div className="flex flex-wrap items-center gap-3">
           <p className="lobby-seat-text">
-            {challengeMode
-              ? `You're available. Tap Challenge on a player's card, or wait to be challenged.${arena?.min_games && arena.min_games > 1 ? ` Games: ${myRow?.games ?? 0} of ${arena.min_games} needed to be ranked.` : ""}`
-              : "Finding your next opponent… your board opens here by itself."}
+            {`You're available. Tap Challenge on a player's card${arena?.pairing === "challenge" ? ", or wait to be challenged" : ". Don't pick anyone and we'll offer you a match to accept"}.${arena?.min_games && arena.min_games > 1 ? ` Games: ${myRow?.games ?? 0} of ${arena.min_games} needed to be ranked.` : ""}`}
           </p>
           <button type="button" className="g-btn" onClick={() => arenaCall("arena:pause")}>
             Take a break
@@ -638,6 +670,30 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
     ["chat", "Chat"],
   ]
 
+  // Playing my own game: the board gets the whole screen. Voice and chat are for the lobby,
+  // so a player at the board neither hears the call nor sees the messages.
+  const playing = !!gameId && gameId === myGame
+
+  if (playing)
+    return (
+      <div className="lobby" data-format={t.format} data-mode="play" style={{ "--fc": f.colour, "--piece": `url(/pieces/classic/w${f.piece}.svg)` } as CSSProperties}>
+        <div className="play-strip">
+          <button type="button" className="g-btn !min-h-[34px] !px-3 !text-[13px]" onClick={() => open(null)}>
+            ‹ Lobby
+          </button>
+          <span className="lobby-format">{f.name}</span>
+          <span className="play-strip-title">{t.title}</span>
+          {roundText && <span className="play-strip-meta">{roundText}</span>}
+          {clock && (
+            <span className="play-strip-clock">
+              {clock.label} <Countdown to={clock.to} offset={offset} size="sm" />
+            </span>
+          )}
+        </div>
+        <GameView key={gameId} id={gameId} initialPass={pass} embedded={{ onExit: () => open(null), onOpen: (id) => open(id) }} />
+      </div>
+    )
+
   return (
     <div className="lobby" data-format={t.format} data-mode={gameId ? "match" : "arena"} style={{ "--fc": f.colour, "--piece": `url(/pieces/classic/w${f.piece}.svg)` } as CSSProperties}>
       {/* Broadcast bar: always on top, so voice and the clock carry on in match mode. */}
@@ -727,8 +783,29 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
         </div>
       )}
 
-      {liveIncoming.length > 0 && (
-        <div className="challenge-box" role="alertdialog" aria-label="You've been challenged">
+      {(liveIncoming.length > 0 || liveOffer) && (
+        <div className="challenge-box" role="alertdialog" aria-label="A match for you">
+          {liveOffer && (
+            <div className="challenge-card challenge-offer">
+              <p className="challenge-title">♟ Match found: {liveOffer.opponent.name}</p>
+              <p className="challenge-meta">
+                {liveOffer.opponent.score} pts · {liveOffer.opponent.games} games · {Math.max(0, Math.ceil((liveOffer.until - (n - offset)) / 1000))} s to accept
+                {liveOffer.theyAccepted ? " · they've accepted" : ""}
+              </p>
+              {liveOffer.accepted ? (
+                <p className="mt-2 text-[14px] font-bold">Accepted. Waiting for {liveOffer.opponent.name}…</p>
+              ) : (
+                <div className="mt-2 flex gap-2">
+                  <button type="button" className="ready-go !min-h-[42px] !px-5 !text-[15px]" onClick={() => answerOffer(true)}>
+                    Accept
+                  </button>
+                  <button type="button" className="g-btn !min-h-[42px]" onClick={() => answerOffer(false)}>
+                    Not this one
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           {liveIncoming.slice(0, 3).map((c) => (
             <div key={c.from.id} className="challenge-card">
               <p className="challenge-title">♟ {c.from.name} challenges you</p>

@@ -5,7 +5,7 @@ import { config } from "./config.js"
 import { pool } from "./db.js"
 import type { Player } from "./game.js"
 import type { GameManager } from "./manager.js"
-import { clockText, DELAY_MS, type Facts, fallbackLine, lowTimeKey, materialOf, type Moment, type MoveInfo, momentsOf, openingOf, PIECE, type PieceKey, shouldSpeak } from "./commentary-rules.js"
+import { clockText, DELAY_MS, type Facts, fallbackLine, firstName, lowTimeKey, materialOf, type Moment, type MoveInfo, momentsOf, openingOf, PIECE, type PieceKey, shouldSpeak } from "./commentary-rules.js"
 
 // Live commentary, with no person involved. Staff switch it on for a game or a whole
 // tournament in the admin (play.commentary; scope "site", "tourney:<id>" or "game:<id>").
@@ -255,13 +255,16 @@ export class Commentary {
     const s = this.settingFor(g.id, g.tournamentId)
     const moves = history ?? g.chess.history()
     const side = m?.side ?? "w"
-    const mover = side === "w" ? g.white.name : g.black.name
-    const opponent = side === "w" ? g.black.name : g.white.name
+    // First names only: the lines are short.
+    const white = firstName(g.white.name)
+    const black = firstName(g.black.name)
+    const mover = side === "w" ? white : black
+    const opponent = side === "w" ? black : white
     const c = g.clocks
     const facts: Facts = {
       moment,
-      white: g.white.name,
-      black: g.black.name,
+      white,
+      black,
       white_rating: g.white.rating,
       black_rating: g.black.rating,
       time_control: g.tc,
@@ -277,7 +280,7 @@ export class Commentary {
       promoted_to: m?.promotion ? PIECE[m.promotion] : null,
       check: !!m?.check,
       opening: openingOf(moves),
-      material: materialOf(g.chess.fen(), g.white.name, g.black.name).text,
+      material: materialOf(g.chess.fen(), white, black).text,
       clocks: { white: clockText(c.w), black: clockText(c.b) },
       mover_clock: clockText(side === "w" ? c.w : c.b),
       result: end?.result ?? null,

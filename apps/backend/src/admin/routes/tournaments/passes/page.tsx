@@ -28,7 +28,7 @@ const FIELDS: [keyof Rules, string, string][] = [
   ["puzzle_pass", "Passes for a puzzle streak", "Once a week at most."],
   ["referral", "Passes for a referral", "When a friend they invited joins and plays."],
   ["referral_monthly_max", "Most referral passes a month", ""],
-  ["completed", "Passes for finishing a tournament", "Players who stay to the end."],
+  ["completed", "Passes for finishing a tournament", "Players who stay to the end of a pass-entry tournament. Free-entry tournaments give none."],
 ]
 
 const PassesPage = () => {

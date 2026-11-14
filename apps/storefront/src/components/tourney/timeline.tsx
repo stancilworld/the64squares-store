@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { FORMAT_COLOUR } from "@/lib/tournament-types"
 import { useNow } from "./countdown"
 import { nowMs } from "@/lib/clock"
@@ -25,8 +25,12 @@ export type TimelineEvent = {
   featured: boolean
 }
 
-const HOUR_PX = 168
+// Zoom: pixels per hour. Zoomed out shows the whole day; zoomed in shows a couple of hours.
+const ZOOMS = [36, 56, 84, 120, 168, 240]
+const DEFAULT_ZOOM = 168
 const LANE_PX = 96
+// Narrowest a card gets (short events still show their title).
+const cardMin = (hourPx: number) => (hourPx >= 120 ? 240 : 180)
 const IST = "Asia/Kolkata"
 const dayKey = (ms: number) => new Intl.DateTimeFormat("en-CA", { timeZone: IST }).format(new Date(ms))
 const dayStart = (key: string) => new Date(`${key}T00:00:00+05:30`).getTime()
@@ -41,11 +45,11 @@ const dayLabel = (key: string, today: string) => {
 }
 
 // Puts each event in the first row where it doesn't overlap another.
-const lanesFor = (events: TimelineEvent[]) => {
+const lanesFor = (events: TimelineEvent[], hourPx: number) => {
   const ends: number[] = []
   const lane = new Map<string, number>()
   for (const e of [...events].sort((a, b) => a.starts_at - b.starts_at)) {
-    const visualEnd = Math.max(e.ends_at, e.starts_at + (260 / HOUR_PX) * 3600_000)
+    const visualEnd = Math.max(e.ends_at, e.starts_at + ((cardMin(hourPx) + 20) / hourPx) * 3600_000)
     let i = ends.findIndex((end) => end <= e.starts_at)
     if (i === -1) {
       i = ends.length
@@ -74,14 +78,53 @@ export function TournamentTimeline({ events, initialDay }: { events: TimelineEve
   const [type, setType] = useState("all")
   const [speed, setSpeed] = useState("All controls")
   const scroller = useRef<HTMLDivElement>(null)
+  const [hourPx, setHourPx] = useState(DEFAULT_ZOOM)
+  // The zoom for event handlers (kept in step by zoomTo, the only thing that changes it).
+  const zoomRef = useRef(DEFAULT_ZOOM)
+
+  // Zooms around the middle of what's on screen (or the pointer), so the same time stays in view.
+  const zoomTo = useCallback((next: number, anchorX?: number) => {
+    const el = scroller.current
+    const prev = zoomRef.current
+    if (!el || next === prev) return
+    const ax = anchorX ?? el.clientWidth / 2
+    const hourAt = (el.scrollLeft + ax) / prev
+    zoomRef.current = next
+    setHourPx(next)
+    requestAnimationFrame(() => el.scrollTo({ left: Math.max(0, hourAt * next - ax) }))
+  }, [])
+  const step = (dir: 1 | -1) => {
+    const i = ZOOMS.findIndex((z) => z >= zoomRef.current)
+    const at = i === -1 ? ZOOMS.length - 1 : ZOOMS[i] === zoomRef.current ? i : dir > 0 ? i - 1 : i
+    zoomTo(ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, at + dir))])
+  }
+  const fitDay = () => {
+    const el = scroller.current
+    if (el) zoomTo(Math.max(20, Math.floor(el.clientWidth / 24)))
+  }
+  // Ctrl/⌘ + scroll (or a trackpad pinch) zooms.
+  useEffect(() => {
+    const el = scroller.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      e.preventDefault()
+      const next = Math.round(Math.min(ZOOMS[ZOOMS.length - 1], Math.max(20, zoomRef.current * (e.deltaY < 0 ? 1.15 : 1 / 1.15))))
+      zoomTo(next, e.clientX - el.getBoundingClientRect().left)
+    }
+    el.addEventListener("wheel", onWheel, { passive: false })
+    return () => el.removeEventListener("wheel", onWheel)
+  }, [zoomTo])
 
   const start = dayStart(day)
   const end = start + 86_400_000
   const shown = events.filter(
     (e) => e.starts_at < end && e.ends_at > start && (type === "all" || e.format === type) && (speed === "All controls" || e.speed === speed)
   )
-  const { lane, count } = lanesFor(shown)
-  const x = (ms: number) => ((Math.min(Math.max(ms, start), end) - start) / 3600_000) * HOUR_PX
+  const { lane, count } = lanesFor(shown, hourPx)
+  const x = (ms: number) => ((Math.min(Math.max(ms, start), end) - start) / 3600_000) * hourPx
+  // Hour labels every 1, 2 or 3 hours, so they don't crowd when zoomed out.
+  const labelEvery = hourPx >= 60 ? 1 : hourPx >= 36 ? 2 : 3
   const days = useMemo(() => Array.from({ length: 9 }, (_, i) => dayKey(dayStart(initialDay) + (i - 1) * 86_400_000)), [initialDay])
 
   // Opens at the current time (or the first event of another day).
@@ -118,6 +161,17 @@ export function TournamentTimeline({ events, initialDay }: { events: TimelineEve
             <option key={s}>{s}</option>
           ))}
         </select>
+        <div className="flex items-center gap-1 rounded-lg border border-[var(--g-line)] bg-[var(--g-panel)] p-1" role="group" aria-label="Zoom the timeline">
+          <button type="button" onClick={() => step(-1)} disabled={hourPx <= ZOOMS[0]} aria-label="Zoom out" className="grid h-[32px] w-[34px] place-items-center rounded-md text-[20px] font-bold leading-none hover:bg-white/10 disabled:opacity-35">
+            −
+          </button>
+          <button type="button" onClick={fitDay} className="h-[32px] rounded-md px-2.5 text-[13px] font-semibold text-[var(--g-muted)] hover:bg-white/10 hover:text-[var(--g-text)]">
+            Whole day
+          </button>
+          <button type="button" onClick={() => step(1)} disabled={hourPx >= ZOOMS[ZOOMS.length - 1]} aria-label="Zoom in" className="grid h-[32px] w-[34px] place-items-center rounded-md text-[20px] font-bold leading-none hover:bg-white/10 disabled:opacity-35">
+            +
+          </button>
+        </div>
         <div className="-mx-1 flex max-w-full gap-1 overflow-x-auto px-1 py-1" role="tablist" aria-label="Day">
           {days.map((d) => (
             <button
@@ -135,11 +189,11 @@ export function TournamentTimeline({ events, initialDay }: { events: TimelineEve
       </div>
 
       <div ref={scroller} className="relative mt-4 overflow-x-auto overscroll-x-contain rounded-xl border border-[var(--g-line)] bg-[#141414] [scrollbar-width:thin]">
-        <div className="relative" style={{ width: 24 * HOUR_PX, height: 40 + count * LANE_PX + 16 }}>
+        <div className="relative" style={{ width: 24 * hourPx, height: 40 + count * LANE_PX + 16 }}>
           {/* Hours */}
           {Array.from({ length: 48 }, (_, i) => (
-            <div key={i} className="absolute top-0 h-full border-l border-white/[0.05]" style={{ left: (i * HOUR_PX) / 2 }}>
-              {i % 2 === 0 && <span className="absolute left-2 top-2 text-[12px] font-semibold tabular-nums text-white/45">{String(i / 2).padStart(2, "0")}:00</span>}
+            <div key={i} className={`absolute top-0 h-full border-l ${i % 2 === 0 ? "border-white/[0.05]" : hourPx >= 60 ? "border-white/[0.03]" : "border-transparent"}`} style={{ left: (i * hourPx) / 2 }}>
+              {i % (2 * labelEvery) === 0 && <span className="absolute left-2 top-2 text-[12px] font-semibold tabular-nums text-white/45">{String(i / 2).padStart(2, "0")}:00</span>}
             </div>
           ))}
           {/* Now */}
@@ -154,7 +208,7 @@ export function TournamentTimeline({ events, initialDay }: { events: TimelineEve
           )}
           {shown.map((e) => {
             const left = x(e.starts_at)
-            const width = Math.max(240, x(e.ends_at) - left)
+            const width = Math.max(cardMin(hourPx), x(e.ends_at) - left)
             const colour = FORMAT_COLOUR[e.format] ?? "#ffb300"
             const live = e.phase === "live"
             const over = e.phase === "over" || e.phase === "cancelled"

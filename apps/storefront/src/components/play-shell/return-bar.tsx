@@ -16,6 +16,8 @@ export function ReturnBar({ pass }: { pass: PlayPass | null }) {
     refreshLive()
   }, [path])
 
+  // A tournament lobby opens the player's own game by itself (and has its own way back).
+  if (/^\/play\/tournaments\/[^/]+\/lobby/.test(path)) return null
   const game = data?.games.find((g) => path !== `/play/${g.id}`)
   if (!game || data?.games.some((g) => path === `/play/${g.id}`)) return null
   return (

@@ -24,7 +24,7 @@ function EarnList({ rules }: { rules: PassWallet["rules"] }) {
   const ways = [
     rules.games_per_pass > 0 && rules.games_daily_max > 0 && { icon: "♞", title: `Play ${rules.games_per_pass} rated games`, detail: `Against real players. Up to ${rules.games_daily_max} ${rules.games_daily_max === 1 ? "pass" : "passes"} a day.`, n: 1, href: "/play/online" },
     rules.puzzle_streak_days > 0 && rules.puzzle_pass > 0 && { icon: "🧩", title: `Solve puzzles ${rules.puzzle_streak_days} days in a row`, detail: "Once a week.", n: rules.puzzle_pass, href: "/play/puzzles" },
-    rules.completed > 0 && { icon: "🏁", title: "Finish a tournament", detail: "Play to the end, win or lose.", n: rules.completed, href: "/play/tournaments" },
+    rules.completed > 0 && { icon: "🏁", title: "Finish a tournament", detail: "Play a pass-entry tournament to the end, win or lose (free tournaments give none).", n: rules.completed, href: "/play/tournaments" },
     rules.referral > 0 && rules.referral_monthly_max > 0 && { icon: "🤝", title: "Invite a friend", detail: `When they join and play a game. Up to ${rules.referral_monthly_max} a month.`, n: rules.referral, href: null },
   ].filter(Boolean) as { icon: string; title: string; detail: string; n: number; href: string | null }[]
   return (

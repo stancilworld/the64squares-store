@@ -642,6 +642,14 @@ button.seat:hover { transform: translateY(-1px); border-color: #ff6b6b; }
 
 /* Match mode: a game on the stage */
 .match { display: flex; flex-direction: column; gap: 10px; }
+/* Playing: one slim line above the board, so the board can take the screen. */
+.lobby[data-mode="play"] { gap: 8px; }
+.play-strip { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 4px 10px; border-radius: 10px; background: #171717; border: 1px solid color-mix(in srgb, var(--fc) 30%, transparent); font-size: 13.5px; }
+.play-strip .lobby-format { font-size: 12px; padding: 3px 8px; }
+.play-strip-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+.play-strip-meta { color: var(--g-muted); white-space: nowrap; }
+.play-strip-clock { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--g-muted); white-space: nowrap; }
+@media (max-width: 640px) { .play-strip-title, .play-strip-meta { display: none; } }
 .match-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .match-label { font-size: 13.5px; color: var(--g-muted); }
 .chat-drawer { position: fixed; z-index: 60; right: 12px; bottom: 12px; top: 12px; width: min(380px, calc(100vw - 24px)); display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 16px; background: #1e1e1e; border: 1px solid var(--g-line); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6); overflow-y: auto; }
