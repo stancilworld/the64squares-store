@@ -145,6 +145,8 @@ export function ComputerGame({ token, myName }: { token: string | null; myName: 
         if (pm && !outcome(after, g.colour)) {
           try {
             const piece = after.get(pm.from)
+            // The same piece must still be there (it may have been captured).
+            if (!piece || piece.color !== g.colour || (pm.piece && piece.type !== pm.piece)) throw new Error("gone")
             const promo = piece?.type === "p" && (pm.to[1] === "8" || pm.to[1] === "1") ? "q" : ""
             after.move({ from: pm.from, to: pm.to, promotion: promo || undefined })
             moves = [...moves, `${pm.from}${pm.to}${promo}`]

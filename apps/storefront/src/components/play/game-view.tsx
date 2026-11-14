@@ -82,8 +82,8 @@ export function GameView({ id, initialPass, share = false, embedded }: Props) {
   const [muted, setMuted] = useState(false)
   const settings = useBoardSettings()
 
-  // Moves queued while the opponent thinks; one is played each turn, as soon as it's ours,
-  // if still legal (otherwise the whole queue is dropped).
+  // A premove: one move chosen while the opponent thinks, played the moment it's our turn if
+  // it's still legal (otherwise it's dropped).
   const [premoves, setPremoveState] = useState<Premove[]>([])
   const premoveRef = useRef<Premove[]>([])
   const meRef = useRef(meId)
@@ -100,6 +100,9 @@ export function GameView({ id, initialPass, share = false, embedded }: Props) {
   // The move waiting for the server (0: none); cleared when the server's next position arrives.
   const moveSeq = useRef(0)
   const pendingSeq = useRef(0)
+  // How many moves the game had when our move was sent: the move has landed once the server's
+  // position has more.
+  const pendingPly = useRef<number | null>(null)
 
   const sendMove = useCallback((g: GameState, m: Pending) => {
     const s = socket.current
@@ -110,11 +113,13 @@ export function GameView({ id, initialPass, share = false, embedded }: Props) {
     }
     const seq = ++moveSeq.current
     pendingSeq.current = seq
+    pendingPly.current = g.moves.length
     setPending(m)
     setViewPly(null)
     const drop = () => {
       if (pendingSeq.current !== seq) return
       pendingSeq.current = 0
+      pendingPly.current = null
       setPending(null)
     }
     s.timeout(6000).emit("game:move", { id: g.id, uci: `${m.from}${m.to}${m.promotion ?? ""}`, ply: g.moves.length }, (err: Error | null, res?: { ok: boolean; error?: string }) => {
@@ -148,8 +153,13 @@ export function GameView({ id, initialPass, share = false, embedded }: Props) {
   const [card, setCard] = useState(false)
   const lastStatus = useRef<string | null>(null)
 
+  // fresh: the whole game was just fetched again (it is the truth, whatever was on the way).
   const apply = useCallback(
-    (g: GameState) => {
+    (g: GameState, fresh = false) => {
+      // Moves are never taken back, so a position with fewer moves than the one shown arrived
+      // late (out of order): showing it would put pieces back where they were.
+      const cur = gameRef.current
+      if (!fresh && cur && cur.id === g.id && g.moves.length < cur.moves.length) return
       const t = performance.now()
       const before = lastStatus.current
       lastStatus.current = g.status
@@ -174,23 +184,31 @@ export function GameView({ id, initialPass, share = false, embedded }: Props) {
       gameRef.current = g
       setReceivedAt(t)
       setNow(t)
-      setPending(null)
-      pendingSeq.current = 0
-      const [pm, ...rest] = premoveRef.current
+      // Our move stays on the board until the server's position includes it. Other updates
+      // (clocks, a draw offer, the Ready check) used to clear it, so the piece jumped back.
+      const landed = pendingPly.current == null || g.moves.length > pendingPly.current || g.status !== "active" || fresh
+      if (landed) {
+        setPending(null)
+        pendingSeq.current = 0
+        pendingPly.current = null
+      }
+      const pm = premoveRef.current[0]
       if (!pm) return
       const mine = g.white?.id === meRef.current ? "w" : g.black?.id === meRef.current ? "b" : null
       if (g.status !== "active" || !mine) return setPremoves([])
-      if (g.turn !== mine) return
+      // Not yet: it's their turn, or our previous move is still on its way.
+      if (g.turn !== mine || pendingSeq.current) return
+      setPremoves([])
       try {
         const c = new Chess(g.fen)
         const piece = c.get(pm.from)
-        const promotion = piece?.type === "p" && (pm.to[1] === "8" || pm.to[1] === "1") ? "q" : undefined
+        // The same piece must still be there (it may have been captured).
+        if (!piece || piece.color !== mine || (pm.piece && piece.type !== pm.piece)) return
+        const promotion = piece.type === "p" && (pm.to[1] === "8" || pm.to[1] === "1") ? "q" : undefined
         c.move({ from: pm.from, to: pm.to, promotion })
-        setPremoves(rest)
-        sendMove(g, { ...pm, promotion })
+        sendMove(g, { from: pm.from, to: pm.to, promotion })
       } catch {
-        // No longer legal: the queue is dropped.
-        setPremoves([])
+        // No longer legal: dropped.
       }
     },
     [sendMove, setPremoves]
@@ -203,7 +221,7 @@ export function GameView({ id, initialPass, share = false, embedded }: Props) {
     const watch = () =>
       s.emit("game:watch", id, (res: { ok: boolean; game?: GameState; presence?: Presence | null; chat?: ChatMsg[]; error?: string }) => {
         if (res.ok && res.game) {
-          apply(res.game)
+          apply(res.game, true)
           setChat((res.chat ?? []).map((m) => ({ ...m, seen: 0 })))
           setPresence(res.presence ? { ...res.presence, at: performance.now() } : null)
           setNotice(null)

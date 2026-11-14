@@ -3,7 +3,7 @@
 import { Chess, type Square } from "chess.js"
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 import { Chessboard, type PieceRenderObject } from "react-chessboard"
-import { premoveTargets, withPremoves } from "@/lib/chess/premove"
+import { premoveTargets } from "@/lib/chess/premove"
 import { playSound } from "@/lib/chess/sounds"
 import { animationMs, BOARD_THEMES, boardPiece, PIECE_SETS, pieceSrc, useBoardSettings } from "@/lib/chess/settings"
 
@@ -44,7 +44,8 @@ type Props = {
   compact?: boolean
 }
 
-export type Premove = { from: Square; to: Square }
+// piece: the type of piece premoved ("b" for a bishop), checked again before it's played.
+export type Premove = { from: Square; to: Square; piece?: string }
 
 const pieceImages = (set: keyof typeof PIECE_SETS, upright = false): PieceRenderObject =>
   Object.fromEntries(
@@ -114,8 +115,6 @@ function LastMoveArrow({ from, to, orientation }: { from: string; to: string; or
 
 // The chessboard everywhere on the site: legal-move dots, highlights, drag or click to move,
 // a piece picker for promotions, and the person's chosen board and pieces.
-// Premoves kept at most (one per turn).
-const MAX_PREMOVES = 40
 const NONE: Premove[] = []
 
 export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove, premoveFor, premoves = NONE, onPremoves, overlay, marks, compact }: Props) {
@@ -168,12 +167,14 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
   const canMove = !!movable && chess.turn() === movable
   const canPremove = !canMove && !!premoveFor && !!onPremoves && settings.premove && chess.turn() !== premoveFor
   const selected = canMove || canPremove ? picked : null
-  // With premoves queued, the board shows where the pieces will be after them.
-  const queued = canPremove ? premoves : NONE
-  const virtual = useMemo(() => withPremoves(fen, queued), [fen, queued])
-  const shownFen = queued.length ? virtual.fen : fen
+  // One premove at a time. The pieces always stay where they really are; the premove shows as
+  // two red squares. (Showing pieces where queued moves would put them made them jump about
+  // when a premove was dropped.) A new premove replaces the old one.
+  const queued = canPremove ? premoves.slice(0, 1) : NONE
+  const shownFen = fen
   const addPremove = (from: Square, to: Square) => {
-    if (queued.length < MAX_PREMOVES) onPremoves?.([...queued, { from, to }])
+    const p = chess.get(from)
+    if (p && p.color === premoveFor) onPremoves?.([{ from, to, piece: p.type }])
   }
   const targets = useMemo(
     () => (selected && canMove ? chess.moves({ square: selected, verbose: true }) : []),
@@ -181,9 +182,9 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
   )
   const preTargets = useMemo(() => {
     if (!selected || !canPremove) return []
-    const p = virtual.at(selected)
+    const p = chess.get(selected)
     return p && p.color === premoveFor ? premoveTargets(selected, p.type, p.color) : []
-  }, [virtual, selected, canPremove, premoveFor])
+  }, [chess, selected, canPremove, premoveFor])
 
   const attempt = (from: Square, to: Square): boolean => {
     if (!canMove || !onMove) return false
@@ -199,7 +200,7 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
   const clickSquare = (square: Square) => {
     if (promotion) return setPromotion(null)
     if (canPremove) {
-      const piece = virtual.at(square)
+      const piece = chess.get(square)
       if (selected && preTargets.includes(square)) {
         addPremove(selected, square)
         return setSelected(null)
@@ -292,12 +293,12 @@ export function Board({ id, fen, orientation, movable, lastMove, arrows, onMove,
             dragging.current = false
             if (!targetSquare || targetSquare === sourceSquare) return false
             if (canPremove) {
-              const p = virtual.at(sourceSquare)
-              if (p && premoveTargets(sourceSquare as Square, p.type, p.color).includes(targetSquare as Square)) {
+              const p = chess.get(sourceSquare as Square)
+              if (p && p.color === premoveFor && premoveTargets(sourceSquare as Square, p.type, p.color).includes(targetSquare as Square)) {
                 addPremove(sourceSquare as Square, targetSquare as Square)
                 setSelected(null)
-                // Accepted: the piece stays where it was dropped (the board shows the queue).
-                return true
+                // The piece goes back to its square; the red squares show the premove.
+                return false
               }
               setSelected(null)
               return false
