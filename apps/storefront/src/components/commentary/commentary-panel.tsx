@@ -4,15 +4,16 @@ import { useEffect, useRef, useState } from "react"
 import type { Socket } from "socket.io-client"
 import { MiniBoard } from "@/components/tourney/mini-board"
 
-// Live commentary for spectators: a board that follows the game 25 seconds late and the
-// commentator's lines in step with it, read aloud if you choose (the ElevenLabs voice on
-// featured games, your browser's voice otherwise). The players never get this.
+// Live commentary for one game: viewers get a board that follows the game 25 seconds late
+// with the lines in step; the two players get their own game's lines at once. It's read
+// aloud by default (the ElevenLabs voice on featured games, the browser's voice otherwise),
+// and anyone can mute it; the choice is remembered on this device.
 
 type Side = { id: string; name: string; rating: number | null }
 type MoveItem = { kind: "move"; ply: number; san: string; fen: string; from: string; to: string; clocks: { w: number; b: number } }
 type LineItem = { kind: "line"; id: string; ply: number; moment: string; text: string; audio_url: string | null }
 type EndItem = { kind: "end"; result: string | null; reason: string | null }
-type Watch = { ok: true; delay_ms: number; white: Side; black: Side; tc: string; tournament: string | null; voice: boolean; moves: MoveItem[]; lines: LineItem[]; end: EndItem | null }
+type Watch = { ok: true; live?: boolean; delay_ms: number; white: Side; black: Side; tc: string; tournament: string | null; voice: boolean; moves: MoveItem[]; lines: LineItem[]; end: EndItem | null }
 
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 const KEY = "t64-commentary-listen"
@@ -31,10 +32,17 @@ export function CommentaryPanel({ socket, gameId, showBoard = true }: { socket: 
   const [moves, setMoves] = useState<MoveItem[]>([])
   const [lines, setLines] = useState<LineItem[]>([])
   const [end, setEnd] = useState<EndItem | null>(null)
-  const [listen, setListen] = useState(false)
+  const [listen, setListen] = useState(() => {
+    try {
+      return localStorage.getItem(KEY) !== "off"
+    } catch {
+      return true
+    }
+  })
+  const [blocked, setBlocked] = useState(false)
   const queue = useRef<LineItem[]>([])
   const playing = useRef(false)
-  const listenRef = useRef(false)
+  const listenRef = useRef(listen)
   const feed = useRef<HTMLOListElement>(null)
 
   // Says queued lines one after another.
@@ -53,7 +61,11 @@ export function CommentaryPanel({ socket, gameId, showBoard = true }: { socket: 
         const a = new Audio(l.audio_url)
         a.onended = done
         a.onerror = done
-        void a.play().catch(done)
+        void a.play().catch((e: Error) => {
+          // The browser wants a tap on the page before it plays sound.
+          if (e.name === "NotAllowedError") setBlocked(true)
+          done()
+        })
       } else if (typeof speechSynthesis !== "undefined") {
         const u = new SpeechSynthesisUtterance(l.text)
         const v = browserVoice()
@@ -121,7 +133,8 @@ export function CommentaryPanel({ socket, gameId, showBoard = true }: { socket: 
   )
 
   const toggle = () => {
-    const on = !listen
+    const on = blocked ? true : !listen
+    setBlocked(false)
     setListen(on)
     listenRef.current = on
     try {
@@ -137,7 +150,7 @@ export function CommentaryPanel({ socket, gameId, showBoard = true }: { socket: 
     }
   }
 
-  if (state === "player" || state === "loading") return null
+  if (state === "loading") return null
   if (state === "off" || !w) return null
   const last = moves.at(-1)
   const lastLine = lines.at(-1)
@@ -149,9 +162,9 @@ export function CommentaryPanel({ socket, gameId, showBoard = true }: { socket: 
         <span className="commentary-live">
           <span className="lobby-dot lobby-dot-live" aria-hidden="true" /> Commentary
         </span>
-        <span className="commentary-delay">{Math.round(w.delay_ms / 1000)} s behind the game</span>
-        <button type="button" className="commentary-listen" aria-pressed={listen} onClick={toggle}>
-          {listen ? "Listening" : w.voice ? "Listen" : "Read aloud"}
+        <span className="commentary-delay">{w.live ? "Your game, live" : `${Math.round(w.delay_ms / 1000)} s behind the game`}</span>
+        <button type="button" className="commentary-listen" aria-pressed={listen && !blocked} aria-label={listen && !blocked ? "Mute the commentary" : "Turn the commentary sound on"} onClick={toggle}>
+          {blocked ? "Tap to listen" : listen ? "🔊 Mute" : "🔇 Unmute"}
         </button>
       </header>
       {showBoard && (

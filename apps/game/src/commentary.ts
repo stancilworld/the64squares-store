@@ -15,8 +15,9 @@ import { clockText, DELAY_MS, type Facts, fallbackLine, lowTimeKey, materialOf, 
 // so nothing said can help a player. The backend writes the line with the AI keys and,
 // for featured games, voices it; if it can't, a plain line is used.
 //
-// Spectators get the moves and the lines DELAY_MS late, on their own delayed board, so the
-// commentary can't help anyone still playing; the two players can't open it at all.
+// Spectators get the moves and the lines DELAY_MS late, on their own delayed board. The two
+// players hear their own game's lines as they're written (it only says what happened on
+// their board), and can mute it.
 
 type View = ReturnType<import("./game.js").Game["view"]>
 type Setting = { enabled: boolean; voice: boolean }
@@ -41,6 +42,8 @@ type G = {
   said: Set<string>
   queue: Item[]
   shown: { moves: Extract<Item, { kind: "move" }>[]; lines: Extract<Item, { kind: "line" }>[]; end: Extract<Item, { kind: "end" }> | null }
+  // Every line as soon as it's written (for the two players).
+  live: Extract<Item, { kind: "line" }>[]
   chain: Promise<void>
   over: boolean
   clocks: { w: number; b: number }
@@ -72,6 +75,8 @@ export class Commentary {
     private manager: GameManager
   ) {
     setInterval(() => this.flush(), 400).unref()
+    // Tournament forms change without telling this server: look again every minute.
+    setInterval(() => void this.load().catch(() => {}), 60_000).unref()
   }
 
   async start() {
@@ -87,16 +92,31 @@ export class Commentary {
   }
 
   private async load() {
-    const { rows } = await pool.query("select scope, enabled, voice from play.commentary")
-    this.settings = new Map(rows.map((r) => [r.scope as string, { enabled: !!r.enabled, voice: !!r.voice }]))
+    const [{ rows }, defs] = await Promise.all([
+      pool.query("select scope, enabled, voice from play.commentary"),
+      // The commentary chosen in the tournament form (admin → Tournaments → Lobby), used
+      // until someone switches it on the Live commentary page.
+      pool
+        .query(
+          `select id, to_jsonb(t) -> 'lobby' ->> 'commentary' as c from public.tournament t
+            where t.mode = 'online' and t.deleted_at is null and t.status = 'published'
+              and coalesce(t.ends_at, t.starts_at + interval '1 day') > now() - interval '1 day'`
+        )
+        .catch(() => ({ rows: [] as { id: string; c: string | null }[] })),
+    ])
+    const map = new Map(rows.map((r) => [r.scope as string, { enabled: !!r.enabled, voice: !!r.voice }]))
+    for (const d of defs.rows) if (d.c === "text" || d.c === "voice") map.set(`tdef:${d.id}`, { enabled: true, voice: d.c === "voice" })
+    this.settings = map
+    this.loadedAt = Date.now()
   }
+  private loadedAt = 0
 
   // Is commentary on for this game, and with a voice?
   private settingFor(gameId: string, tournamentId: string | null): Setting {
     const site = this.settings.get("site") ?? { enabled: true, voice: true }
     if (!site.enabled) return { enabled: false, voice: false }
     const g = this.settings.get(`game:${gameId}`)
-    const t = tournamentId ? this.settings.get(`tourney:${tournamentId}`) : undefined
+    const t = tournamentId ? (this.settings.get(`tourney:${tournamentId}`) ?? this.settings.get(`tdef:${tournamentId}`)) : undefined
     const enabled = g ? g.enabled : !!t?.enabled
     // A game's own setting wins over its tournament's; "featured" (voice) likewise.
     const voice = enabled && site.voice && (g ? g.voice : !!t?.voice)
@@ -180,6 +200,7 @@ export class Commentary {
       said: new Set(),
       queue: [],
       shown: { moves: [], lines: [], end: null },
+      live: [],
       chain: Promise.resolve(),
       over: false,
       clocks: v.clocks as { w: number; b: number },
@@ -263,7 +284,10 @@ export class Commentary {
       reason: end?.reason ?? null,
     }
     const written = await this.write(facts, s.voice, leftMs)
-    g.queue.push({ kind: "line", release: Math.max(at + DELAY_MS, Date.now()), id: `${g.id}-${ply}-${(seq++).toString(36)}`, ply, moment, text: written.text, audio_url: written.audio_url })
+    const line = { kind: "line" as const, release: Math.max(at + DELAY_MS, Date.now()), id: `${g.id}-${ply}-${(seq++).toString(36)}`, ply, moment, text: written.text, audio_url: written.audio_url }
+    g.queue.push(line)
+    g.live = [...g.live, line].slice(-120)
+    this.io.to(`commentary:${g.id}:live`).emit("commentary:item", { game_id: g.id, ...line })
   }
 
   // The backend writes (and voices) the line; a plain line if it can't.
@@ -309,43 +333,31 @@ export class Commentary {
       .map((g) => ({ game_id: g.id, tournament_id: g.tournamentId, white: g.white, black: g.black, tc: g.tc, voice: this.settingFor(g.id, g.tournamentId).voice }))
   }
 
-  // Registered in this tournament, which isn't over yet (moderators excepted). Cached a minute.
-  private playing = new Map<string, { at: number; yes: boolean }>()
-  private async playingIn(tournamentId: string, playerId: string) {
-    const key = `${tournamentId}|${playerId}`
-    const hit = this.playing.get(key)
-    if (hit && Date.now() - hit.at < 60_000) return hit.yes
-    let yes = false
-    try {
-      const { rows } = await pool.query(
-        `select 1 from public.tournament_registration r
-           join public.tournament t on t.id = r.tournament_id
-           left join play.t_state s on s.tournament_id = t.id
-          where r.tournament_id = $1 and r.customer_id = $2 and r.status = 'confirmed' and r.deleted_at is null
-            and t.status <> 'completed' and s.finished_at is null
-            and not exists (select 1 from play.moderator m where m.player_id = $2 and m.scope in ('*', $1))
-          limit 1`,
-        [tournamentId, playerId]
-      )
-      yes = rows.length > 0
-    } catch {
-      yes = true
-    }
-    if (this.playing.size > 5000) this.playing.clear()
-    this.playing.set(key, { at: Date.now(), yes })
-    return yes
-  }
-
   register(socket: Socket, me: () => Player | null, limited: (s: Socket, ack?: unknown) => boolean) {
-    socket.on("commentary:watch", async (id: unknown, ack: unknown) => {
+    socket.on("commentary:watch", (id: unknown, ack: unknown) => {
       if (typeof ack !== "function" || limited(socket, ack) || typeof id !== "string" || !/^[A-Za-z0-9]{6,20}$/.test(id)) return
       const g = this.games.get(id)
       if (!g) return ack({ ok: false, error: "off" })
       const p = me()
-      // The players never get the commentary of their own game, and nobody playing in the
-      // same tournament gets any of its commentary until the tournament is over.
-      if (p && (p.id === g.white.id || p.id === g.black.id)) return ack({ ok: false, error: "player" })
-      if (p && g.tournamentId && (await this.playingIn(g.tournamentId, p.id))) return ack({ ok: false, error: "player" })
+      // The two players hear their own game's lines at once (they see the board anyway).
+      if (p && (p.id === g.white.id || p.id === g.black.id)) {
+        socket.join(`commentary:${id}:live`)
+        return ack({
+          ok: true,
+          game_id: id,
+          live: true,
+          delay_ms: 0,
+          white: g.white,
+          black: g.black,
+          tc: g.tc,
+          tournament: g.tournament,
+          voice: this.settingFor(g.id, g.tournamentId).voice,
+          moves: [],
+          lines: g.live.slice(-60),
+          end: null,
+          server_now: Date.now(),
+        })
+      }
       if (!this.games.has(id)) return ack({ ok: false, error: "off" })
       socket.join(`commentary:${id}`)
       ack({
@@ -364,7 +376,10 @@ export class Commentary {
       })
     })
     socket.on("commentary:unwatch", (id: unknown) => {
-      if (typeof id === "string") socket.leave(`commentary:${id}`)
+      if (typeof id === "string") {
+        socket.leave(`commentary:${id}`)
+        socket.leave(`commentary:${id}:live`)
+      }
     })
     socket.on("commentary:list", (tid: unknown, ack: unknown) => {
       if (typeof ack !== "function" || limited(socket, ack)) return

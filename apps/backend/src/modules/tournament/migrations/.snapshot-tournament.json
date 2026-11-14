@@ -583,6 +583,22 @@
           "enumItems": [],
           "mappedType": "boolean"
         },
+        "lobby": {
+          "name": "lobby",
+          "type": "jsonb",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "json"
+        },
         "stream_url": {
           "name": "stream_url",
           "type": "text",

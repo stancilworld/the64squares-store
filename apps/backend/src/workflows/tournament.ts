@@ -47,6 +47,7 @@ export type TournamentInput = {
   prize_list?: unknown
   category_prizes?: unknown
   tagline?: string | null
+  lobby?: unknown
   accent?: string | null
   featured?: boolean
   stream_url?: string | null

@@ -75,6 +75,40 @@ export const migrateLobby = async () => {
   `)
 }
 
+// The lobby's starting settings, chosen when the tournament is created (admin → Tournaments →
+// Lobby). Moderators can change them live; without a moderator the lobby runs on them.
+export type LobbyDefaults = { players_chat: PlayersChat; spectator_chat: SpectatorChat; voice_on: boolean; players_voice: boolean; ready_seconds: number }
+const defaultsCache = new Map<string, { at: number; d: LobbyDefaults; format: string }>()
+export const lobbyDefaults = async (tid: string): Promise<LobbyDefaults> => {
+  const hit = defaultsCache.get(tid)
+  if (hit && Date.now() - hit.at < 30_000) return hit.d
+  // to_jsonb: works before the backend has added the column.
+  const { rows } = await pool.query("select format, to_jsonb(t) -> 'lobby' as lobby from public.tournament t where id = $1", [tid]).catch(() => ({ rows: [] as Record<string, any>[] }))
+  const l = (rows[0]?.lobby ?? {}) as Partial<LobbyDefaults>
+  const format = rows[0]?.format ?? "swiss"
+  const pick = <K extends string>(v: unknown, ok: readonly K[], d: K) => (ok.includes(v as K) ? (v as K) : d)
+  const d: LobbyDefaults = {
+    players_chat: pick(l.players_chat, ["open", "quick", "off"] as const, DEFAULT_SETTINGS.players_chat),
+    spectator_chat: pick(l.spectator_chat, ["open", "slow", "off"] as const, DEFAULT_SETTINGS.spectator_chat),
+    voice_on: l.voice_on === true,
+    players_voice: l.players_voice === true,
+    // Seconds both players have to press Ready before a game (0 = start at once).
+    ready_seconds: Number.isFinite(l.ready_seconds) ? Math.min(Math.max(Number(l.ready_seconds), 0), 300) : format === "arena" ? 20 : 60,
+  }
+  defaultsCache.set(tid, { at: Date.now(), d, format })
+  return d
+}
+
+// The Auto Moderator: automatic announcements in a tournament's lobby (rounds, results,
+// the end). The tournament engines call announce(); the lobby posts it.
+let announceHook: (tid: string, text: string) => void = () => {}
+export const announce = (tid: string, text: string) => {
+  try {
+    announceHook(tid, text)
+  } catch {}
+}
+export const AUTO_MODERATOR = { id: "auto", name: "Auto Moderator", role: "moderator" as Role }
+
 type T = { id: string; title: string; handle: string; format: string; starts_at: number; ends_at: number | null; check_in_minutes: number; status: string; finished_at: number | null }
 type Msg = { id: string; channel: Channel; thread: string | null; kind: Kind; text: string; at: number; author: { id: string; name: string; role: Role } }
 type Here = { id: string; name: string; role: Role }
@@ -102,7 +136,9 @@ export class Lobbies {
   // Lobby voice, when the site has it (set by index.ts).
   voiceSite: () => Promise<boolean> = async () => false
 
-  constructor(private io: Server) {}
+  constructor(private io: Server) {
+    announceHook = (tid, text) => void this.post(tid, "all", null, AUTO_MODERATOR, "announce", text).catch((e) => console.error("auto moderator", e))
+  }
 
   // The role a socket joined this lobby with (null if it hasn't joined).
   roleIn(tid: string, socketId: string): Role | null {
@@ -160,7 +196,10 @@ export class Lobbies {
     const hit = this.settings.get(tid)
     if (hit && Date.now() - hit.at < 30_000) return hit.s
     const { rows } = await pool.query("select players_chat, spectator_chat, pinned, voice_on, players_voice from play.lobby_settings where tournament_id = $1", [tid])
-    const s: Settings = rows[0] ? { ...DEFAULT_SETTINGS, ...rows[0] } : DEFAULT_SETTINGS
+    const d = await lobbyDefaults(tid)
+    const s: Settings = rows[0]
+      ? { ...DEFAULT_SETTINGS, ...rows[0] }
+      : { ...DEFAULT_SETTINGS, players_chat: d.players_chat, spectator_chat: d.spectator_chat, voice_on: d.voice_on, players_voice: d.players_voice }
     this.settings.set(tid, { at: Date.now(), s })
     return s
   }

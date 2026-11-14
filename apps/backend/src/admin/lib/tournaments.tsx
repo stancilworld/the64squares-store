@@ -47,6 +47,7 @@ export type Tournament = {
   tagline: string | null
   accent: string | null
   featured: boolean
+  lobby: LobbyDefaults | null
   stream_url: string | null
   coupon_code: string | null
   certificates: boolean
@@ -57,6 +58,24 @@ export type Tournament = {
   results_final_at?: string | null
   results_at?: string | null
 }
+
+// The lobby's starting settings (game server: apps/game/src/lobby.ts).
+export type LobbyDefaults = {
+  players_chat: "open" | "quick" | "off"
+  spectator_chat: "open" | "slow" | "off"
+  voice_on: boolean
+  players_voice: boolean
+  ready_seconds: number
+  commentary: "off" | "text" | "voice"
+}
+export const LOBBY_DEFAULTS = (format: string): LobbyDefaults => ({
+  players_chat: "quick",
+  spectator_chat: "open",
+  voice_on: false,
+  players_voice: false,
+  ready_seconds: format === "arena" ? 20 : 60,
+  commentary: "off",
+})
 
 export type Prize = { place: string; title: string; detail?: string | null; image_url?: string | null; product_handle?: string | null }
 
@@ -136,6 +155,7 @@ const EMPTY: Form = {
   tagline: null,
   accent: null,
   featured: false,
+  lobby: null,
   stream_url: null,
   coupon_code: null,
   certificates: true,
@@ -461,6 +481,8 @@ export function TournamentDrawer({ tournament, open, onClose }: { tournament: To
                 </div>
               )}
 
+              {form.mode === "online" && <LobbySection format={form.format} value={form.lobby ?? LOBBY_DEFAULTS(form.format)} onChange={(v) => set("lobby", v)} />}
+
               <Heading level="h3" className="mt-2">
                 Prizes
               </Heading>
@@ -551,3 +573,65 @@ export const formatEventDate = (iso: string | null | undefined) =>
   iso
     ? new Date(iso).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })
     : ""
+
+// The lobby's starting settings. With a moderator in the lobby they can change chat and voice
+// live; with none, the Auto Moderator runs it on these.
+function LobbySection({ format, value, onChange }: { format: string; value: LobbyDefaults; onChange: (v: LobbyDefaults) => void }) {
+  const set = <K extends keyof LobbyDefaults>(k: K, v: LobbyDefaults[K]) => onChange({ ...value, [k]: v })
+  const choose = <K extends "players_chat" | "spectator_chat" | "commentary">(k: K, id: string, label: string, hint: string, options: [LobbyDefaults[K], string][]) => (
+    <Field label={label} htmlFor={id} hint={hint}>
+      <Select value={value[k]} onValueChange={(v) => set(k, v as LobbyDefaults[K])}>
+        <Select.Trigger id={id}>
+          <Select.Value />
+        </Select.Trigger>
+        <Select.Content>
+          {options.map(([v, l]) => (
+            <Select.Item key={v} value={v}>
+              {l}
+            </Select.Item>
+          ))}
+        </Select.Content>
+      </Select>
+    </Field>
+  )
+  return (
+    <>
+      <Heading level="h3" className="mt-2">
+        Lobby
+      </Heading>
+      <Text size="small" className="-mt-2 text-ui-fg-subtle">
+        Players and viewers do everything in the tournament&apos;s lobby: chat, voice, live boards, their own games and the commentary. These are its starting settings. Moderators (Tournaments → this tournament → Lobby) can change chat and voice live; with no moderator there, the Auto Moderator runs the lobby on these settings and posts round updates.
+      </Text>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {choose("players_chat", "t-lpc", "Participants' chat", "Under-18 players always send quick messages only.", [
+          ["quick", "Quick messages only"],
+          ["open", "Open (typed messages)"],
+          ["off", "Moderators only"],
+        ])}
+        {choose("spectator_chat", "t-lsc", "Viewers' chat", "Slow: one message every 15 seconds each.", [
+          ["open", "Open"],
+          ["slow", "Slow"],
+          ["off", "Off"],
+        ])}
+        {choose("commentary", "t-lcm", "Live commentary", "Says only what happens on the board. Voice uses ElevenLabs credits.", [
+          ["off", "Off"],
+          ["text", "On (text, read aloud by the browser)"],
+          ["voice", "On, with the ElevenLabs voice"],
+        ])}
+        <Field label="Voice chat on from the start" htmlFor="t-lvo" hint="Needs Lobby voice chat on in Website → Site features. Everyone can listen.">
+          <div className="flex h-8 items-center">
+            <Switch id="t-lvo" checked={value.voice_on} onCheckedChange={(v) => set("voice_on", v)} />
+          </div>
+        </Field>
+        <Field label="Adult players may talk" htmlFor="t-lpv" hint="Off: players raise a hand and a moderator gives them the mic. Under-18s always need a moderator.">
+          <div className="flex h-8 items-center">
+            <Switch id="t-lpv" checked={value.players_voice} onCheckedChange={(v) => set("players_voice", v)} />
+          </div>
+        </Field>
+        <Field label="Time to press Ready (seconds)" htmlFor="t-lrs" hint={`Before every game both players press Ready; the clocks start when both have. Whoever isn't ready in time loses that game. 0 = start at once.${format === "arena" ? " Arenas: keep it short." : ""}`}>
+          <Input id="t-lrs" type="number" min={0} max={300} value={value.ready_seconds} onChange={(e) => set("ready_seconds", Math.min(300, Math.max(0, Number(e.target.value) || 0)))} />
+        </Field>
+      </div>
+    </>
+  )
+}

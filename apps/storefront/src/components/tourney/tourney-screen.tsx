@@ -149,6 +149,16 @@ export function TourneyScreen(props: Props) {
     return at >= starts - Math.max(30, t.check_in_minutes ?? 0) * 60_000 && at < end + 3600_000
   })()
 
+  // While the lobby is open, the tournament happens there: go straight in (the lobby's
+  // "Tournament details" link comes back here with ?details=1).
+  useEffect(() => {
+    if (!lobbyOpen) return
+    try {
+      if (new URLSearchParams(window.location.search).has("details")) return
+    } catch {}
+    router.replace(`/play/tournaments/${t.handle}/lobby`)
+  }, [lobbyOpen, router, t.handle])
+
   const registered = ticket?.status === "confirmed"
   const myLive = meId ? view?.live.find((b) => b.white?.id === meId || b.black?.id === meId) : undefined
   const myGame = myLive?.game_id ?? arenaYou?.game_id ?? null

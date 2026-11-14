@@ -35,6 +35,8 @@ export class Voice {
   private listeners = new Map<string, Map<string, Listener>>() // tid -> socket id -> who
   private speakers = new Map<string, Map<string, { name: string; role: Role }>>() // tid -> identity -> who
   private rooms = new Set<string>()
+  // Players who raised a hand to talk, oldest first (tid -> player id -> who).
+  private hands = new Map<string, Map<string, { name: string; at: number }>>()
 
   constructor(
     private io: Server,
@@ -86,8 +88,12 @@ export class Voice {
     return [...(this.speakers.get(tid)?.entries() ?? [])].map(([id, s]) => ({ id, name: s.name, role: s.role }))
   }
 
+  private handsOf(tid: string) {
+    return [...(this.hands.get(tid)?.entries() ?? [])].map(([id, h]) => ({ id, name: h.name, at: h.at })).sort((a, b) => a.at - b.at)
+  }
+
   private emitState(tid: string) {
-    this.io.to(`lobby:${tid}`).emit("voice:state", { tid, speakers: this.speakersOf(tid), listeners: this.count(tid) })
+    this.io.to(`lobby:${tid}`).emit("voice:state", { tid, speakers: this.speakersOf(tid), listeners: this.count(tid), hands: this.handsOf(tid) })
   }
 
   private async allowedByName(tid: string, playerId: string) {
@@ -110,6 +116,7 @@ export class Voice {
     const c = await this.config()
     this.speakers.delete(tid)
     this.listeners.delete(tid)
+    this.hands.delete(tid)
     this.rooms.delete(tid)
     if (c.livekit) await this.api(c.livekit, "DeleteRoom", { room: roomOf(tid) }, roomOf(tid)).catch(() => {})
     this.io.to(`lobby:${tid}`).emit("voice:closed", { tid })
@@ -164,7 +171,7 @@ export class Voice {
           3 * 3600
         )
         this.emitState(tid)
-        ack({ ok: true, url: c.livekit.url, token, identity, can_talk: talk === null, why: talk, speakers: this.speakersOf(tid), max_speakers: VOICE_SPEAKERS })
+        ack({ ok: true, url: c.livekit.url, token, identity, can_talk: talk === null, why: talk, speakers: this.speakersOf(tid), hands: this.handsOf(tid), max_speakers: VOICE_SPEAKERS })
       } catch (e) {
         console.error("voice:join", e)
         ack({ ok: false, error: "server-error" })
@@ -205,6 +212,25 @@ export class Voice {
       }
     })
 
+    // A player raises (or lowers) a hand to ask the moderator for the mic.
+    socket.on("voice:hand", async (input: { tid?: unknown; up?: unknown }, ack: unknown) => {
+      const reply = typeof ack === "function" ? (ack as (r: Record<string, unknown>) => void) : () => {}
+      if (limited(socket, ack)) return
+      const tid = input?.tid
+      const p = me()
+      if (typeof tid !== "string" || !p || this.lobbies.roleIn(tid, socket.id) !== "player") return reply({ ok: false, error: "players-only" })
+      const s = await this.lobbies.getSettings(tid)
+      if (!s.voice_on) return reply({ ok: false, error: "voice-off" })
+      if (!this.hands.has(tid)) this.hands.set(tid, new Map())
+      if (input.up === true) {
+        const w = await this.lobbies.who(tid, p)
+        if (w.muted || w.removed) return reply({ ok: false, error: "muted" })
+        this.hands.get(tid)!.set(p.id, { name: p.name, at: Date.now() })
+      } else this.hands.get(tid)!.delete(p.id)
+      this.emitState(tid)
+      reply({ ok: true })
+    })
+
     // Moderator: voice on/off for the lobby, players may talk, a player allowed by name,
     // take someone's mic.
     socket.on("voice:mod", async (input: Record<string, unknown>, ack: unknown) => {
@@ -234,6 +260,7 @@ export class Voice {
           case "allow": {
             const pid = input.player_id
             if (typeof pid !== "string" || !pid.startsWith("cus_")) return reply({ ok: false, error: "bad-request" })
+            this.hands.get(tid)?.delete(pid)
             if (input.on === true) await pool.query("insert into play.lobby_voice_allow (tournament_id, player_id, by) values ($1,$2,$3) on conflict do nothing", [tid, pid, p.id])
             else {
               await pool.query("delete from play.lobby_voice_allow where tournament_id = $1 and player_id = $2", [tid, pid])
@@ -241,6 +268,15 @@ export class Voice {
               if (this.speakers.get(tid)?.has(pid) && canTalk(target, s, false)) await this.revoke(tid, pid)
             }
             this.io.to(`lobby:${tid}:u:${pid}`).emit("voice:recheck", { tid })
+            this.emitState(tid)
+            return reply({ ok: true })
+          }
+          case "lower": {
+            const pid = input.player_id
+            if (typeof pid !== "string") return reply({ ok: false, error: "bad-request" })
+            this.hands.get(tid)?.delete(pid)
+            this.io.to(`lobby:${tid}:u:${pid}`).emit("voice:hand-lowered", { tid })
+            this.emitState(tid)
             return reply({ ok: true })
           }
           case "mute": {

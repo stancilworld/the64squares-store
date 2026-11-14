@@ -51,6 +51,10 @@ const Tournament = model.define("tournament", {
   tagline: model.text().nullable(),
   accent: model.text().nullable(),
   featured: model.boolean().default(false),
+  // The lobby's starting settings (online): { players_chat, spectator_chat, voice_on,
+  // players_voice, ready_seconds, commentary: "off" | "text" | "voice" }. Moderators can
+  // change chat and voice live; without a moderator the lobby runs on these.
+  lobby: model.json().nullable(),
   // A live commentary stream (YouTube), shown on the tournament page.
   stream_url: model.text().nullable(),
   // Pairing stops while paused (games in progress carry on).

@@ -22,24 +22,35 @@ function Player({ p, ms, running, top }: { p: LiveBoard["white"]; ms: number; ru
   )
 }
 
-function Board({ b, offset, big }: { b: LiveBoard; offset: number; big?: boolean }) {
+function Board({ b, offset, big, onOpen }: { b: LiveBoard; offset: number; big?: boolean; onOpen?: (id: string) => void }) {
   const now = useNow()
   const elapsed = now === null || !b.clock_running ? 0 : Math.max(0, now + offset - b.server_now)
   const w = b.clocks.w - (b.clock_running === "w" ? elapsed : 0)
   const bl = b.clocks.b - (b.clock_running === "b" ? elapsed : 0)
   return (
-    <Link href={`/play/${b.game_id}`} className={`group block rounded-xl border border-[var(--g-line)] bg-[var(--g-panel)] p-2.5 transition hover:border-[#ff3b3b]/70 ${big ? "" : ""}`} aria-label={`Watch ${b.white?.name} against ${b.black?.name}`}>
+    <Link href={`/play/${b.game_id}`} className={`group block rounded-xl border border-[var(--g-line)] bg-[var(--g-panel)] p-2.5 transition hover:border-[#ff3b3b]/70 ${big ? "" : ""}`} aria-label={`Watch ${b.white?.name} against ${b.black?.name}`}
+      onClick={
+        onOpen
+          ? (e) => {
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+              e.preventDefault()
+              onOpen(b.game_id)
+            }
+          : undefined
+      }
+    >
       <Player p={b.black} ms={bl} running={b.clock_running === "b"} top />
       <MiniBoard fen={b.fen} lastMove={b.last_move} label={`${b.white?.name} against ${b.black?.name}`} />
       <Player p={b.white} ms={w} running={b.clock_running === "w"} />
-      {big && <span className="mt-2 block text-center text-[13px] font-semibold text-[#ff6b6b] group-hover:underline">Open the board to watch with chat and moves</span>}
+      {big && <span className="mt-2 block text-center text-[13px] font-semibold text-[#ff6b6b] group-hover:underline">{onOpen ? "Watch this board with its commentary" : "Open the board to watch with chat and moves"}</span>}
     </Link>
   )
 }
 
 // Every game being played in the tournament, updating move by move: the top board large,
 // the rest in a grid (like a broadcast).
-export function LiveBoards({ boards, offset }: { boards: LiveBoard[]; offset: number }) {
+// onOpen: open the board in place (the tournament lobby) instead of on its own page.
+export function LiveBoards({ boards, offset, onOpen }: { boards: LiveBoard[]; offset: number; onOpen?: (id: string) => void }) {
   if (!boards.length) return <p className="g-muted py-8 text-center">No games are being played right now.</p>
   const [top, ...rest] = boards
   return (
@@ -48,12 +59,12 @@ export function LiveBoards({ boards, offset }: { boards: LiveBoard[]; offset: nu
         <p className="mb-2 flex items-center gap-2 text-[13px] font-bold">
           <span className="h-2 w-2 animate-pulse rounded-full bg-[#ff3b3b] motion-reduce:animate-none" /> Top board
         </p>
-        <Board b={top} offset={offset} big />
+        <Board b={top} offset={offset} big onOpen={onOpen} />
       </div>
       {rest.length > 0 && (
         <div className="grid content-start gap-3 [grid-template-columns:repeat(auto-fill,minmax(170px,1fr))]">
           {rest.map((b) => (
-            <Board key={b.game_id} b={b} offset={offset} />
+            <Board key={b.game_id} b={b} offset={offset} onOpen={onOpen} />
           ))}
         </div>
       )}

@@ -1,3 +1,4 @@
+import { announce, lobbyDefaults } from "./lobby.js"
 import { banOf } from "./fairplay.js"
 import type { Server, Socket } from "socket.io"
 import { applyResult, emptyStanding, pairPool, rank, type Standing } from "./arena-rules.js"
@@ -285,7 +286,7 @@ const pairNow = async (io: Server, manager: GameManager, a: Arena) => {
       { id: black.player_id, name: black.name },
       a.initial_ms,
       a.increment_ms,
-      { mode: "arena", tournamentId: a.t.id }
+      { mode: "arena", tournamentId: a.t.id, readyMs: (await lobbyDefaults(a.t.id)).ready_seconds * 1000 }
     )
     a.playing.set(white.player_id, g.r.id)
     a.playing.set(black.player_id, g.r.id)
@@ -314,7 +315,7 @@ const onArenaGameEnd = (io: Server, manager: GameManager) => async (g: Game) => 
     await saveStanding(tid, sb)
   }
   // Whoever missed their first move sits out until they press Join again.
-  const noShow = g.r.reason === "no-start" ? (g.r.moves.length === 0 ? w : b) : null
+  const noShow = g.r.reason === "no-show" ? (g.r.result === "1-0" ? b : w) : g.r.reason === "no-start" ? (g.r.moves.length === 0 ? w : b) : null
   for (const id of [w, b]) {
     if (id === noShow) a.paused.add(id)
     else if (phase(a) === "live" && online.has(id) && !a.paused.has(id)) a.waiting.add(id)
@@ -342,9 +343,15 @@ export const startArenas = async (io: Server, manager: GameManager) => {
         })
       }
       const p = phase(a)
-      if (lastPhase.get(a.t.id) !== p) {
+      const prev = lastPhase.get(a.t.id)
+      if (prev !== p) {
         lastPhase.set(a.t.id, p)
         if (p === "over") a.waiting.clear()
+        // Not on the first look after a restart (the phase was already this).
+        if (prev !== undefined) {
+          if (p === "live") announce(a.t.id, "The arena is open! Press Join the arena: you're paired as soon as a game ends, until the clock runs out.")
+          if (p === "over") announce(a.t.id, "Time! The arena is over. Games still going count. Final standings are on the Leaderboard tab.")
+        }
         broadcast(io, a)
       }
       if (p === "live" && a.waiting.size >= 2) void pairArena(io, manager, a)

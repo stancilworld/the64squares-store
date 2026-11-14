@@ -17,6 +17,8 @@ export type Reason =
   | "agreement"
   | "aborted"
   | "no-start"
+  // Didn't press Ready before a tournament game (the opponent did).
+  | "no-show"
   | "abandoned"
 
 export type Player = { id: string; name: string }
@@ -54,6 +56,8 @@ export type GameRecord = {
   black_diff: number | null
   // Time each move took, in ms (for fair-play checks).
   move_ms?: number[]
+  // Tournament games wait for both players to press Ready (until the deadline).
+  ready?: { w: boolean; b: boolean; until: number } | null
 }
 
 // Each side's first move doesn't use its clock, but must come within this time.
@@ -68,7 +72,7 @@ export const parseTimeControl = (tc: string) => {
   return { initial_ms: minutes * 60_000, increment_ms: increment * 1000 }
 }
 
-export type MoveError = "not-your-turn" | "not-active" | "illegal" | "stale" | "not-a-player"
+export type MoveError = "not-your-turn" | "not-active" | "illegal" | "stale" | "not-a-player" | "not-ready"
 
 export class Game {
   readonly r: GameRecord
@@ -115,17 +119,35 @@ export class Game {
 
   // The moment something must happen if nobody moves: a flag fall, or a missed first move.
   deadline(): number | null {
-    if (this.r.status !== "active" || this.r.turn_started_at == null) return null
+    if (this.r.status !== "active") return null
+    if (this.r.ready) return this.r.ready.until
+    if (this.r.turn_started_at == null) return null
     if (this.ply < 2) return this.r.turn_started_at + FIRST_MOVE_MS
     const left = this.turn === "w" ? this.r.white_ms : this.r.black_ms
     return this.r.turn_started_at + left
   }
 
-  start(now: number) {
+  // readyMs: a tournament game first waits (up to this long) for both players to press Ready.
+  start(now: number, readyMs = 0) {
     if (this.r.status !== "waiting" || !this.r.white || !this.r.black) return
     this.r.status = "active"
     this.r.started_at = now
     this.r.turn_started_at = now
+    this.r.ready = readyMs > 0 ? { w: false, b: false, until: now + readyMs } : null
+  }
+
+  // A player is ready. When both are, the game begins (the first-move time starts now).
+  markReady(playerId: string, now: number) {
+    if (this.tick(now) || this.r.status !== "active" || !this.r.ready) return false
+    const color = this.colorOf(playerId)
+    if (!color) return false
+    this.r.ready[color] = true
+    if (this.r.ready.w && this.r.ready.b) {
+      this.r.ready = null
+      this.r.started_at = now
+      this.r.turn_started_at = now
+    }
+    return true
   }
 
   private finish(result: Result | null, reason: Reason, now: number) {
@@ -147,6 +169,15 @@ export class Game {
   tick(now: number): boolean {
     const due = this.deadline()
     if (due == null || now < due) return false
+    if (this.r.ready) {
+      // Ready time is up: whoever pressed Ready wins by no-show; nobody ready, no game.
+      const { w, b } = this.r.ready
+      this.r.ready = null
+      if (w && !b) this.finish("1-0", "no-show", now)
+      else if (b && !w) this.finish("0-1", "no-show", now)
+      else this.finish(null, "no-start", now)
+      return true
+    }
     if (this.ply < 2) {
       this.finish(null, "no-start", now)
       return true
@@ -173,6 +204,7 @@ export class Game {
   move(playerId: string, uci: string, ply: number, now: number): { ok: true; san: string } | { ok: false; error: MoveError } {
     if (this.tick(now)) return { ok: false, error: "not-active" }
     if (this.r.status !== "active") return { ok: false, error: "not-active" }
+    if (this.r.ready) return { ok: false, error: "not-ready" }
     const color = this.colorOf(playerId)
     if (!color) return { ok: false, error: "not-a-player" }
     if (color !== this.turn) return { ok: false, error: "not-your-turn" }
@@ -278,7 +310,8 @@ export class Game {
       in_check: this.chess.inCheck(),
       clocks: this.clocks(now),
       clock_running: this.r.status === "active" && this.ply >= 2 ? this.turn : null,
-      first_move_deadline: this.r.status === "active" && this.ply < 2 ? this.deadline() : null,
+      first_move_deadline: this.r.status === "active" && this.ply < 2 && !this.r.ready ? this.deadline() : null,
+      ready: this.r.status === "active" && this.r.ready ? { ...this.r.ready } : null,
       initial_ms: this.r.initial_ms,
       increment_ms: this.r.increment_ms,
       result: this.r.result,

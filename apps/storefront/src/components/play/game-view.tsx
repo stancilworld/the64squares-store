@@ -20,12 +20,15 @@ import type { PlayPass } from "@/lib/play"
 import type { PublicProfile } from "@/lib/profile-types"
 import { usePlayPass } from "./use-play-pass"
 import { CommentaryPanel } from "@/components/commentary/commentary-panel"
+import { ReadyCheck } from "@/components/play/ready-check"
 import { type ChatMsg, GameChat } from "./game-chat"
 import { ShareGame } from "./share-game"
 import { useBoardSettings } from "@/lib/chess/settings"
 import { GAME_URL, type GameState, LIVE_KEY, type Presence, resultText, SPEED_LABEL, speedOf, tcText } from "@/lib/game-types"
 
-type Props = { id: string; initialPass: PlayPass | null; share?: boolean }
+// embedded: shown inside a tournament lobby, which stays the only place for the tournament:
+// "back" returns to the lobby's arena and the next game opens there too.
+type Props = { id: string; initialPass: PlayPass | null; share?: boolean; embedded?: { onExit: () => void; onOpen: (id: string) => void } }
 type Pending = { from: Square; to: Square; promotion?: "q" | "r" | "b" | "n" }
 
 const noSubscribe = () => () => {}
@@ -42,7 +45,7 @@ const store = {
   },
 }
 
-export function GameView({ id, initialPass, share = false }: Props) {
+export function GameView({ id, initialPass, share = false, embedded }: Props) {
   const pass = usePlayPass(initialPass)
   const token = pass?.token ?? null
   const meId = pass?.me.id ?? null
@@ -50,6 +53,11 @@ export function GameView({ id, initialPass, share = false }: Props) {
   const socket = useRef<Socket | null>(null)
   // The same connection, for the commentary panel (spectators).
   const [sock, setSock] = useState<Socket | null>(null)
+  // The lobby's callbacks, read inside socket handlers without re-subscribing.
+  const embeddedRef = useRef(embedded)
+  useEffect(() => {
+    embeddedRef.current = embedded
+  })
   const [game, setGame] = useState<GameState | null>(null)
   const gameRef = useRef<GameState | null>(null)
   const [receivedAt, setReceivedAt] = useState(0)
@@ -216,7 +224,10 @@ export function GameView({ id, initialPass, share = false }: Props) {
     s.on("game:presence", (p: Presence) => p.id === id && setPresence({ ...p, at: performance.now() }))
     s.on("game:rematch", (r: { id: string; by?: string | null; game_id?: string; declined?: boolean }) => {
       if (r.id !== id) return
-      if (r.game_id) router.push(`/play/${r.game_id}`)
+      if (r.game_id) {
+        if (embeddedRef.current) embeddedRef.current.onOpen(r.game_id)
+        else router.push(`/play/${r.game_id}`)
+      }
       else setRematch({ by: r.by ?? null, declined: r.declined })
     })
     // In an arena the next pairing arrives as soon as this game ends.
@@ -231,7 +242,7 @@ export function GameView({ id, initialPass, share = false }: Props) {
   useEffect(() => {
     if (!nextGame) return
     const t = setInterval(() => setNextIn((n) => n - 1), 1000)
-    const go = setTimeout(() => router.push(`/play/${nextGame}`), 3000)
+    const go = setTimeout(() => (embeddedRef.current ? embeddedRef.current.onOpen(nextGame) : router.push(`/play/${nextGame}`)), 3000)
     return () => {
       clearInterval(t)
       clearTimeout(go)
@@ -567,7 +578,11 @@ export function GameView({ id, initialPass, share = false }: Props) {
             )}
           </>
         )}
-        {game.mode === "arena" && game.tournament_id ? (
+        {embedded ? (
+          <button type="button" className="g-btn g-btn-primary h-[42px]" onClick={embedded.onExit}>
+            Back to the arena
+          </button>
+        ) : game.mode === "arena" && game.tournament_id ? (
           <Link href={`/play/tournaments/${game.tournament_id}`} className="g-btn g-btn-primary h-[42px]">
             Tournament standings
           </Link>
@@ -602,7 +617,13 @@ export function GameView({ id, initialPass, share = false }: Props) {
   ) : (
     <div className="g-panel p-4">
       <p className="text-[15px] font-medium">
-        {firstMoveLeft != null && myTurn
+        {game.ready
+          ? myColour
+            ? game.ready[myColour]
+              ? "You're ready. Waiting for your opponent to press Ready…"
+              : "Press Ready on the board to start."
+            : "Waiting for both players to press Ready…"
+          : firstMoveLeft != null && myTurn
           ? `Your first move: ${Math.max(0, Math.ceil(firstMoveLeft / 1000))} s left`
           : myColour
             ? myTurn
@@ -634,9 +655,12 @@ export function GameView({ id, initialPass, share = false }: Props) {
       {myColour && (
         <div className="mt-3 flex flex-wrap gap-2">
           {game.moves.length < 2 ? (
-            <button type="button" className={`${btn}`} onClick={() => emit("game:abort", id)}>
-              Abort
-            </button>
+            // A tournament game can't be called off (leaving it loses it), so no Abort there.
+            game.tournament_id ? null : (
+              <button type="button" className={`${btn}`} onClick={() => emit("game:abort", id)}>
+                Abort
+              </button>
+            )
           ) : game.draw_offer && game.draw_offer !== myColour ? (
             <>
               <button type="button" className={`${btn} g-btn-primary`} onClick={() => emit("game:draw", { id, action: "accept" })}>
@@ -690,7 +714,27 @@ export function GameView({ id, initialPass, share = false }: Props) {
     return { name: p?.name ?? "…", colour: c, avatarUrl: prof?.avatar_url, rating: p?.rating, level: prof?.level, record: prof?.record, isBot: p?.id === "computer" }
   }
   let overlay: ReactNode = null
-  if (intro && active) {
+  const ready = active ? game.ready : null
+  if (ready) {
+    const left = Math.max(0, Math.ceil((ready.until - game.server_now - elapsed) / 1000))
+    const mine = myColour ? ready[myColour] : false
+    const theirs = myColour ? ready[myColour === "w" ? "b" : "w"] : false
+    const opp = myColour ? fighter(myColour === "w" ? "b" : "w") : null
+    overlay = (
+      <ReadyCheck
+        left={left}
+        white={fighter("w")}
+        black={fighter("b")}
+        player={!!myColour}
+        mine={mine}
+        theirs={theirs}
+        readyW={ready.w}
+        readyB={ready.b}
+        opponent={opp?.name ?? "your opponent"}
+        onReady={() => void emit("game:ready", id)}
+      />
+    )
+  } else if (intro && active) {
     const label = `${game.rated ? "Rated" : "Casual"} · ${SPEED_LABEL[speed]} ${tcText(game.initial_ms, game.increment_ms)}${game.mode === "arena" ? " · Arena" : ""}`
     overlay = <MatchIntro a={fighter(bottom)} b={fighter(top)} label={label} onDone={() => setIntro(false)} />
   } else if (burst && game.status === "finished" && game.result) {
@@ -739,7 +783,11 @@ export function GameView({ id, initialPass, share = false }: Props) {
               </button>
             )}
             <div className="grid grid-cols-2 gap-2">
-              {game.mode === "arena" && game.tournament_id ? (
+              {embedded ? (
+                <button type="button" className="g-btn" onClick={embedded.onExit}>
+                  Back to the arena
+                </button>
+              ) : game.mode === "arena" && game.tournament_id ? (
                 <Link href={`/play/tournaments/${game.tournament_id}`} className="g-btn">
                   Standings
                 </Link>
@@ -752,7 +800,7 @@ export function GameView({ id, initialPass, share = false }: Props) {
                 <Link href={`/play/analysis/${id}`} className="g-btn">
                   Game review
                 </Link>
-              ) : (
+              ) : embedded ? null : (
                 <Link href="/play" className="g-btn">
                   Menu
                 </Link>
@@ -807,9 +855,15 @@ export function GameView({ id, initialPass, share = false }: Props) {
       panel={
         <>
           <p className="hidden items-center gap-2 text-[13px] g-muted lg:flex">
-            <Link href={game.mode === "arena" && game.tournament_id ? `/play/tournaments/${game.tournament_id}` : "/play"} aria-label="Back" className="g-btn g-btn-ghost !min-h-[34px] !px-2 !text-[13px]">
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
-            </Link>
+            {embedded ? (
+              <button type="button" aria-label="Back to the arena" className="g-btn g-btn-ghost !min-h-[34px] !px-2 !text-[13px]" onClick={embedded.onExit}>
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
+              </button>
+            ) : (
+              <Link href={game.mode === "arena" && game.tournament_id ? `/play/tournaments/${game.tournament_id}` : "/play"} aria-label="Back" className="g-btn g-btn-ghost !min-h-[34px] !px-2 !text-[13px]">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
+              </Link>
+            )}
             <span className="flex-1">
               {game.mode === "computer" ? "Game vs computer" : `${game.rated ? "Rated" : "Casual"} · ${SPEED_LABEL[speed]} ${tcText(game.initial_ms, game.increment_ms)}`}
               {game.mode === "arena" ? " · Arena" : ""}
@@ -821,7 +875,7 @@ export function GameView({ id, initialPass, share = false }: Props) {
             )}
           </p>
           {statusCard}
-          {!myColour && game.mode !== "computer" && <CommentaryPanel socket={sock} gameId={id} showBoard={false} />}
+          {game.mode !== "computer" && <CommentaryPanel socket={sock} gameId={id} showBoard={false} />}
           {canChat && <GameChat messages={chat} me={myColour} canType={canType} onSend={sendChat} muted={muted} onMute={() => setMuted((m) => !m)} />}
           <MovePanel moves={game.moves} ply={shownPly} onGo={goTo} onFlip={() => setFlipped((f) => !f)} className="order-first lg:order-none" />
         </>

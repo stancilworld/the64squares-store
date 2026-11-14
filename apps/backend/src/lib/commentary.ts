@@ -96,7 +96,7 @@ export const commentaryOverview = async (c: MedusaContainer) => {
         order by (g.tournament_id is null), g.started_at desc limit 200`
     ),
     db.raw(
-      `select t.id, t.title, t.handle, t.format, t.time_control, t.starts_at, t.ends_at, s.phase,
+      `select t.id, t.title, t.handle, t.format, t.time_control, t.starts_at, t.ends_at, s.phase, t.lobby ->> 'commentary' as lobby_commentary,
               (select count(*)::int from public.tournament_registration r where r.tournament_id = t.id and r.status = 'confirmed' and r.deleted_at is null) as players
          from public.tournament t left join play.t_state s on s.tournament_id = t.id
         where t.deleted_at is null and t.status = 'published' and t.mode = 'online'
@@ -106,6 +106,9 @@ export const commentaryOverview = async (c: MedusaContainer) => {
     ),
   ])
   const map = new Map(settings.rows.map((r) => [r.scope as string, { enabled: !!r.enabled, voice: !!r.voice }]))
+  // A tournament's own choice (its form's Lobby section) until it's switched here.
+  for (const t of tournaments.rows)
+    if (!map.has(`tourney:${t.id}`) && (t.lobby_commentary === "text" || t.lobby_commentary === "voice")) map.set(`tourney:${t.id}`, { enabled: true, voice: t.lobby_commentary === "voice" })
   const site = map.get("site") ?? { enabled: true, voice: true }
   const keys = await getServiceKeys(c)
   const { rows: use } = await db.raw("select chars from coach_usage where customer_id = ? and day = ? and deleted_at is null", [COMMENTARY_ACCOUNT, indiaDay()]).catch(() => ({ rows: [] as Row[] }))

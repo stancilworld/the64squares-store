@@ -41,6 +41,7 @@ export const migrate = async () => {
     alter table play.game add column if not exists white_diff integer;
     alter table play.game add column if not exists black_diff integer;
     alter table play.game add column if not exists move_ms integer[];
+    alter table play.game add column if not exists ready jsonb;
     create table if not exists play.rating (
       player_id text not null,
       speed text not null,
@@ -66,8 +67,8 @@ export const saveGame = async (g: GameRecord, pgn: string | null) => {
   await pool.query(
     `insert into play.game (id, mode, tournament_id, white_id, white_name, black_id, black_name, creator_id,
        initial_ms, increment_ms, status, result, reason, moves, white_ms, black_ms, turn_started_at, draw_offer,
-       created_at, started_at, ended_at, pgn, rated, white_rating, black_rating, white_diff, black_diff, move_ms)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28)
+       created_at, started_at, ended_at, pgn, rated, white_rating, black_rating, white_diff, black_diff, move_ms, ready)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29)
      on conflict (id) do update set
        white_id = excluded.white_id, white_name = excluded.white_name,
        black_id = excluded.black_id, black_name = excluded.black_name,
@@ -76,12 +77,12 @@ export const saveGame = async (g: GameRecord, pgn: string | null) => {
        draw_offer = excluded.draw_offer, started_at = excluded.started_at, ended_at = excluded.ended_at,
        pgn = coalesce(excluded.pgn, play.game.pgn),
        white_rating = excluded.white_rating, black_rating = excluded.black_rating,
-       white_diff = excluded.white_diff, black_diff = excluded.black_diff, move_ms = excluded.move_ms`,
+       white_diff = excluded.white_diff, black_diff = excluded.black_diff, move_ms = excluded.move_ms, ready = excluded.ready`,
     [
       g.id, g.mode, g.tournament_id, g.white?.id ?? null, g.white?.name ?? null, g.black?.id ?? null, g.black?.name ?? null,
       g.creator_id, g.initial_ms, g.increment_ms, g.status, g.result, g.reason, g.moves, g.white_ms, g.black_ms,
       ts(g.turn_started_at), g.draw_offer, ts(g.created_at), ts(g.started_at), ts(g.ended_at), pgn,
-      g.rated, g.white_rating, g.black_rating, g.white_diff, g.black_diff, g.move_ms ?? [],
+      g.rated, g.white_rating, g.black_rating, g.white_diff, g.black_diff, g.move_ms ?? [], g.ready ? JSON.stringify(g.ready) : null,
     ]
   )
 }
@@ -114,6 +115,7 @@ export const recordFromRow = (r: Row): GameRecord => ({
   white_diff: r.white_diff ?? null,
   black_diff: r.black_diff ?? null,
   move_ms: r.move_ms ?? [],
+  ready: r.ready ?? null,
 })
 
 export const loadGame = async (id: string) => {

@@ -1,10 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { io, type Socket } from "socket.io-client"
 import { openSignIn } from "@/components/account/sign-in-dialog"
+import { GameView } from "@/components/play/game-view"
 import { RichText } from "@/components/rich-text"
 import { type ArenaState, ArenaTable, type ArenaYou } from "@/components/tourney/arena-table"
 import { Bracket } from "@/components/tourney/bracket"
@@ -13,25 +13,33 @@ import { LiveBoards } from "@/components/tourney/live-boards"
 import { Crosstable, SwissPairings, SwissStandings } from "@/components/tourney/swiss"
 import { nowMs } from "@/lib/clock"
 import { GAME_URL } from "@/lib/game-types"
+import type { PlayPass } from "@/lib/play"
 import { checkInToTournament } from "@/lib/tournament-actions"
 import { eventTime, type LiveBoard, speedLabel, type Ticket, type Tournament, type TourneyView } from "@/lib/tournament-types"
-import { CommentaryPanel } from "@/components/commentary/commentary-panel"
 import { LobbyChat } from "./lobby-chat"
-import { LobbyVoice } from "./lobby-voice"
 import { type Channel, type LobbyJoin, type LobbyMe, type LobbyMsg, type LobbySettings, type Person, type Presence, ROLE_LABEL, type Role, SEND_ERROR } from "./lobby-types"
+import { LobbyVoice, type VoiceState } from "./lobby-voice"
+
+// The tournament's lobby: the one place for the whole event. An esports-style arena:
+//   a broadcast bar (status, clock, voice) always on top;
+//   arena mode: the caster desk (the moderator, or the Auto Moderator) in the spotlight,
+//   the participants on the arena floor, the participants & moderators' chat on the left
+//   and the viewers' chat on the right;
+//   match mode: a player's own game (it opens by itself, with the Ready check) or any board
+//   a viewer opens, with that game's commentary, the lobby's chats in a drawer.
 
 export type RuleChapter = { handle: string; label: string; title: string; body: string }
 
 type Props = {
   t: Tournament
   initialView: TourneyView | null
-  token: string | null
-  me: { id: string; name: string; guest: boolean } | null
+  pass: PlayPass | null
   ticket: (Ticket & { tournament: { id: string } }) | null
   chapters: RuleChapter[]
+  initialGame: string | null
 }
 
-// Each format has its own stage: colour, piece and pattern, and what the main table shows.
+// Each format has its own stage: colour, piece and pattern, and what its table shows.
 const FORMATS: Record<string, { colour: string; piece: string; name: string; table: string; how: string }> = {
   arena: {
     colour: "#ffb300",
@@ -63,58 +71,115 @@ const FORMATS: Record<string, { colour: string; piece: string; name: string; tab
   },
 }
 
-type Tab = "live" | "commentary" | "table" | "rules" | "chat"
-type OnAir = { game_id: string; white: { name: string }; black: { name: string }; voice: boolean }
+type Tab = "floor" | "live" | "table" | "rules" | "chat"
+const NO_VOICE: VoiceState = { joined: false, speakers: [], hands: [], active: [], listeners: 0 }
 
-function Avatar({ p, size = 30 }: { p: Person; size?: number }) {
+function Face({ p, size = 40 }: { p: { name: string; avatar_url?: string | null }; size?: number }) {
   return p.avatar_url ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={p.avatar_url} alt="" width={size} height={size} className="lobby-avatar" style={{ width: size, height: size }} />
   ) : (
-    <span className="lobby-avatar lobby-avatar-letter" style={{ width: size, height: size }} aria-hidden="true">
+    <span className="lobby-avatar lobby-avatar-letter" style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }} aria-hidden="true">
       {p.name.slice(0, 1).toUpperCase()}
     </span>
   )
 }
 
-function WhoIsHere({ presence, entrants }: { presence: Presence | null; entrants: number }) {
-  if (!presence) return null
+// ------------------------------------------------------------------ caster desk
+
+function CasterDesk({ moderators, voice, latest, status }: { moderators: Person[]; voice: VoiceState; latest: LobbyMsg | null; status: string }) {
+  const onMic = (id: string) => voice.speakers.some((s) => s.id === id)
   return (
-    <section className="lobby-here" aria-label="Who's here">
-      <div className="lobby-here-row">
-        <h3>Moderators</h3>
-        {presence.moderators.length === 0 ? (
-          <p className="lobby-why">A moderator joins before the start.</p>
+    <section className="desk" aria-label="Moderators">
+      <div className="desk-row">
+        {moderators.length ? (
+          moderators.map((m) => (
+            <div key={m.id} className={`desk-mod ${voice.active.includes(m.id) ? "is-speaking" : ""}`}>
+              <span className="desk-ring">
+                <Face p={m} size={72} />
+              </span>
+              <p className="desk-name">{m.name}</p>
+              <p className="desk-role">
+                <span className="lobby-badge lobby-badge-moderator">Moderator</span>
+                {onMic(m.id) && <span className="desk-mic">on mic</span>}
+              </p>
+            </div>
+          ))
         ) : (
-          <ul>
-            {presence.moderators.map((p) => (
-              <li key={p.id} className="lobby-here-mod">
-                <Avatar p={p} size={28} />
-                <span>{p.name}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="desk-mod desk-auto">
+            <span className="desk-ring">
+              <span className="desk-auto-face" aria-hidden="true" />
+            </span>
+            <p className="desk-name">Auto Moderator</p>
+            <p className="desk-role">
+              <span className="lobby-badge lobby-badge-moderator">Moderator</span>
+            </p>
+          </div>
         )}
       </div>
-      <div className="lobby-here-row">
-        <h3>
-          Players here <span className="lobby-here-count">{presence.players.length}{entrants ? ` of ${entrants}` : ""}</span>
-        </h3>
-        <ul className="lobby-here-faces">
-          {presence.players.slice(0, 40).map((p) => (
-            <li key={p.id} title={p.name}>
-              <Avatar p={p} size={30} />
-              <span className="sr-only">{p.name}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <p className="lobby-here-watch">
-        <span className="lobby-dot lobby-dot-live" aria-hidden="true" /> {presence.spectators} watching
-      </p>
+      <p className="desk-status">{status}</p>
+      {latest && (
+        <p className="desk-ticker" aria-live="polite">
+          <span className="desk-ticker-from">{latest.author.name}:</span> {latest.text}
+        </p>
+      )}
     </section>
   )
 }
+
+// ------------------------------------------------------------------ arena floor
+
+type Seat = { id: string; name: string; rating: number | null; avatar_url: string | null; here: boolean; game: string | null; rank: number | null; score: string | null; out: boolean }
+
+function ArenaFloor({ seats, voice, meId, onOpen, colourLabel }: { seats: Seat[]; voice: VoiceState; meId: string | null; onOpen: (id: string) => void; colourLabel: string }) {
+  if (!seats.length) return <p className="lobby-empty">The participants appear here as they arrive in the lobby.</p>
+  return (
+    <ul className="floor" aria-label="Participants">
+      {seats.map((s) => {
+        const speaking = voice.active.includes(s.id)
+        const hand = voice.hands.some((h) => h.id === s.id)
+        const cls = ["seat", s.here ? "is-here" : "is-away", s.game ? "is-playing" : "", speaking ? "is-speaking" : "", s.id === meId ? "is-me" : "", s.out ? "is-out" : ""].join(" ")
+        const body = (
+          <>
+            {s.rank != null && <span className="seat-rank">{s.rank}</span>}
+            <span className="seat-face">
+              <Face p={s} size={52} />
+              {hand && (
+                <span className="seat-hand" aria-label="Hand raised">
+                  ✋
+                </span>
+              )}
+            </span>
+            <span className="seat-name">
+              {s.name}
+              {s.id === meId && " (you)"}
+            </span>
+            <span className="seat-meta">
+              {s.rating ?? ""}
+              {s.score != null && <b className="seat-score">{s.score}</b>}
+            </span>
+            <span className="seat-state">{s.out ? "Out" : s.game ? "Playing · watch" : s.here ? "In the lobby" : "Away"}</span>
+          </>
+        )
+        return (
+          <li key={s.id}>
+            {s.game ? (
+              <button type="button" className={cls} onClick={() => onOpen(s.game!)} aria-label={`${s.name}, playing: watch the game`}>
+                {body}
+              </button>
+            ) : (
+              <div className={cls} aria-label={`${s.name}, ${colourLabel}`}>
+                {body}
+              </div>
+            )}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+// ------------------------------------------------------------------ rules
 
 function Rules({ t, chapters, how }: { t: Tournament; chapters: RuleChapter[]; how: string }) {
   const [ch, setCh] = useState("event")
@@ -147,8 +212,8 @@ function Rules({ t, chapters, how }: { t: Tournament; chapters: RuleChapter[]; h
                 {t.rounds ? `, ${t.rounds} rounds` : ""}.
               </li>
               {t.check_in_minutes > 0 && <li>Check in during the {t.check_in_minutes} minutes before the start. Players who don&apos;t check in aren&apos;t paired.</li>}
-              <li>Stay in the lobby: your game opens by itself when you&apos;re paired. Not making a first move loses the game.</li>
-              <li>Questions? Use &ldquo;Ask the arbiter&rdquo; in the chat; only moderators see it.</li>
+              <li>Stay in this lobby: when you&apos;re paired your board opens here. Press Ready; the clocks start when both players are ready. Not ready in time loses the game.</li>
+              <li>Questions? Use &ldquo;Ask the arbiter&rdquo; in the participants&apos; chat; only moderators see it.</li>
             </ul>
             {t.rules && (
               <>
@@ -169,10 +234,14 @@ function Rules({ t, chapters, how }: { t: Tournament; chapters: RuleChapter[]; h
   )
 }
 
-export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTicket, chapters }: Props) {
-  const router = useRouter()
+// ------------------------------------------------------------------ the lobby
+
+export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapters, initialGame }: Props) {
   const f = FORMATS[t.format] ?? FORMATS.arena
+  const token = pass?.token ?? null
+  const meId = pass?.me.id ?? null
   const socket = useRef<Socket | null>(null)
+  const [sock, setSock] = useState<Socket | null>(null)
   const [view, setView] = useState<TourneyView | null>(initialView)
   const [arena, setArena] = useState<ArenaState | null>(null)
   const [arenaYou, setArenaYou] = useState<ArenaYou>(null)
@@ -183,29 +252,39 @@ export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTi
   const [presence, setPresence] = useState<Presence | null>(null)
   const [meL, setMeL] = useState<LobbyMe | null>(null)
   const [ticket, setTicket] = useState(initialTicket)
-  const [tab, setTab] = useState<Tab>("live")
+  const [tab, setTab] = useState<Tab>("floor")
+  const [chatArea, setChatArea] = useState<"participants" | "viewers">("participants")
+  const [drawer, setDrawer] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [rejoin, setRejoin] = useState(0)
-  const [sock, setSock] = useState<Socket | null>(null)
-  const [onAir, setOnAir] = useState<OnAir[]>([])
-  const [airGame, setAirGame] = useState<string | null>(null)
+  const [voice, setVoice] = useState<VoiceState>(NO_VOICE)
+  // The game on the stage (match mode), and the games already opened by themselves.
+  const [gameId, setGameId] = useState<string | null>(initialGame)
+  const opened = useRef(new Set<string>(initialGame ? [initialGame] : []))
+  // Games I was paired into (mine), for the label above the board.
+  const [mine, setMine] = useState<string[]>([])
   const now = useNow()
   const n = (now ?? nowMs()) + offset
+
+  const open = useCallback((id: string | null) => {
+    setGameId(id)
+    setDrawer(false)
+    if (id) opened.current.add(id)
+    try {
+      const u = new URL(window.location.href)
+      if (id) u.searchParams.set("game", id)
+      else u.searchParams.delete("game")
+      window.history.replaceState(null, "", u)
+    } catch {}
+    window.scrollTo({ top: 0 })
+  }, [])
 
   useEffect(() => {
     const s = io(GAME_URL, { path: "/game/socket.io", auth: token ? { token } : {}, transports: ["websocket", "polling"] })
     socket.current = s
-    s.on("connect", () => setSock(s))
-    // Games with live commentary in this tournament (featured, with voice, first).
-    const air = () =>
-      s.emit("commentary:list", t.id, (r: { ok: boolean; games?: OnAir[] }) => {
-        if (r.ok && r.games) setOnAir([...r.games].sort((a, b) => Number(b.voice) - Number(a.voice)))
-      })
-    const airTimer = setInterval(air, 20_000)
-    s.on("commentary:started", (d: { tournament_id: string | null }) => d.tournament_id === t.id && air())
     s.on("connect", () => {
-      air()
+      setSock(s)
       s.emit("lobby:join", t.id, (res: LobbyJoin | { ok: false; error: string }) => {
         if (!res.ok) return setError("The lobby couldn't open. Please reload the page.")
         setJoin(res)
@@ -253,17 +332,18 @@ export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTi
       })
     )
     s.on("arena:state", (a: ArenaState) => setArena(a))
-    // Paired: the game opens by itself.
-    const go = (p: { game_id: string; tournament_id: string }) => {
-      if (p.tournament_id === t.id) router.push(`/play/${p.game_id}`)
+    // Paired: the board opens here, with the Ready check.
+    const paired = (p: { game_id: string; tournament_id: string }) => {
+      if (p.tournament_id !== t.id) return
+      setMine((m) => (m.includes(p.game_id) ? m : [...m, p.game_id]))
+      open(p.game_id)
     }
-    s.on("tourney:paired", go)
-    s.on("arena:paired", go)
+    s.on("tourney:paired", paired)
+    s.on("arena:paired", paired)
     return () => {
-      clearInterval(airTimer)
       s.disconnect()
     }
-  }, [t.id, t.format, token, router])
+  }, [t.id, t.format, token, open])
 
   // A moderator was added or removed: join again to get the new role.
   useEffect(() => {
@@ -307,8 +387,15 @@ export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTi
   const finished = t.status === "completed" || view?.state?.phase === "finished" || arena?.phase === "over"
   const running = !finished && (view?.state?.phase === "running" || arena?.phase === "live" || (t.format === "arena" && n >= starts))
   const checkinOpen = !running && !finished && t.check_in_minutes > 0 && n >= starts - t.check_in_minutes * 60_000 && n < starts
-  const myBoard = pass ? view?.live.find((b) => b.white?.id === pass.id || b.black?.id === pass.id) : undefined
+  const myBoard = meId ? view?.live.find((b) => b.white?.id === meId || b.black?.id === meId) : undefined
   const myGame = myBoard?.game_id ?? arenaYou?.game_id ?? null
+
+  // Arriving (or coming back) while my game is on: it opens by itself, once.
+  useEffect(() => {
+    if (!myGame || opened.current.has(myGame)) return
+    const id = setTimeout(() => open(myGame), 0)
+    return () => clearTimeout(id)
+  }, [myGame, open])
 
   const roundText = useMemo(() => {
     if (!view?.state) return null
@@ -316,6 +403,30 @@ export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTi
     if (t.format === "knockout" && view.bracket) return view.bracket.rounds[view.state.round - 1]?.name ?? null
     return null
   }, [view, t.format, t.rounds])
+
+  // The arena floor: everyone in the tournament (or, before it starts, the participants here).
+  const seats = useMemo<Seat[]>(() => {
+    const here = new Map((presence?.players ?? []).map((p) => [p.id, p]))
+    const playing = new Map<string, string>()
+    for (const b of view?.live ?? []) {
+      if (b.white?.id) playing.set(b.white.id, b.game_id)
+      if (b.black?.id) playing.set(b.black.id, b.game_id)
+    }
+    const rows: Seat[] = []
+    if (t.format === "arena" && arena?.standings.length) {
+      for (const r of arena.standings)
+        rows.push({ id: r.player_id, name: r.name, rating: null, avatar_url: here.get(r.player_id)?.avatar_url ?? null, here: here.has(r.player_id), game: playing.get(r.player_id) ?? null, rank: r.rank, score: String(r.score), out: false })
+    } else if (view?.entrants.length) {
+      const standing = new Map((view.standings ?? []).map((s) => [s.id, s]))
+      for (const e of view.entrants) {
+        const st = standing.get(e.id)
+        rows.push({ id: e.id, name: e.name, rating: e.rating, avatar_url: here.get(e.id)?.avatar_url ?? null, here: here.has(e.id), game: playing.get(e.id) ?? null, rank: st?.rank ?? null, score: st ? String(st.points) : null, out: e.withdrawn })
+      }
+    }
+    for (const p of presence?.players ?? []) if (!rows.some((r) => r.id === p.id)) rows.push({ id: p.id, name: p.name, rating: null, avatar_url: p.avatar_url, here: true, game: playing.get(p.id) ?? null, rank: null, score: null, out: false })
+    const weight = (s: Seat) => (s.out ? 3 : s.game ? 0 : s.here ? 1 : 2)
+    return rows.sort((a, b) => weight(a) - weight(b) || (a.rank ?? 9999) - (b.rank ?? 9999) || (b.rating ?? 0) - (a.rating ?? 0))
+  }, [presence, view, arena, t.format])
 
   const checkIn = async () => {
     setBusy(true)
@@ -330,32 +441,30 @@ export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTi
       else setError(res.error === "not-registered" ? "You're not registered for this tournament." : "That didn't work. Please try again.")
     })
 
-  // ------------------------------------------------------------------ your seat
+  // ------------------------------------------------------------------ your seat (what to do now)
 
   const seat = (() => {
-    if (role === "moderator") return <p className="lobby-seat-text">You&apos;re moderating this lobby. Your tools are under the chat.</p>
+    if (role === "moderator") return <p className="lobby-seat-text">You&apos;re moderating. Chat tools are under the participants&apos; chat; voice tools under Voice in the bar above.</p>
     if (role === "spectator")
       return (
         <p className="lobby-seat-text">
-          You&apos;re watching.{" "}
-          {!pass || pass.guest ? (
-            <button type="button" className="underline" onClick={openSignIn}>
-              Sign in
-            </button>
-          ) : (
-            <Link href="/play/tournaments" className="underline">
-              Find a tournament to play
-            </Link>
+          You&apos;re watching. Tap a player who&apos;s playing, or a live board, to watch the game with its commentary.{" "}
+          {(!pass || pass.me.guest) && (
+            <>
+              <button type="button" className="underline" onClick={openSignIn}>
+                Sign in
+              </button>{" "}
+              to chat.
+            </>
           )}
-          {!pass || pass.guest ? " to chat with other spectators." : "."}
         </p>
       )
     if (finished) return <p className="lobby-seat-text">The tournament is over. Thanks for playing!</p>
     if (myGame)
       return (
-        <Link href={`/play/${myGame}`} className="lobby-seat-go">
-          Go to your board
-        </Link>
+        <button type="button" className="lobby-seat-go lobby-pulse" onClick={() => open(myGame)}>
+          Back to your board
+        </button>
       )
     if (checkinOpen && ticket && !ticket.checked_in_at)
       return (
@@ -366,7 +475,7 @@ export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTi
     if (t.format === "arena" && running)
       return arenaYou?.joined ? (
         <div className="flex flex-wrap items-center gap-3">
-          <p className="lobby-seat-text">Finding your next opponent… the board opens by itself.</p>
+          <p className="lobby-seat-text">Finding your next opponent… your board opens here by itself.</p>
           <button type="button" className="g-btn" onClick={() => arenaCall("arena:pause")}>
             Take a break
           </button>
@@ -376,35 +485,24 @@ export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTi
           Join the arena
         </button>
       )
-    if (running) return <p className="lobby-seat-text">You&apos;re in. Stay here: your next game opens by itself when you&apos;re paired.</p>
-    return <p className="lobby-seat-text">{ticket?.checked_in_at ? "Checked in. Your first game opens by itself at the start." : "You're registered. Stay here: your first game opens by itself at the start."}</p>
+    if (running) return <p className="lobby-seat-text">You&apos;re in. Stay here: your next board opens here by itself when you&apos;re paired.</p>
+    return <p className="lobby-seat-text">{ticket?.checked_in_at ? "Checked in. Your first board opens here at the start." : "You're registered. Stay here: your first board opens here at the start."}</p>
   })()
 
-  // ------------------------------------------------------------------ stage
-
   const table = (() => {
-    if (t.format === "arena") return arena ? <ArenaTable arena={arena} meId={pass?.id ?? null} /> : <p className="lobby-empty">The leaderboard fills up once the arena starts.</p>
+    if (t.format === "arena") return arena ? <ArenaTable arena={arena} meId={meId} /> : <p className="lobby-empty">The leaderboard fills up once the arena starts.</p>
     if (!view?.state) return <p className="lobby-empty">The {f.table.toLowerCase()} appears when the first round is paired.</p>
-    if (t.format === "knockout") return <Bracket view={view} meId={pass?.id ?? null} />
-    if (t.format === "round_robin") return <Crosstable view={view} meId={pass?.id ?? null} />
+    if (t.format === "knockout") return <Bracket view={view} meId={meId} />
+    if (t.format === "round_robin") return <Crosstable view={view} meId={meId} />
     return (
       <div className="flex flex-col gap-6">
-        <SwissStandings view={view} meId={pass?.id ?? null} />
-        <SwissPairings view={view} meId={pass?.id ?? null} />
+        <SwissStandings view={view} meId={meId} />
+        <SwissPairings view={view} meId={meId} />
       </div>
     )
   })()
 
-  const airId = onAir.some((g) => g.game_id === airGame) ? airGame : (onAir[0]?.game_id ?? null)
-  const tabs: [Tab, string][] = [
-    ["live", `Live boards${view?.live.length ? ` (${view.live.length})` : ""}`],
-    ...(onAir.length || tab === "commentary" ? ([["commentary", "Commentary"]] as [Tab, string][]) : []),
-    ["table", f.table],
-    ["rules", "Rules & guide"],
-    ["chat", "Chat"],
-  ]
-
-  const statusLine = (() => {
+  const statusChip = (() => {
     if (t.status === "cancelled") return <span className="lobby-chip">Cancelled</span>
     if (finished) return <span className="lobby-chip">Finished</span>
     if (running)
@@ -416,101 +514,145 @@ export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTi
     return <span className="lobby-chip">{checkinOpen ? "Check-in open" : "Starting soon"}</span>
   })()
 
+  const clock = (() => {
+    if (!running && !finished && t.status !== "cancelled") return { label: checkinOpen ? "Starts in" : "Starts in", to: starts }
+    if (running && t.format === "arena" && arena) return { label: "Ends in", to: arena.ends_at }
+    if (running && view?.state?.next_round_at && view.state.round_done_at) return { label: "Next round in", to: view.state.next_round_at }
+    return null
+  })()
+
+  const deskStatus = (() => {
+    if (finished) return "The tournament is over. Final standings are in the table."
+    if (running && view?.state?.round_done_at) return `${roundText ?? "This round"} is over. Next round coming up.`
+    if (running) return `${roundText ? `${roundText} is on.` : "Games are on."} ${view?.live.length ? `${view.live.length} board${view.live.length === 1 ? "" : "s"} live.` : ""}`
+    if (checkinOpen) return "Check-in is open. Participants: check in so you're paired."
+    return "Welcome! The tournament starts soon."
+  })()
+
+  const latest = [...messages].reverse().find((m) => m.channel === "all") ?? null
   const closedNote = join && !join.window.open ? (n < join.window.opens_at ? `The lobby opens ${eventTime(new Date(join.window.opens_at).toISOString())}, with check-in.` : "The lobby has closed. You can still read the chat.") : null
 
+  const chat = (area: "participants" | "viewers" | "announcements") =>
+    join && settings ? (
+      <LobbyChat area={area} role={role} me={meL} settings={settings} quick={join.quick} messages={messages} open={join.window.open} send={send} mod={mod} />
+    ) : (
+      <p className="lobby-empty">Connecting to the lobby…</p>
+    )
+  // Viewers see the moderators' announcements in place of the participants' chat.
+  const leftArea = role === "spectator" ? "announcements" : "participants"
+  const hub = (
+    <div className="chat-hub">
+      <div className="lobby-seg" role="radiogroup" aria-label="Chat">
+        <button type="button" role="radio" aria-checked={chatArea === "participants"} onClick={() => setChatArea("participants")}>
+          {role === "spectator" ? "Moderators" : "Participants"}
+        </button>
+        <button type="button" role="radio" aria-checked={chatArea === "viewers"} onClick={() => setChatArea("viewers")}>
+          Viewers
+        </button>
+      </div>
+      {chatArea === "participants" ? chat(leftArea) : chat("viewers")}
+    </div>
+  )
+
+  const tabs: [Tab, string][] = [
+    ["floor", "Arena"],
+    ["live", `Live boards${view?.live.length ? ` (${view.live.length})` : ""}`],
+    ["table", f.table],
+    ["rules", "Rules & guide"],
+    ["chat", "Chat"],
+  ]
+
   return (
-    <div className="lobby" data-format={t.format} style={{ "--fc": f.colour, "--piece": `url(/pieces/classic/w${f.piece}.svg)` } as CSSProperties}>
-      <header className="lobby-stage">
-        {t.image_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={t.image_url} alt="" className="lobby-stage-img" />
-        )}
-        <div className="lobby-stage-pattern" aria-hidden="true" />
-        <div className="lobby-stage-piece" aria-hidden="true" />
-        <div className="lobby-stage-body">
-          <Link href={`/play/tournaments/${t.handle}`} className="lobby-back">
-            ‹ Tournament page
-          </Link>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+    <div className="lobby" data-format={t.format} data-mode={gameId ? "match" : "arena"} style={{ "--fc": f.colour, "--piece": `url(/pieces/classic/w${f.piece}.svg)` } as CSSProperties}>
+      {/* Broadcast bar: always on top, so voice and the clock carry on in match mode. */}
+      <header className="bcast">
+        <div className="bcast-art" aria-hidden="true" />
+        <div className="bcast-main">
+          <div className="bcast-title-row">
             <span className="lobby-format">{f.name}</span>
-            {statusLine}
+            {statusChip}
             <span className={`lobby-role lobby-role-${role}`}>You: {ROLE_LABEL[role]}</span>
           </div>
-          <h1 className="lobby-title">{t.title}</h1>
-          <p className="lobby-meta">
+          <h1 className="bcast-title">{t.title}</h1>
+          <p className="bcast-meta">
             {t.time_control} {speedLabel(t.time_control)}
-            {view?.entrants.length ? ` · ${view.entrants.length} players` : ""}
+            {seats.length ? ` · ${seats.length} participants` : ""}
             {presence ? ` · ${presence.spectators} watching` : ""}
+            {" · "}
+            <Link href={`/play/tournaments/${t.handle}?details=1`} className="underline underline-offset-2">
+              Tournament details
+            </Link>
           </p>
-          <div className="lobby-clock">
-            {!running && !finished && t.status !== "cancelled" && (
-              <>
-                <span className="lobby-clock-label">{checkinOpen ? "Check-in open · starts in" : "Starts in"}</span>
-                <Countdown to={starts} offset={offset} />
-              </>
-            )}
-            {running && t.format === "arena" && arena && (
-              <>
-                <span className="lobby-clock-label">Ends in</span>
-                <Countdown to={arena.ends_at} offset={offset} />
-              </>
-            )}
-            {running && view?.state?.next_round_at && view.state.round_done_at && (
-              <>
-                <span className="lobby-clock-label">Next round in</span>
-                <Countdown to={view.state.next_round_at} offset={offset} />
-              </>
-            )}
+        </div>
+        {clock && (
+          <div className="bcast-clock">
+            <span className="bcast-clock-label">{clock.label}</span>
+            <Countdown to={clock.to} offset={offset} size="sm" />
           </div>
+        )}
+        <div className="bcast-voice">
+          {join?.voice_site && settings && join.window.open && <LobbyVoice socket={sock} tid={t.id} role={role} meId={meId} settings={settings} players={presence?.players ?? []} onState={setVoice} />}
+          {gameId && (
+            <button type="button" className="lv-btn lv-btn-quiet" aria-expanded={drawer} onClick={() => setDrawer((v) => !v)}>
+              💬 Chat
+            </button>
+          )}
         </div>
       </header>
 
-      <div className="lobby-seat">{seat}</div>
       {(error || closedNote) && <p className="lobby-note">{error ?? closedNote}</p>}
 
-      <div className="lobby-grid">
-        <div className="lobby-main">
-          <div className="lobby-tabs" role="tablist" aria-label="Lobby">
-            {tabs.map(([k, label]) => (
-              <button key={k} type="button" role="tab" aria-selected={tab === k} className={k === "chat" ? "lobby-tab-chat" : undefined} onClick={() => setTab(k)}>
-                {label}
-              </button>
-            ))}
+      {gameId ? (
+        <div className="match">
+          <div className="match-bar">
+            <button type="button" className="g-btn !min-h-[38px] !px-3 !text-[14px]" onClick={() => open(null)}>
+              ‹ Back to the arena
+            </button>
+            <span className="match-label">{myGame === gameId || mine.includes(gameId) ? "Your game" : "Watching"} · the commentary is in the side panel</span>
           </div>
-          <div className={`lobby-panel ${tab === "chat" ? "lobby-panel-chatmode" : ""}`}>
-            {tab === "live" && (view?.live.length ? <LiveBoards boards={view.live} offset={offset} /> : <p className="lobby-empty">{running ? "No games on right now. The next round's boards appear here." : "The boards appear here when the games start."}</p>)}
-            {tab === "commentary" &&
-              (airId && role !== "player" ? (
-                <div className="flex flex-col gap-3">
-                  {onAir.length > 1 && (
-                    <div className="lobby-rules-nav" role="tablist" aria-label="Games with commentary">
-                      {onAir.map((g) => (
-                        <button key={g.game_id} type="button" role="tab" aria-selected={g.game_id === airId} onClick={() => setAirGame(g.game_id)}>
-                          {g.white.name} – {g.black.name}
-                          {g.voice ? " ★" : ""}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <CommentaryPanel key={airId} socket={sock} gameId={airId} />
-                </div>
-              ) : (
-                <p className="lobby-empty">{role === "player" ? "Commentary is for spectators while games are on, so it can't help anyone playing. Watch the replays after your games." : "No game has commentary right now."}</p>
-              ))}
-            {tab === "table" && table}
-            {tab === "rules" && <Rules t={t} chapters={chapters} how={f.how} />}
-          </div>
+          <GameView key={gameId} id={gameId} initialPass={pass} embedded={{ onExit: () => open(null), onOpen: (id) => open(id) }} />
         </div>
-        <aside className={`lobby-side ${tab === "chat" ? "lobby-side-open" : ""}`}>
-          {join?.voice_site && settings && join.window.open && <LobbyVoice socket={sock} tid={t.id} role={role} settings={settings} players={presence?.players ?? []} />}
-          {join && settings ? (
-            <LobbyChat role={role} me={meL} settings={settings} quick={join.quick} messages={messages} open={join.window.open} send={send} mod={mod} />
-          ) : (
-            <p className="lobby-empty">Connecting to the lobby…</p>
-          )}
-          <WhoIsHere presence={presence} entrants={view?.entrants.length ?? 0} />
-        </aside>
-      </div>
+      ) : (
+        <div className="arena-grid">
+          <aside className="arena-left">{chat(leftArea)}</aside>
+          <main className="arena-center">
+            <CasterDesk moderators={presence?.moderators ?? []} voice={voice} latest={latest} status={deskStatus} />
+            <div className="lobby-seat">{seat}</div>
+            <div className="lobby-tabs" role="tablist" aria-label="Lobby">
+              {tabs.map(([k, label]) => (
+                <button key={k} type="button" role="tab" aria-selected={tab === k} className={k === "chat" ? "lobby-tab-chat" : undefined} onClick={() => setTab(k)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="lobby-panel">
+              {tab === "floor" && <ArenaFloor seats={seats} voice={voice} meId={meId} onOpen={open} colourLabel={f.name} />}
+              {tab === "live" &&
+                (view?.live.length ? (
+                  <LiveBoards boards={view.live} offset={offset} onOpen={open} />
+                ) : (
+                  <p className="lobby-empty">{running ? "No games on right now. The next round's boards appear here." : "The boards appear here when the games start."}</p>
+                ))}
+              {tab === "table" && table}
+              {tab === "rules" && <Rules t={t} chapters={chapters} how={f.how} />}
+              {tab === "chat" && hub}
+            </div>
+          </main>
+          <aside className="arena-right">{chat("viewers")}</aside>
+        </div>
+      )}
+
+      {gameId && drawer && (
+        <div className="chat-drawer" role="dialog" aria-label="Lobby chat">
+          <div className="flex items-center justify-between">
+            <p className="font-extrabold">Lobby chat</p>
+            <button type="button" className="lv-x" aria-label="Close the chat" onClick={() => setDrawer(false)}>
+              ×
+            </button>
+          </div>
+          {hub}
+        </div>
+      )}
     </div>
   )
 }

@@ -173,7 +173,7 @@ export class GameManager {
     black: Player,
     initial_ms: number,
     increment_ms: number,
-    opts: { mode: Mode; tournamentId?: string | null; rated?: boolean }
+    opts: { mode: Mode; tournamentId?: string | null; rated?: boolean; readyMs?: number }
   ) {
     const now = Date.now()
     // A game with a guest in it never counts for ratings.
@@ -194,7 +194,7 @@ export class GameManager {
         black_rating: rated ? Math.round(br.rating) : null,
       })
     )
-    g.start(now)
+    g.start(now, opts.readyMs ?? 0)
     this.games.set(g.r.id, g)
     await this.changed(g)
     return g

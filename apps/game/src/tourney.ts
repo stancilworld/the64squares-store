@@ -1,3 +1,4 @@
+import { announce, lobbyDefaults } from "./lobby.js"
 import { Chess } from "chess.js"
 import type { Server, Socket } from "socket.io"
 import { pool } from "./db.js"
@@ -253,6 +254,7 @@ export class Tourneys {
           t.id,
           `${field.length} of the ${need} players needed checked in`,
         ])
+        announce(t.id, `Only ${field.length} of the ${need} players needed checked in, so this tournament is called off. Sorry, and see you at the next one!`)
         return this.changed(t.id)
       }
       for (const [i, e] of field.entries()) {
@@ -275,6 +277,7 @@ export class Tourneys {
       if (state.round > 0) {
         if (!state.round_done_at) {
           await pool.query("update play.t_state set round_done_at = now() where tournament_id = $1", [t.id])
+          announce(t.id, `Round ${state.round} is over. The next round starts in ${Math.round(breakMs / 1000)} seconds: stay in the lobby.`)
           return this.changed(t.id)
         }
         if (Date.now() - state.round_done_at < breakMs) return
@@ -294,6 +297,7 @@ export class Tourneys {
         }
         await this.createGame(t, next, i + 1, 1, byId.get(p.white)!, byId.get(p.black)!, false)
       }
+      announce(t.id, `Round ${next} of ${rounds} is paired! Your board opens right here: press Ready when it appears.`)
       return this.changed(t.id)
     }
 
@@ -305,6 +309,7 @@ export class Tourneys {
       if (state.round > 0) {
         if (!state.round_done_at) {
           await pool.query("update play.t_state set round_done_at = now() where tournament_id = $1", [t.id])
+          announce(t.id, `Round ${state.round} is over. The next round starts in ${Math.round(breakMs / 1000)} seconds: stay in the lobby.`)
           return this.changed(t.id)
         }
         if (Date.now() - state.round_done_at < breakMs) return
@@ -331,6 +336,7 @@ export class Tourneys {
         }
         await this.createGame(t, next, i + 1, 1, byId.get(p.white)!, byId.get(p.black)!, false)
       }
+      announce(t.id, `Round ${next} of ${rounds} is paired! Your board opens right here: press Ready when it appears.`)
       return this.changed(t.id)
     }
 
@@ -343,14 +349,17 @@ export class Tourneys {
       if (state.round === 0) {
         if (t.paused) return
         await pool.query("update play.t_state set round = 1, round_done_at = null where tournament_id = $1", [t.id])
+        announce(t.id, `The tournament has begun: ${bracket.rounds[0]?.name ?? "round 1"}! Your board opens right here: press Ready when it appears.`)
       } else if (!undecided.length) {
         if (current >= bracket.totalRounds) return this.finish(t.id)
         if (!state.round_done_at) {
           await pool.query("update play.t_state set round_done_at = now() where tournament_id = $1", [t.id])
+          announce(t.id, `Round ${state.round} is over. The next round starts in ${Math.round(breakMs / 1000)} seconds: stay in the lobby.`)
           return this.changed(t.id)
         }
         if (Date.now() - state.round_done_at < breakMs || t.paused) return
         await pool.query("update play.t_state set round = $2, round_done_at = null where tournament_id = $1", [t.id, current + 1])
+        announce(t.id, `${bracket.rounds[current]?.name ?? `Round ${current + 1}`} begins! Your board opens right here: press Ready when it appears.`)
         return this.changed(t.id)
       }
       if (t.paused) return
@@ -392,6 +401,7 @@ export class Tourneys {
     const g = await this.manager.createPaired({ id: white.id, name: white.name } as Player, { id: black.id, name: black.name } as Player, tc.initial_ms, tc.increment_ms, {
       mode: "arena",
       tournamentId: t.id,
+      readyMs: (await lobbyDefaults(t.id)).ready_seconds * 1000,
     })
     await pool.query("update play.t_game set game_id = $5 where tournament_id = $1 and round = $2 and board = $3 and game_no = $4", [t.id, round, board, gameNo, g.r.id])
     const payload = { tournament_id: t.id, handle: t.handle, game_id: g.r.id, round, board }
@@ -409,7 +419,11 @@ export class Tourneys {
     let result = g.r.result
     let forfeit = false
     let absent: string | null = null
-    if (g.r.reason === "no-start" || (!result && g.r.status === "aborted")) {
+    if (g.r.reason === "no-show") {
+      // Didn't press Ready (the opponent did).
+      absent = result === "1-0" ? row.black_id : row.white_id
+      forfeit = true
+    } else if (g.r.reason === "no-start" || (!result && g.r.status === "aborted")) {
       absent = g.r.moves.length === 0 ? row.white_id : row.black_id
       result = absent === row.white_id ? "0-1" : "1-0"
       forfeit = true
@@ -427,7 +441,10 @@ export class Tourneys {
 
   private async finish(tid: string) {
     const done = await pool.query("update play.t_state set phase = 'finished', finished_at = now() where tournament_id = $1 and phase = 'running' returning tournament_id", [tid])
-    if (done.rowCount) await saveFinal(tid)
+    if (done.rowCount) {
+      await saveFinal(tid)
+      announce(tid, "That's the last game: the tournament is over! Final standings are on the Standings tab. Congratulations to the winners, and thank you all for playing.")
+    }
     this.changed(tid)
   }
 

@@ -17,6 +17,8 @@ export type GameState = {
   clocks: { w: number; b: number }
   clock_running: Colour | null
   first_move_deadline: number | null
+  // Tournament games: both players press Ready before the game begins (until `until`).
+  ready?: { w: boolean; b: boolean; until: number } | null
   initial_ms: number
   increment_ms: number
   result: "1-0" | "0-1" | "1/2-1/2" | null
@@ -52,6 +54,7 @@ const REASONS: Record<string, string> = {
   "fifty-moves": "by the fifty-move rule",
   agreement: "by agreement",
   abandoned: "— opponent left the game",
+  "no-show": "— the opponent wasn't ready in time",
 }
 
 export type Presence = {
@@ -77,7 +80,7 @@ export const tcText = (initial_ms: number, increment_ms: number) => (initial_ms 
 export const LIVE_KEY = "t64:live-game"
 
 export const resultText = (g: Pick<GameState, "status" | "result" | "reason" | "white" | "black">) => {
-  if (g.status === "aborted") return g.reason === "no-start" ? "Game aborted: the first move wasn't played in time." : "Game aborted."
+  if (g.status === "aborted") return g.reason === "no-start" ? "Game not played: nobody was ready (or the first move wasn't played) in time." : "Game aborted."
   if (!g.result) return ""
   const how = g.reason ? REASONS[g.reason] ?? "" : ""
   if (g.result === "1/2-1/2") return g.reason === "abandoned" ? "Draw — a player left the game" : `Draw ${how}`.trim()

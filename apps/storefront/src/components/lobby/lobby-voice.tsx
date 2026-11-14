@@ -4,21 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type { Socket } from "socket.io-client"
 import type { LobbySettings, Person, Role } from "./lobby-types"
 
-// Lobby voice (LiveKit). Everyone in the lobby can listen; moderators talk, players when a
-// moderator lets them, spectators never. The game server hands out the pass and grants the
-// mic; LiveKit carries the audio. The LiveKit library loads only when someone joins.
+// Lobby voice (LiveKit), as a strip in the lobby's broadcast bar. Everyone can listen;
+// moderators talk; players talk when the moderator lets players talk (adults) or accepts
+// their raised hand; viewers listen. The game server hands out the pass and grants the mic;
+// LiveKit carries the audio. The LiveKit library loads only when someone joins.
 
-type Speaker = { id: string; name: string; role: Role }
-type Join = { ok: true; url: string; token: string; identity: string; can_talk: boolean; why: string | null; speakers: Speaker[]; max_speakers: number }
+export type Speaker = { id: string; name: string; role: Role }
+export type Hand = { id: string; name: string; at: number }
+export type VoiceState = { joined: boolean; speakers: Speaker[]; hands: Hand[]; active: string[]; listeners: number }
+
+type Join = { ok: true; url: string; token: string; identity: string; can_talk: boolean; why: string | null; speakers: Speaker[]; hands: Hand[]; max_speakers: number }
 type LkRoom = import("livekit-client").Room
 
-const WHY: Record<string, string> = {
-  "not-allowed": "Listening. The moderator hasn't opened the mic to players.",
-  "ask-moderator": "Listening. Ask a moderator if you'd like to talk.",
-  "listen-only": "Spectators listen only.",
-  muted: "A moderator muted you.",
-  "voice-off": "Voice is off in this lobby.",
-}
 const ERR: Record<string, string> = {
   "voice-off-site": "Voice isn't available right now.",
   "voice-off": "Voice is off in this lobby.",
@@ -26,9 +23,10 @@ const ERR: Record<string, string> = {
   "site-full": "Voice is full across the site right now. Try again in a bit.",
   "mics-full": "Six people are already talking. Wait for a free mic.",
   closed: "The lobby is closed.",
-  "not-allowed": "The moderator hasn't opened the mic to players.",
-  "ask-moderator": "Ask a moderator to give you the mic.",
-  "listen-only": "Spectators listen only.",
+  "not-allowed": "Raise your hand to ask the moderator for the mic.",
+  "ask-moderator": "Raise your hand to ask the moderator for the mic.",
+  "listen-only": "Viewers listen only.",
+  "players-only": "Only participants can ask to talk.",
   muted: "A moderator muted you.",
   "not-connected": "Voice isn't connected yet. Try again in a moment.",
 }
@@ -36,17 +34,45 @@ const ERR: Record<string, string> = {
 const emit = <T,>(s: Socket, ev: string, arg: unknown) =>
   new Promise<T>((resolve) => s.timeout(10_000).emit(ev, arg, (err: Error | null, r: T) => resolve(err ? ({ ok: false, error: "not-connected" } as T) : r)))
 
-export function LobbyVoice({ socket, tid, role, settings, players }: { socket: Socket | null; tid: string; role: Role; settings: LobbySettings; players: Person[] }) {
+const Mic = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+    <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z" fill="currentColor" />
+  </svg>
+)
+
+export function LobbyVoice({
+  socket,
+  tid,
+  role,
+  meId,
+  settings,
+  players,
+  onState,
+}: {
+  socket: Socket | null
+  tid: string
+  role: Role
+  meId: string | null
+  settings: LobbySettings
+  players: Person[]
+  onState?: (s: VoiceState) => void
+}) {
   const room = useRef<LkRoom | null>(null)
   const audio = useRef<HTMLDivElement>(null)
   const [state, setState] = useState<"idle" | "joining" | "in">("idle")
   const [join, setJoin] = useState<Join | null>(null)
   const [speakers, setSpeakers] = useState<Speaker[]>([])
+  const [hands, setHands] = useState<Hand[]>([])
   const [listeners, setListeners] = useState(0)
   const [active, setActive] = useState<string[]>([])
   const [mic, setMic] = useState(false)
   const [note, setNote] = useState<string | null>(null)
   const [allowed, setAllowed] = useState<string[]>([])
+  const [panel, setPanel] = useState(false)
+
+  useEffect(() => {
+    onState?.({ joined: state === "in", speakers, hands, active, listeners })
+  }, [onState, state, speakers, hands, active, listeners])
 
   const leave = useCallback(async () => {
     const r = room.current
@@ -61,10 +87,11 @@ export function LobbyVoice({ socket, tid, role, settings, players }: { socket: S
 
   useEffect(() => {
     if (!socket) return
-    const onState = (d: { tid: string; speakers: Speaker[]; listeners: number }) => {
+    const onVoiceState = (d: { tid: string; speakers: Speaker[]; listeners: number; hands?: Hand[] }) => {
       if (d.tid !== tid) return
       setSpeakers(d.speakers)
       setListeners(d.listeners)
+      setHands(d.hands ?? [])
     }
     const onMic = (d: { tid: string; on: boolean }) => {
       if (d.tid !== tid || d.on) return
@@ -77,20 +104,27 @@ export function LobbyVoice({ socket, tid, role, settings, players }: { socket: S
       void leave()
       setNote("The moderator ended voice.")
     }
-    // The rules changed (players may talk, allowed by name): ask again whether I may talk.
+    // The rules changed (players may talk, a hand accepted): ask again whether I may talk.
     const onRecheck = (d: { tid: string }) => {
       if (d.tid !== tid || !room.current) return
-      void emit<Join | { ok: false; error: string }>(socket, "voice:join", tid).then((r) => r.ok && setJoin((j) => (j ? { ...j, can_talk: r.can_talk, why: r.why } : j)))
+      void emit<Join | { ok: false; error: string }>(socket, "voice:join", tid).then((r) => {
+        if (!r.ok) return
+        setJoin((j) => (j ? { ...j, can_talk: r.can_talk, why: r.why } : j))
+        if (r.can_talk) setNote("The moderator gave you the mic. Tap Talk when you're ready.")
+      })
     }
-    socket.on("voice:state", onState)
+    const onLowered = (d: { tid: string }) => d.tid === tid && setNote("The moderator lowered your hand.")
+    socket.on("voice:state", onVoiceState)
     socket.on("voice:mic", onMic)
     socket.on("voice:closed", onClosed)
     socket.on("voice:recheck", onRecheck)
+    socket.on("voice:hand-lowered", onLowered)
     return () => {
-      socket.off("voice:state", onState)
+      socket.off("voice:state", onVoiceState)
       socket.off("voice:mic", onMic)
       socket.off("voice:closed", onClosed)
       socket.off("voice:recheck", onRecheck)
+      socket.off("voice:hand-lowered", onLowered)
     }
   }, [socket, tid, leave])
 
@@ -106,8 +140,6 @@ export function LobbyVoice({ socket, tid, role, settings, players }: { socket: S
     if (!socket || role !== "moderator" || !settings.voice_on) return
     socket.emit("voice:allowed", tid, (r: { ok: boolean; ids?: string[] }) => r.ok && setAllowed(r.ids ?? []))
   }, [socket, role, tid, settings.voice_on])
-
-  if (!settings.voice_on && role !== "moderator") return null
 
   const start = async () => {
     if (!socket) return
@@ -138,6 +170,7 @@ export function LobbyVoice({ socket, tid, role, settings, players }: { socket: S
       room.current = lk
       setJoin(r)
       setSpeakers(r.speakers)
+      setHands(r.hands ?? [])
       setState("in")
     } catch {
       socket.emit("voice:leave", tid)
@@ -169,6 +202,12 @@ export function LobbyVoice({ socket, tid, role, settings, players }: { socket: S
     }
   }
 
+  const hand = async (up: boolean) => {
+    if (!socket) return
+    const r = await emit<{ ok: boolean; error?: string }>(socket, "voice:hand", { tid, up })
+    setNote(r.ok ? (up ? "Hand raised. The moderator will give you the mic." : null) : (ERR[r.error ?? ""] ?? "That didn't work."))
+  }
+
   const mod = async (body: Record<string, unknown>) => {
     if (!socket) return
     const r = await emit<{ ok: boolean; error?: string }>(socket, "voice:mod", { tid, ...body })
@@ -176,100 +215,128 @@ export function LobbyVoice({ socket, tid, role, settings, players }: { socket: S
     if (body.action === "allow" && r.ok) setAllowed((a) => (body.on ? [...a, String(body.player_id)] : a.filter((x) => x !== body.player_id)))
   }
 
-  const speaking = (id: string) => active.includes(id)
+  const myHand = !!meId && hands.some((h) => h.id === meId)
+  const canTalk = role === "moderator" || !!join?.can_talk
 
   return (
-    <section className="lobby-voice" aria-label="Lobby voice">
-      <div className="lobby-voice-head">
-        <span className="lobby-voice-title">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z" fill="currentColor" />
-          </svg>
-          Voice
-        </span>
-        {settings.voice_on ? <span className="lobby-voice-count">{listeners} listening</span> : <span className="lobby-voice-count">Off</span>}
-      </div>
-
-      {settings.voice_on && speakers.length > 0 && (
-        <ul className="lobby-voice-speakers">
-          {speakers.map((s) => (
-            <li key={s.id} className={speaking(s.id) ? "is-speaking" : undefined}>
-              <span className={`lobby-voice-dot lobby-voice-dot-${s.role}`} aria-hidden="true" />
-              {s.name}
-              {s.role === "moderator" && <span className="lobby-badge lobby-badge-moderator ml-1">Moderator</span>}
-              {role === "moderator" && s.id !== join?.identity && (
-                <button type="button" className="lobby-voice-mini" onClick={() => void mod({ action: "mute", player_id: s.id })}>
-                  Mute
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <div className="lobby-voice-actions">
-        {settings.voice_on && state !== "in" && (
-          <button type="button" className="g-btn g-btn-primary !min-h-[40px] !px-4 !text-[14px]" disabled={state === "joining" || !socket} onClick={() => void start()}>
-            {state === "joining" ? "Connecting…" : "Join voice"}
+    <div className="lv">
+      {!settings.voice_on ? (
+        role === "moderator" ? (
+          <button type="button" className="lv-btn lv-btn-go" onClick={() => void mod({ action: "voice", on: true })}>
+            <Mic /> Start voice
           </button>
-        )}
-        {state === "in" && join && (
-          <>
-            {join.can_talk || role === "moderator" ? (
-              <button type="button" className={`lobby-voice-talk ${mic ? "is-on" : ""}`} aria-pressed={mic} onClick={() => void talk(!mic)}>
-                {mic ? "Mic on · tap to stop" : "Talk"}
-              </button>
-            ) : (
-              <p className="lobby-why !mt-0">{WHY[join.why ?? ""] ?? "Listening."}</p>
-            )}
-            <button type="button" className="g-btn !min-h-[38px] !px-3 !text-[13px]" onClick={() => void leave()}>
-              Leave voice
+        ) : (
+          <span className="lv-off">
+            <Mic /> Voice off
+          </span>
+        )
+      ) : state !== "in" ? (
+        <button type="button" className="lv-btn lv-btn-go" disabled={state === "joining" || !socket} onClick={() => void start()}>
+          🎧 {state === "joining" ? "Connecting…" : "Join voice"}
+        </button>
+      ) : (
+        <>
+          {canTalk ? (
+            <button type="button" className={`lv-btn lv-talk ${mic ? "is-on" : ""}`} aria-pressed={mic} onClick={() => void talk(!mic)}>
+              <Mic /> {mic ? "Mic on" : "Talk"}
             </button>
-          </>
-        )}
-      </div>
-
-      {role === "moderator" && (
-        <details className="lobby-tools !border-0 !px-0 !pb-0">
-          <summary>Voice controls</summary>
-          <div className="flex flex-col gap-3 pt-3">
-            <div className="lobby-seg" role="radiogroup" aria-label="Lobby voice">
-              <button type="button" role="radio" aria-checked={settings.voice_on} onClick={() => void mod({ action: "voice", on: true })}>
-                Voice on
-              </button>
-              <button type="button" role="radio" aria-checked={!settings.voice_on} onClick={() => void mod({ action: "voice", on: false })}>
-                Off
-              </button>
-            </div>
-            {settings.voice_on && (
-              <>
-                <label className="flex items-center gap-2 text-[13.5px]">
-                  <input type="checkbox" checked={settings.players_voice} onChange={(e) => void mod({ action: "players", on: e.target.checked })} />
-                  Adult players may take the mic
-                </label>
-                {players.length > 0 && (
-                  <div>
-                    <p className="lobby-tools-label">Give the mic by name (how under-18 players can talk)</p>
-                    <ul className="lobby-voice-allow">
-                      {players.map((p) => (
-                        <li key={p.id}>
-                          <span className="truncate">{p.name}</span>
-                          <button type="button" aria-pressed={allowed.includes(p.id)} onClick={() => void mod({ action: "allow", player_id: p.id, on: !allowed.includes(p.id) })}>
-                            {allowed.includes(p.id) ? "Allowed" : "Allow"}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </details>
+          ) : role === "player" ? (
+            <button type="button" className={`lv-btn ${myHand ? "is-hand" : ""}`} aria-pressed={myHand} onClick={() => void hand(!myHand)}>
+              ✋ {myHand ? "Hand raised" : "Raise hand"}
+            </button>
+          ) : (
+            <span className="lv-off">🎧 Listening</span>
+          )}
+          <button type="button" className="lv-btn lv-btn-quiet" onClick={() => void leave()}>
+            Leave
+          </button>
+        </>
+      )}
+      {settings.voice_on && (
+        <button type="button" className="lv-btn lv-btn-quiet" aria-expanded={panel} onClick={() => setPanel((v) => !v)}>
+          {speakers.length > 0 ? `${speakers.length} on mic` : "Voice"}
+          {role === "moderator" && hands.length > 0 && <span className="lv-badge">✋ {hands.length}</span>} ▾
+        </button>
       )}
 
-      {note && <p className="lobby-why">{note}</p>}
+      {panel && settings.voice_on && (
+        <div className="lv-panel" role="dialog" aria-label="Voice">
+          <div className="flex items-center justify-between">
+            <p className="lv-panel-title">Voice · {listeners} listening</p>
+            <button type="button" className="lv-x" aria-label="Close" onClick={() => setPanel(false)}>
+              ×
+            </button>
+          </div>
+          <p className="lv-label">On the mic</p>
+          {speakers.length === 0 ? (
+            <p className="lobby-why !mt-0">Nobody is talking right now.</p>
+          ) : (
+            <ul className="lobby-voice-speakers">
+              {speakers.map((s) => (
+                <li key={s.id} className={active.includes(s.id) ? "is-speaking" : undefined}>
+                  <span className={`lobby-voice-dot lobby-voice-dot-${s.role}`} aria-hidden="true" />
+                  {s.name}
+                  {s.role === "moderator" && <span className="lobby-badge lobby-badge-moderator ml-1">Moderator</span>}
+                  {role === "moderator" && s.id !== join?.identity && (
+                    <button type="button" className="lobby-voice-mini" onClick={() => void mod({ action: "mute", player_id: s.id })}>
+                      Take the mic
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {role === "moderator" && (
+            <>
+              <p className="lv-label">Raised hands</p>
+              {hands.length === 0 ? (
+                <p className="lobby-why !mt-0">No hands up.</p>
+              ) : (
+                <ul className="lobby-voice-allow">
+                  {hands.map((h) => (
+                    <li key={h.id}>
+                      <span className="truncate">✋ {h.name}</span>
+                      <span className="flex gap-1">
+                        <button type="button" aria-pressed="true" onClick={() => void mod({ action: "allow", player_id: h.id, on: true })}>
+                          Give the mic
+                        </button>
+                        <button type="button" onClick={() => void mod({ action: "lower", player_id: h.id })}>
+                          Lower
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="lv-label">Voice settings</p>
+              <label className="flex items-center gap-2 text-[13.5px]">
+                <input type="checkbox" checked={settings.players_voice} onChange={(e) => void mod({ action: "players", on: e.target.checked })} />
+                Adult participants may talk without asking
+              </label>
+              {players.length > 0 && (
+                <details>
+                  <summary className="cursor-pointer text-[13px] font-semibold">Give the mic by name (how under-18s can talk)</summary>
+                  <ul className="lobby-voice-allow mt-2">
+                    {players.map((p) => (
+                      <li key={p.id}>
+                        <span className="truncate">{p.name}</span>
+                        <button type="button" aria-pressed={allowed.includes(p.id)} onClick={() => void mod({ action: "allow", player_id: p.id, on: !allowed.includes(p.id) })}>
+                          {allowed.includes(p.id) ? "Allowed" : "Allow"}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              <button type="button" className="g-btn mt-2 !min-h-[36px] !text-[13px]" onClick={() => void mod({ action: "voice", on: false })}>
+                End voice for everyone
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {note && <p className="lv-note">{note}</p>}
       <div ref={audio} hidden />
-    </section>
+    </div>
   )
 }

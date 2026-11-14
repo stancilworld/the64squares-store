@@ -16,6 +16,9 @@ type Props = {
   open: boolean
   send: (channel: Channel, kind: "text" | "quick", text: string, thread?: string) => Promise<string | null>
   mod: (action: string, body?: Record<string, unknown>) => Promise<string | null>
+  // Which chat area this is: the participants and moderators' table, the viewers' stand,
+  // or (for viewers, in place of the participants' chat) the moderators' announcements.
+  area: "participants" | "viewers" | "announcements"
 }
 
 const time = (at: number) => new Date(at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })
@@ -182,16 +185,17 @@ function ModTools({ settings, mod }: { settings: LobbySettings; mod: Props["mod"
 }
 
 export function LobbyChat(props: Props) {
-  const { role, me, settings, quick, messages, open, send, mod } = props
+  const { role, me, settings, quick, messages, open, send, mod, area } = props
   const now = useNow() ?? 0
   const tabs: { key: Channel; label: string }[] =
-    role === "spectator"
-      ? [{ key: "spectators", label: "Chat" }]
-      : [
-          { key: "players", label: "Players" },
-          { key: "spectators", label: "Spectators" },
-          { key: "arbiter", label: role === "moderator" ? "Questions" : "Ask the arbiter" },
-        ]
+    area === "viewers"
+      ? [{ key: "spectators", label: "Viewers" }]
+      : area === "announcements"
+        ? [{ key: "all", label: "From the moderators" }]
+        : [
+            { key: "players", label: "Participants" },
+            { key: "arbiter", label: role === "moderator" ? "Questions" : "Ask the arbiter" },
+          ]
   const [tab, setTab] = useState<Channel>(tabs[0].key)
   const [thread, setThread] = useState<string | null>(null)
   const [seen, setSeen] = useState<Record<string, number>>({})
@@ -209,7 +213,11 @@ export function LobbyChat(props: Props) {
     return [...m.values()].sort((a, b) => b.at - a.at)
   }, [messages])
 
-  const shown = messages.filter((m) => (m.channel === "all" && tab !== "arbiter") || (m.channel === tab && (tab !== "arbiter" || role !== "moderator" || m.thread === thread)))
+  // Announcements show in the participants' and the announcements area, not in the viewers'
+  // chat (viewers see them in their announcements area).
+  const shown = messages.filter(
+    (m) => (m.channel === "all" && tab !== "arbiter" && area !== "viewers") || (m.channel === tab && (tab !== "arbiter" || role !== "moderator" || m.thread === thread))
+  )
   const count = (c: Channel) => messages.filter((m) => m.channel === c && m.at > (seen[c] ?? 0)).length
 
   const last = shown.at(-1)?.id
@@ -223,7 +231,7 @@ export function LobbyChat(props: Props) {
     setTab(c)
   }
 
-  const w = open ? writeMode(role, me, settings, tab, now) : { mode: "none" as const, why: "The chat opens with the lobby." }
+  const w = area === "announcements" ? { mode: "none" as const, why: null } : open ? writeMode(role, me, settings, tab, now) : { mode: "none" as const, why: "The chat opens with the lobby." }
   const replyThread = role === "moderator" && tab === "arbiter" ? thread : undefined
   const composer = role === "moderator" && tab === "arbiter" && !thread ? null : (
     <Composer
@@ -236,7 +244,10 @@ export function LobbyChat(props: Props) {
   )
 
   return (
-    <section className="lobby-chat" aria-label="Lobby chat">
+    <section className={`lobby-chat lobby-chat-${area}`} aria-label={area === "viewers" ? "Viewers' chat" : area === "announcements" ? "Moderators' announcements" : "Participants and moderators' chat"}>
+      <h2 className="lobby-chat-title">
+        {area === "viewers" ? "Viewers' chat" : area === "announcements" ? "From the moderators" : "Participants & moderators"}
+      </h2>
       {tabs.length > 1 && (
         <div className="lobby-chat-tabs" role="tablist">
           {tabs.map((t) => (
@@ -274,14 +285,16 @@ export function LobbyChat(props: Props) {
       )}
       <div ref={feed} className="lobby-feed" aria-live="polite">
         {tab === "arbiter" && role === "player" && <p className="lobby-system">Questions about rules, pairings or a problem in your game? Only the moderators see what you write here.</p>}
-        {tab === "players" && <p className="lobby-system">Players and moderators only. Spectators don&apos;t see this chat.</p>}
-        {shown.length === 0 && tab !== "arbiter" && <p className="lobby-system">No messages yet.</p>}
+        {tab === "players" && <p className="lobby-system">Participants and moderators only. Viewers don&apos;t see this chat.</p>}
+        {area === "announcements" && <p className="lobby-system">Announcements and updates from the moderators appear here.</p>}
+        {area === "viewers" && <p className="lobby-system">Everyone watching chats here. Participants can join in too.</p>}
+        {shown.length === 0 && tab !== "arbiter" && area !== "announcements" && <p className="lobby-system">No messages yet.</p>}
         {shown.map((m) => (
           <Message key={m.id} m={m} canModerate={role === "moderator"} mod={mod} />
         ))}
       </div>
-      {composer}
-      {role === "moderator" && <ModTools settings={settings} mod={mod} />}
+      {area !== "announcements" && composer}
+      {role === "moderator" && area === "participants" && <ModTools settings={settings} mod={mod} />}
       <p className="lobby-footnote">
         Be kind. No phone numbers, links or addresses. Messages are kept for the moderators. <Link href="/play/rules?ch=fair-play">Fair play</Link>
       </p>

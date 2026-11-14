@@ -62,7 +62,7 @@ const PUBLIC_FIELDS = [
   "rating_min", "rating_max", "prizes", "rules", "image_url", "status",
   "entry", "pass_cost", "check_in_minutes", "min_players", "round_break_seconds", "knockout_games", "armageddon",
   "age_min", "age_max", "prize_list", "category_prizes", "tagline", "accent", "featured", "stream_url", "paused",
-  "cancel_reason", "results_final_at", "certificates",
+  "cancel_reason", "results_final_at", "certificates", "lobby",
 ] as const
 
 // Check-in: opens `check_in_minutes` before the start and closes at the start.

@@ -598,6 +598,17 @@ export const TournamentBody = z
       .nullable()
       .optional(),
     tagline: z.string().trim().max(160).nullable().optional(),
+    lobby: z
+      .object({
+        players_chat: z.enum(["open", "quick", "off"]),
+        spectator_chat: z.enum(["open", "slow", "off"]),
+        voice_on: z.boolean(),
+        players_voice: z.boolean(),
+        ready_seconds: z.number().int().min(0).max(300),
+        commentary: z.enum(["off", "text", "voice"]),
+      })
+      .nullable()
+      .optional(),
     accent: z.string().regex(/^#[0-9a-fA-F]{6}$/).nullable().optional(),
     featured: z.boolean().optional(),
     stream_url: z.string().url().max(500).nullable().optional().or(z.literal("")),

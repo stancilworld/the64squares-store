@@ -508,6 +508,14 @@ io.on("connection", (socket) => {
     }
   })
 
+  // A tournament game: "I'm ready". The clocks start when both players are.
+  socket.on("game:ready", async (id: unknown, ack: unknown) => {
+    if (!guard(ack) || limited(socket, ack) || !isId(id)) return
+    const player = me()
+    if (!player) return ack({ ok: false, error: "sign-in" })
+    ack(await manager.act(id, (g, now) => g.markReady(player.id, now)))
+  })
+
   socket.on("game:resign", async (id: unknown, ack: unknown) => {
     if (!guard(ack) || limited(socket, ack) || !isId(id)) return
     const player = me()
