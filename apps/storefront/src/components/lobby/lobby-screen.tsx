@@ -15,6 +15,7 @@ import { nowMs } from "@/lib/clock"
 import { GAME_URL } from "@/lib/game-types"
 import type { PlayPass } from "@/lib/play"
 import { checkInToTournament } from "@/lib/tournament-actions"
+import { myMatch } from "@/components/tourney/schedule-card"
 import { eventTime, type LiveBoard, speedLabel, type Ticket, type Tournament, type TourneyView } from "@/lib/tournament-types"
 import { LobbyChat } from "./lobby-chat"
 import { type Channel, type LobbyJoin, type LobbyMe, type LobbyMsg, type LobbySettings, type Person, type Presence, ROLE_LABEL, type Role, SEND_ERROR } from "./lobby-types"
@@ -129,9 +130,25 @@ function CasterDesk({ moderators, voice, latest, status }: { moderators: Person[
 
 // ------------------------------------------------------------------ arena floor
 
-type Seat = { id: string; name: string; rating: number | null; avatar_url: string | null; here: boolean; game: string | null; rank: number | null; score: string | null; out: boolean }
+type Seat = { id: string; name: string; rating: number | null; avatar_url: string | null; here: boolean; game: string | null; rank: number | null; score: string | null; out: boolean; available: boolean }
+type Challenge = { from: { id: string; name: string; score: number; games: number }; until: number }
 
-function ArenaFloor({ seats, voice, meId, onOpen, colourLabel }: { seats: Seat[]; voice: VoiceState; meId: string | null; onOpen: (id: string) => void; colourLabel: string }) {
+function ArenaFloor({
+  seats,
+  voice,
+  meId,
+  onOpen,
+  colourLabel,
+  challenge,
+}: {
+  seats: Seat[]
+  voice: VoiceState
+  meId: string | null
+  onOpen: (id: string) => void
+  colourLabel: string
+  // Challenge arenas: I may challenge available players.
+  challenge?: { can: boolean; pending: string | null; onChallenge: (id: string) => void }
+}) {
   if (!seats.length) return <p className="lobby-empty">The participants appear here as they arrive in the lobby.</p>
   return (
     <ul className="floor" aria-label="Participants">
@@ -158,9 +175,10 @@ function ArenaFloor({ seats, voice, meId, onOpen, colourLabel }: { seats: Seat[]
               {s.rating ?? ""}
               {s.score != null && <b className="seat-score">{s.score}</b>}
             </span>
-            <span className="seat-state">{s.out ? "Out" : s.game ? "Playing · watch" : s.here ? "In the lobby" : "Away"}</span>
+            <span className="seat-state">{s.out ? "Out" : s.game ? "Playing · watch" : s.available ? "Available" : s.here ? "In the lobby" : "Away"}</span>
           </>
         )
+        const canChallenge = !!challenge?.can && s.available && s.id !== meId && !s.game
         return (
           <li key={s.id}>
             {s.game ? (
@@ -170,6 +188,11 @@ function ArenaFloor({ seats, voice, meId, onOpen, colourLabel }: { seats: Seat[]
             ) : (
               <div className={cls} aria-label={`${s.name}, ${colourLabel}`}>
                 {body}
+                {canChallenge && (
+                  <button type="button" className="seat-challenge" disabled={!!challenge?.pending} onClick={() => challenge?.onChallenge(s.id)}>
+                    {challenge?.pending === s.id ? "Challenged…" : "Challenge"}
+                  </button>
+                )}
               </div>
             )}
           </li>
@@ -212,6 +235,7 @@ function Rules({ t, chapters, how }: { t: Tournament; chapters: RuleChapter[]; h
                 {t.rounds ? `, ${t.rounds} rounds` : ""}.
               </li>
               {t.check_in_minutes > 0 && <li>Check in during the {t.check_in_minutes} minutes before the start. Players who don&apos;t check in aren&apos;t paired.</li>}
+              {t.start_mode === "scheduled" && t.format !== "arena" && <li>No check-in: register before the deadline, and be here at your match time. You get {t.join_minutes ?? 5} minutes to press Ready.</li>}
               <li>Stay in this lobby: when you&apos;re paired your board opens here. Press Ready; the clocks start when both players are ready. Not ready in time loses the game.</li>
               <li>Questions? Use &ldquo;Ask the arbiter&rdquo; in the participants&apos; chat; only moderators see it.</li>
             </ul>
@@ -259,6 +283,9 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
   const [busy, setBusy] = useState(false)
   const [rejoin, setRejoin] = useState(0)
   const [voice, setVoice] = useState<VoiceState>(NO_VOICE)
+  // Challenge arenas: challenges to me, and the one I sent.
+  const [incoming, setIncoming] = useState<Challenge[]>([])
+  const [pending, setPending] = useState<string | null>(null)
   // The game on the stage (match mode), and the games already opened by themselves.
   const [gameId, setGameId] = useState<string | null>(initialGame)
   const opened = useRef(new Set<string>(initialGame ? [initialGame] : []))
@@ -332,10 +359,20 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
       })
     )
     s.on("arena:state", (a: ArenaState) => setArena(a))
+    s.on("arena:challenged", (c: Challenge & { tournament_id: string }) => {
+      if (c.tournament_id === t.id) setIncoming((list) => [...list.filter((x) => x.from.id !== c.from.id), { from: c.from, until: c.until }])
+    })
+    s.on("arena:challenge-answer", (d: { tournament_id: string; by: string; accepted: boolean }) => {
+      if (d.tournament_id !== t.id) return
+      setPending(null)
+      if (!d.accepted) setError(`${d.by} declined your challenge.`)
+    })
     // Paired: the board opens here, with the Ready check.
     const paired = (p: { game_id: string; tournament_id: string }) => {
       if (p.tournament_id !== t.id) return
       setMine((m) => (m.includes(p.game_id) ? m : [...m, p.game_id]))
+      setPending(null)
+      setIncoming([])
       open(p.game_id)
     }
     s.on("tourney:paired", paired)
@@ -415,15 +452,15 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
     const rows: Seat[] = []
     if (t.format === "arena" && arena?.standings.length) {
       for (const r of arena.standings)
-        rows.push({ id: r.player_id, name: r.name, rating: null, avatar_url: here.get(r.player_id)?.avatar_url ?? null, here: here.has(r.player_id), game: playing.get(r.player_id) ?? null, rank: r.rank, score: String(r.score), out: false })
+        rows.push({ id: r.player_id, name: r.name, rating: null, avatar_url: here.get(r.player_id)?.avatar_url ?? null, here: here.has(r.player_id), game: playing.get(r.player_id) ?? null, rank: r.rank, score: String(r.score), out: false, available: r.status === "waiting" })
     } else if (view?.entrants.length) {
       const standing = new Map((view.standings ?? []).map((s) => [s.id, s]))
       for (const e of view.entrants) {
         const st = standing.get(e.id)
-        rows.push({ id: e.id, name: e.name, rating: e.rating, avatar_url: here.get(e.id)?.avatar_url ?? null, here: here.has(e.id), game: playing.get(e.id) ?? null, rank: st?.rank ?? null, score: st ? String(st.points) : null, out: e.withdrawn })
+        rows.push({ id: e.id, name: e.name, rating: e.rating, avatar_url: here.get(e.id)?.avatar_url ?? null, here: here.has(e.id), game: playing.get(e.id) ?? null, rank: st?.rank ?? null, score: st ? String(st.points) : null, out: e.withdrawn, available: false })
       }
     }
-    for (const p of presence?.players ?? []) if (!rows.some((r) => r.id === p.id)) rows.push({ id: p.id, name: p.name, rating: null, avatar_url: p.avatar_url, here: true, game: playing.get(p.id) ?? null, rank: null, score: null, out: false })
+    for (const p of presence?.players ?? []) if (!rows.some((r) => r.id === p.id)) rows.push({ id: p.id, name: p.name, rating: null, avatar_url: p.avatar_url, here: true, game: playing.get(p.id) ?? null, rank: null, score: null, out: false, available: false })
     const weight = (s: Seat) => (s.out ? 3 : s.game ? 0 : s.here ? 1 : 2)
     return rows.sort((a, b) => weight(a) - weight(b) || (a.rank ?? 9999) - (b.rank ?? 9999) || (b.rating ?? 0) - (a.rating ?? 0))
   }, [presence, view, arena, t.format])
@@ -440,6 +477,32 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
       if (res.ok) setArenaYou(res.you ?? null)
       else setError(res.error === "not-registered" ? "You're not registered for this tournament." : "That didn't work. Please try again.")
     })
+
+  const challengeMode = t.format === "arena" && arena?.pairing === "challenge"
+  const sendChallenge = (to: string) =>
+    socket.current?.emit("arena:challenge", { tid: t.id, to }, (res: { ok: boolean; until?: number; error?: string }) => {
+      if (!res.ok) {
+        const why: Record<string, string> = {
+          "join-first": "Press Join the arena first.",
+          busy: "They're not available right now.",
+          "played-enough": "You've played each other twice already here. Challenge someone else.",
+          "not-started": "The arena hasn't started yet.",
+          over: "The arena is over.",
+        }
+        return setError(why[res.error ?? ""] ?? "That challenge didn't go through.")
+      }
+      setError(null)
+      setPending(to)
+      setTimeout(() => setPending((p) => (p === to ? null : p)), Math.max(0, (res.until ?? 0) - Date.now()) + 500)
+    })
+  const answer = (from: string, accept: boolean) => {
+    setIncoming((list) => list.filter((c) => c.from.id !== from))
+    socket.current?.emit("arena:answer", { tid: t.id, from, accept }, (res: { ok: boolean; error?: string }) => {
+      if (!res.ok && accept) setError(res.error === "expired" ? "That challenge has expired." : "They're not available any more.")
+    })
+  }
+  const liveIncoming = incoming.filter((c) => c.until > n - offset)
+  const myRow = meId ? arena?.standings.find((r) => r.player_id === meId) : undefined
 
   // ------------------------------------------------------------------ your seat (what to do now)
 
@@ -475,7 +538,11 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
     if (t.format === "arena" && running)
       return arenaYou?.joined ? (
         <div className="flex flex-wrap items-center gap-3">
-          <p className="lobby-seat-text">Finding your next opponent… your board opens here by itself.</p>
+          <p className="lobby-seat-text">
+            {challengeMode
+              ? `You're available. Tap Challenge on a player's card, or wait to be challenged.${arena?.min_games && arena.min_games > 1 ? ` Games: ${myRow?.games ?? 0} of ${arena.min_games} needed to be ranked.` : ""}`
+              : "Finding your next opponent… your board opens here by itself."}
+          </p>
           <button type="button" className="g-btn" onClick={() => arenaCall("arena:pause")}>
             Take a break
           </button>
@@ -484,6 +551,15 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
         <button type="button" className="lobby-seat-go" onClick={() => arenaCall("arena:join")}>
           Join the arena
         </button>
+      )
+    const next = t.start_mode === "scheduled" ? myMatch(view, meId) : null
+    if (next)
+      return (
+        <p className="lobby-seat-text">
+          {next.opponent
+            ? `Your next match: ${next.label} vs ${next.opponent}${next.at ? `, ${eventTime(new Date(next.at).toISOString())}` : ""}${next.colour ? ` (you play ${next.colour})` : ""}. Be here then: the board opens by itself and you have ${t.join_minutes ?? 5} minutes to press Ready.`
+            : `${next.label}: you have a bye this round (a free point).`}
+        </p>
       )
     if (running) return <p className="lobby-seat-text">You&apos;re in. Stay here: your next board opens here by itself when you&apos;re paired.</p>
     return <p className="lobby-seat-text">{ticket?.checked_in_at ? "Checked in. Your first board opens here at the start." : "You're registered. Stay here: your first board opens here at the start."}</p>
@@ -530,7 +606,7 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
   })()
 
   const latest = [...messages].reverse().find((m) => m.channel === "all") ?? null
-  const closedNote = join && !join.window.open ? (n < join.window.opens_at ? `The lobby opens ${eventTime(new Date(join.window.opens_at).toISOString())}, with check-in.` : "The lobby has closed. You can still read the chat.") : null
+  const closedNote = join && !join.window.open ? (n < join.window.opens_at ? `The lobby opens ${eventTime(new Date(join.window.opens_at).toISOString())}${t.check_in_minutes > 0 ? ", with check-in" : ""}.` : "The lobby has closed. You can still read the chat.") : null
 
   const chat = (area: "participants" | "viewers" | "announcements") =>
     join && settings ? (
@@ -626,7 +702,16 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
               ))}
             </div>
             <div className="lobby-panel">
-              {tab === "floor" && <ArenaFloor seats={seats} voice={voice} meId={meId} onOpen={open} colourLabel={f.name} />}
+              {tab === "floor" && (
+                <ArenaFloor
+                  seats={seats}
+                  voice={voice}
+                  meId={meId}
+                  onOpen={open}
+                  colourLabel={f.name}
+                  challenge={challengeMode && running && role === "player" && arenaYou?.joined && !myGame ? { can: true, pending, onChallenge: sendChallenge } : undefined}
+                />
+              )}
               {tab === "live" &&
                 (view?.live.length ? (
                   <LiveBoards boards={view.live} offset={offset} onOpen={open} />
@@ -639,6 +724,27 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
             </div>
           </main>
           <aside className="arena-right">{chat("viewers")}</aside>
+        </div>
+      )}
+
+      {liveIncoming.length > 0 && (
+        <div className="challenge-box" role="alertdialog" aria-label="You've been challenged">
+          {liveIncoming.slice(0, 3).map((c) => (
+            <div key={c.from.id} className="challenge-card">
+              <p className="challenge-title">♟ {c.from.name} challenges you</p>
+              <p className="challenge-meta">
+                {c.from.score} pts · {c.from.games} games · {Math.max(0, Math.ceil((c.until - (n - offset)) / 1000))} s to answer
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button type="button" className="ready-go !min-h-[42px] !px-5 !text-[15px]" onClick={() => answer(c.from.id, true)}>
+                  Accept
+                </button>
+                <button type="button" className="g-btn !min-h-[42px]" onClick={() => answer(c.from.id, false)}>
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

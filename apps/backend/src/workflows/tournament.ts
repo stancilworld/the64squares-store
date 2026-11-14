@@ -40,6 +40,11 @@ export type TournamentInput = {
   check_in_minutes?: number
   min_players?: number
   round_break_seconds?: number
+  start_mode?: "checkin" | "scheduled"
+  round_times?: string[] | null
+  join_minutes?: number
+  arena_pairing?: "auto" | "challenge"
+  min_games?: number
   knockout_games?: number
   armageddon?: boolean
   age_min?: number | null

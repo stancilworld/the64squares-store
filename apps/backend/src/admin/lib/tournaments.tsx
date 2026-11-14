@@ -38,6 +38,11 @@ export type Tournament = {
   check_in_minutes: number
   min_players: number
   round_break_seconds: number
+  start_mode: "checkin" | "scheduled"
+  round_times: string[] | null
+  join_minutes: number
+  arena_pairing: "auto" | "challenge"
+  min_games: number
   knockout_games: number
   armageddon: boolean
   age_min: number | null
@@ -146,6 +151,11 @@ const EMPTY: Form = {
   check_in_minutes: 30,
   min_players: 4,
   round_break_seconds: 60,
+  start_mode: "scheduled",
+  round_times: null,
+  join_minutes: 5,
+  arena_pairing: "auto",
+  min_games: 2,
   knockout_games: 1,
   armageddon: true,
   age_min: null,
@@ -457,14 +467,37 @@ export function TournamentDrawer({ tournament, open, onClose }: { tournament: To
               <Heading level="h3" className="mt-2">
                 How it runs
               </Heading>
+              {form.format !== "arena" && (
+                <StartMode form={form} set={set} />
+              )}
+              {form.format === "arena" && (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field label="How players are paired" htmlFor="t-ap" hint="Automatic: paired as soon as a game ends. Challenges: players challenge each other in the lobby and accept.">
+                    <Select value={form.arena_pairing} onValueChange={(v) => set("arena_pairing", v as Form["arena_pairing"])}>
+                      <Select.Trigger id="t-ap">
+                        <Select.Value />
+                      </Select.Trigger>
+                      <Select.Content>
+                        <Select.Item value="auto">Automatic</Select.Item>
+                        <Select.Item value="challenge">Challenges</Select.Item>
+                      </Select.Content>
+                    </Select>
+                  </Field>
+                  <Field label="Minimum games to be ranked" htmlFor="t-mg" hint="Players with fewer games at the end aren't ranked and can't win a prize.">
+                    <Input id="t-mg" type="number" min={0} max={50} value={form.min_games} onChange={(e) => set("min_games", Math.max(0, intOrNull(e.target.value) ?? 0))} />
+                  </Field>
+                </div>
+              )}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <Field label="Check-in (minutes before)" htmlFor="t-ci" hint={form.format === "arena" ? "Arenas don't need check-in: 0." : "Players who don't check in aren't paired. 0 = no check-in."}>
-                  <Input id="t-ci" type="number" min={0} max={240} value={form.check_in_minutes} onChange={(e) => set("check_in_minutes", intOrNull(e.target.value) ?? 0)} />
-                </Field>
-                <Field label="Fewest players" htmlFor="t-min" hint="Fewer check in and it's called off; passes go back.">
+                {form.format !== "arena" && form.start_mode === "checkin" && (
+                  <Field label="Check-in (minutes before)" htmlFor="t-ci" hint="Players who don't check in aren't paired. 0 = no check-in.">
+                    <Input id="t-ci" type="number" min={0} max={240} value={form.check_in_minutes} onChange={(e) => set("check_in_minutes", intOrNull(e.target.value) ?? 0)} />
+                  </Field>
+                )}
+                <Field label="Fewest players" htmlFor="t-min" hint={form.start_mode === "scheduled" && form.format !== "arena" ? "Fewer register and it's called off when registration closes; passes go back." : "Fewer check in and it's called off; passes go back."}>
                   <Input id="t-min" type="number" min={2} value={form.min_players} onChange={(e) => set("min_players", Math.max(2, intOrNull(e.target.value) ?? 2))} />
                 </Field>
-                <Field label="Break between rounds (seconds)" htmlFor="t-brk">
+                <Field label="Break between rounds (seconds)" htmlFor="t-brk" hint={form.start_mode === "scheduled" && form.format !== "arena" ? "The shortest pause; rounds with a time below start at that time." : undefined}>
                   <Input id="t-brk" type="number" min={0} max={3600} value={form.round_break_seconds} onChange={(e) => set("round_break_seconds", intOrNull(e.target.value) ?? 0)} />
                 </Field>
               </div>
@@ -633,5 +666,86 @@ function LobbySection({ format, value, onChange }: { format: string; value: Lobb
         </Field>
       </div>
     </>
+  )
+}
+
+// Check-in (on the spot) or Scheduled (pre-timed). Scheduled: everyone registered plays;
+// the pairings are made and published when registration closes; each round starts at its
+// time; a player has the join window to arrive and press Ready, or loses by no-show.
+function StartMode({ form, set }: { form: Form; set: <K extends keyof Form>(key: K, value: Form[K]) => void }) {
+  const times = form.round_times ?? []
+  const [every, setEvery] = useState(30)
+  const [count, setCount] = useState(Math.max(form.rounds ?? 0, times.length, 3))
+  const fill = () => {
+    if (!form.starts_at) return
+    const start = new Date(form.starts_at).getTime()
+    set(
+      "round_times",
+      Array.from({ length: count }, (_, i) => new Date(start + i * every * 60_000).toISOString())
+    )
+  }
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-ui-border-base p-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Field label="How it starts" htmlFor="t-sm" hint={form.start_mode === "scheduled" ? "Pre-timed: share the registration link (on WhatsApp); everyone registered plays at the times below." : "On the spot: players check in just before the start; only they are paired."}>
+          <Select value={form.start_mode} onValueChange={(v) => set("start_mode", v as Form["start_mode"])}>
+            <Select.Trigger id="t-sm">
+              <Select.Value />
+            </Select.Trigger>
+            <Select.Content>
+              <Select.Item value="scheduled">Scheduled (pre-timed)</Select.Item>
+              <Select.Item value="checkin">Check-in (on the spot)</Select.Item>
+            </Select.Content>
+          </Select>
+        </Field>
+        {form.start_mode === "scheduled" && (
+          <Field label="Join window (minutes)" htmlFor="t-jm" hint="At each match time, players have this long to arrive and press Ready, or lose by no-show.">
+            <Input id="t-jm" type="number" min={1} max={60} value={form.join_minutes} onChange={(e) => set("join_minutes", Math.min(60, Math.max(1, intOrNull(e.target.value) ?? 5)))} />
+          </Field>
+        )}
+      </div>
+      {form.start_mode === "scheduled" && (
+        <>
+          <Text size="small" className="text-ui-fg-subtle">
+            The pairings are made when registration closes (set &ldquo;Registration closes&rdquo; above; empty = 1 hour before the start) and shown on the tournament page and in the lobby. You can change them in the tournament&apos;s Pairings panel until each round starts. Round 1 is the start time.
+          </Text>
+          <div className="flex flex-wrap items-end gap-2">
+            <Field label="Rounds to schedule" htmlFor="t-rc">
+              <Input id="t-rc" type="number" min={1} max={30} className="w-[90px]" value={count} onChange={(e) => setCount(Math.min(30, Math.max(1, intOrNull(e.target.value) ?? 1)))} />
+            </Field>
+            <Field label="Every (minutes)" htmlFor="t-ev">
+              <Input id="t-ev" type="number" min={5} max={1440} className="w-[110px]" value={every} onChange={(e) => setEvery(Math.min(1440, Math.max(5, intOrNull(e.target.value) ?? 30)))} />
+            </Field>
+            <Button type="button" size="small" variant="secondary" disabled={!form.starts_at} onClick={fill}>
+              Fill the round times
+            </Button>
+            {times.length > 0 && (
+              <Button type="button" size="small" variant="transparent" onClick={() => set("round_times", null)}>
+                Clear
+              </Button>
+            )}
+          </div>
+          {times.length > 0 && (
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+              {times.map((at, i) => (
+                <Field key={i} label={`Round ${i + 1}${i === 0 ? " (the start)" : ""}`} htmlFor={`t-rt-${i}`}>
+                  <Input
+                    id={`t-rt-${i}`}
+                    type="datetime-local"
+                    disabled={i === 0}
+                    value={toLocalInput(i === 0 ? form.starts_at : at)}
+                    onChange={(e) => {
+                      const v = fromLocalInput(e.target.value)
+                      if (!v) return
+                      set("round_times", times.map((x, j) => (j === i ? v : x)))
+                    }}
+                  />
+                </Field>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
   )
 }

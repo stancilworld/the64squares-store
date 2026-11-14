@@ -37,9 +37,10 @@ const hasPlayTables = async (pg: Pg) => {
 const placesFor = async (pg: Pg, t: Row): Promise<FinalPlace[]> => {
   if (t.format === "arena") {
     const { rows } = await pg.raw(
-      `select player_id, score, games from play.arena_player where tournament_id = ? and games > 0
+      // Only players with the arena's minimum number of games are ranked (and win prizes).
+      `select player_id, score, games from play.arena_player where tournament_id = ? and games >= ?
         order by score desc, wins desc, games asc, joined_at asc`,
-      [t.id]
+      [t.id, Math.max(1, Number(t.min_games ?? 1))]
     )
     return rows.map((r, i) => ({ customer_id: r.player_id, rank: i + 1, score: Number(r.score), completed: true }))
   }

@@ -29,9 +29,16 @@ type T = {
   knockout_games: number
   armageddon: boolean
   paused: boolean
+  // "scheduled": everyone registered plays, pairings published before the start, rounds
+  // at their times (round_times[i] is round i+1; round 1 is the start).
+  start_mode: "checkin" | "scheduled"
+  round_times: number[]
+  join_minutes: number
+  registration_closes_at: number | null
 }
 
-type State = { phase: "running" | "finished" | "cancelled_low"; round: number; round_done_at: number | null; started_at: number; finished_at: number | null; note: string | null }
+// locked: a scheduled tournament's field is set and its pairings published, before the start.
+type State = { phase: "locked" | "running" | "finished" | "cancelled_low"; round: number; round_done_at: number | null; started_at: number; finished_at: number | null; note: string | null }
 
 export const migrateTourney = async () => {
   await pool.query(`
@@ -81,6 +88,16 @@ export const migrateTourney = async () => {
       tournament_id text primary key,
       at timestamptz not null default now()
     );
+    -- Scheduled tournaments: pairings set by staff for a round (they replace the computed ones).
+    create table if not exists play.t_plan (
+      tournament_id text not null,
+      round integer not null,
+      board integer not null,
+      white_id text not null,
+      black_id text,
+      by text,
+      primary key (tournament_id, round, board)
+    );
     create table if not exists play.t_withdrawn (
       tournament_id text not null,
       player_id text not null,
@@ -95,9 +112,7 @@ const ms = (d: unknown) => (d ? new Date(d as string).getTime() : null)
 
 const loadT = async (idOrHandle: string): Promise<T | null> => {
   const { rows } = await pool.query(
-    `select id, title, handle, format, status, time_control, rounds, starts_at, ends_at, check_in_minutes, min_players,
-            round_break_seconds, knockout_games, armageddon, paused
-       from public.tournament where (id = $1 or handle = $1) and deleted_at is null and status <> 'draft' and mode = 'online'`,
+    `select * from public.tournament where (id = $1 or handle = $1) and deleted_at is null and status <> 'draft' and mode = 'online'`,
     [idOrHandle]
   )
   const r = rows[0]
@@ -111,7 +126,26 @@ const loadT = async (idOrHandle: string): Promise<T | null> => {
     round_break_seconds: Number(r.round_break_seconds ?? 60),
     knockout_games: Number(r.knockout_games ?? 1),
     rounds: r.rounds == null ? null : Number(r.rounds),
+    paused: !!r.paused,
+    armageddon: r.armageddon !== false,
+    start_mode: r.start_mode === "scheduled" ? "scheduled" : "checkin",
+    round_times: Array.isArray(r.round_times) ? r.round_times.map((x: string) => new Date(x).getTime()).filter((x: number) => Number.isFinite(x)) : [],
+    join_minutes: Number(r.join_minutes ?? 5),
+    registration_closes_at: ms(r.registration_closes_at),
   }
+}
+
+// When a round of a scheduled tournament starts (null: not set, so after the usual break).
+export const roundAt = (t: Pick<T, "start_mode" | "starts_at" | "round_times">, round: number) =>
+  t.start_mode !== "scheduled" ? null : round <= 1 ? t.starts_at : (t.round_times[round - 1] ?? null)
+// When a scheduled tournament's field is set and its pairings published: when registration
+// closes, or an hour before the start.
+export const lockAt = (t: Pick<T, "starts_at" | "registration_closes_at">) => Math.min(t.registration_closes_at ?? t.starts_at - 3600_000, t.starts_at)
+const istTime = (at: number) => new Date(at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })
+
+const loadPlan = async (tid: string, round: number) => {
+  const { rows } = await pool.query("select board, white_id, black_id from play.t_plan where tournament_id = $1 and round = $2 order by board", [tid, round])
+  return rows.map((r) => ({ white: r.white_id as string, black: (r.black_id as string | null) ?? null }))
 }
 
 const loadState = async (tid: string): Promise<State | null> => {
@@ -150,7 +184,7 @@ const checkedIn = async (t: T) => {
        left join play.rating pr on pr.player_id = r.customer_id and pr.speed = $2
       where r.tournament_id = $1 and r.status = 'confirmed' and r.deleted_at is null
         and ($3::int = 0 or r.checked_in_at is not null)`,
-    [t.id, speedOfTc(t.time_control), t.check_in_minutes]
+    [t.id, speedOfTc(t.time_control), t.start_mode === "scheduled" ? 0 : t.check_in_minutes]
   )
   return rows as Entrant[]
 }
@@ -221,7 +255,10 @@ export class Tourneys {
       const { rows } = await pool.query(
         `select t.id from public.tournament t left join play.t_state s on s.tournament_id = t.id
           where t.deleted_at is null and t.mode = 'online' and t.format in ('swiss', 'round_robin', 'knockout') and t.status = 'published'
-            and t.starts_at <= now() and (s.phase is null or s.phase = 'running') and t.starts_at > now() - interval '3 days'
+            and (s.phase is null or s.phase in ('locked', 'running')) and t.starts_at > now() - interval '3 days'
+            and (t.starts_at <= now()
+                 or (to_jsonb(t) ->> 'start_mode' = 'scheduled'
+                     and least(coalesce(t.registration_closes_at, t.starts_at - interval '1 hour'), t.starts_at) <= now()))
             and t.id not like 'trn\\_demo\\_%'`
       )
       ids = rows.map((r) => r.id)
@@ -245,22 +282,36 @@ export class Tourneys {
     const t = await loadT(tid)
     if (!t || t.status !== "published") return
     let state = await loadState(t.id)
+    const scheduled = t.start_mode === "scheduled"
     if (!state) {
-      // The start: freeze the field (seeded by rating), or call it off if too few came.
+      // Freeze the field (seeded by rating), or call it off if too few: at the start for a
+      // check-in event, when registration closes for a scheduled one.
+      if (!scheduled && Date.now() < t.starts_at) return
       const field = (await checkedIn(t)).sort((a, b) => b.rating - a.rating || a.name.localeCompare(b.name))
       const need = Math.max(2, t.min_players)
       if (field.length < need) {
+        const what = scheduled ? "registered" : "checked in"
         await pool.query(`insert into play.t_state (tournament_id, phase, note) values ($1, 'cancelled_low', $2) on conflict do nothing`, [
           t.id,
-          `${field.length} of the ${need} players needed checked in`,
+          `${field.length} of the ${need} players needed ${what}`,
         ])
-        announce(t.id, `Only ${field.length} of the ${need} players needed checked in, so this tournament is called off. Sorry, and see you at the next one!`)
+        announce(t.id, `Only ${field.length} of the ${need} players needed ${what}, so this tournament is called off. Sorry, and see you at the next one!`)
         return this.changed(t.id)
       }
       for (const [i, e] of field.entries()) {
         await pool.query(`insert into play.t_entrant (tournament_id, player_id, name, rating, seed) values ($1,$2,$3,$4,$5) on conflict do nothing`, [t.id, e.id, e.name, e.rating, i + 1])
       }
-      await pool.query(`insert into play.t_state (tournament_id, phase, round) values ($1, 'running', 0) on conflict do nothing`, [t.id])
+      await pool.query(`insert into play.t_state (tournament_id, phase, round) values ($1, $2, 0) on conflict do nothing`, [t.id, scheduled ? "locked" : "running"])
+      if (scheduled) {
+        announce(t.id, `Registration is closed and the pairings are out! ${field.length} players. Round 1 starts ${istTime(t.starts_at)}: be in this lobby on time.`)
+        return this.changed(t.id)
+      }
+      state = (await loadState(t.id))!
+    }
+    if (state.phase === "locked") {
+      // Scheduled: the pairings are published; play begins at the start time.
+      if (Date.now() < t.starts_at || t.paused) return
+      await pool.query("update play.t_state set phase = 'running', started_at = now() where tournament_id = $1 and phase = 'locked'", [t.id])
       state = (await loadState(t.id))!
     }
     if (state.phase !== "running") return
@@ -277,17 +328,19 @@ export class Tourneys {
       if (state.round > 0) {
         if (!state.round_done_at) {
           await pool.query("update play.t_state set round_done_at = now() where tournament_id = $1", [t.id])
-          announce(t.id, `Round ${state.round} is over. The next round starts in ${Math.round(breakMs / 1000)} seconds: stay in the lobby.`)
+          const nextAt = roundAt(t, state.round + 1)
+          announce(t.id, nextAt && nextAt > Date.now() + breakMs ? `Round ${state.round} is over. The next round starts ${istTime(nextAt)}: be in this lobby on time.` : `Round ${state.round} is over. The next round starts in ${Math.round(breakMs / 1000)} seconds: stay in the lobby.`)
           return this.changed(t.id)
         }
-        if (Date.now() - state.round_done_at < breakMs) return
+        if (!this.roundDue(t, state, state.round + 1, breakMs)) return
       }
       if (t.paused) return
       const next = state.round + 1
       const table = swissTable(entrants, games, withdrawn, rounds)
       // Too few players left to go on.
       if (table.filter((r) => !r.withdrawn).length < 2) return this.finish(t.id)
-      const pairs = pairSwiss(table, next)
+      const planned = await loadPlan(t.id, next)
+      const pairs = planned.length ? planned : pairSwiss(table, next)
       await pool.query("update play.t_state set round = $2, round_done_at = null where tournament_id = $1", [t.id, next])
       const byId = new Map(entrants.map((e) => [e.id, e]))
       for (const [i, p] of pairs.entries()) {
@@ -309,16 +362,18 @@ export class Tourneys {
       if (state.round > 0) {
         if (!state.round_done_at) {
           await pool.query("update play.t_state set round_done_at = now() where tournament_id = $1", [t.id])
-          announce(t.id, `Round ${state.round} is over. The next round starts in ${Math.round(breakMs / 1000)} seconds: stay in the lobby.`)
+          const nextAt = roundAt(t, state.round + 1)
+          announce(t.id, nextAt && nextAt > Date.now() + breakMs ? `Round ${state.round} is over. The next round starts ${istTime(nextAt)}: be in this lobby on time.` : `Round ${state.round} is over. The next round starts in ${Math.round(breakMs / 1000)} seconds: stay in the lobby.`)
           return this.changed(t.id)
         }
-        if (Date.now() - state.round_done_at < breakMs) return
+        if (!this.roundDue(t, state, state.round + 1, breakMs)) return
       }
       if (t.paused) return
       if (entrants.filter((e) => !withdrawn.has(e.id)).length < 2) return this.finish(t.id)
       const next = state.round + 1
       const seeded = [...entrants].sort((a, b) => a.seed - b.seed)
-      const pairs = pairRoundRobin(seeded.map((e) => e.id), next)
+      const planned = await loadPlan(t.id, next)
+      const pairs = planned.length ? planned : pairRoundRobin(seeded.map((e) => e.id), next)
       await pool.query("update play.t_state set round = $2, round_done_at = null where tournament_id = $1", [t.id, next])
       const byId = new Map(entrants.map((e) => [e.id, e]))
       for (const [i, p] of pairs.entries()) {
@@ -354,10 +409,11 @@ export class Tourneys {
         if (current >= bracket.totalRounds) return this.finish(t.id)
         if (!state.round_done_at) {
           await pool.query("update play.t_state set round_done_at = now() where tournament_id = $1", [t.id])
-          announce(t.id, `Round ${state.round} is over. The next round starts in ${Math.round(breakMs / 1000)} seconds: stay in the lobby.`)
+          const nextAt = roundAt(t, state.round + 1)
+          announce(t.id, nextAt && nextAt > Date.now() + breakMs ? `Round ${state.round} is over. The next round starts ${istTime(nextAt)}: be in this lobby on time.` : `Round ${state.round} is over. The next round starts in ${Math.round(breakMs / 1000)} seconds: stay in the lobby.`)
           return this.changed(t.id)
         }
-        if (Date.now() - state.round_done_at < breakMs || t.paused) return
+        if (!this.roundDue(t, state, current + 1, breakMs) || t.paused) return
         await pool.query("update play.t_state set round = $2, round_done_at = null where tournament_id = $1", [t.id, current + 1])
         announce(t.id, `${bracket.rounds[current]?.name ?? `Round ${current + 1}`} begins! Your board opens right here: press Ready when it appears.`)
         return this.changed(t.id)
@@ -390,6 +446,95 @@ export class Tourneys {
     }
   }
 
+  private totalRounds(t: T, n: number) {
+    if (t.format === "swiss") return swissRounds(t, n)
+    if (t.format === "round_robin") return rrRounds(n, rrCycles(t))
+    if (t.format === "knockout") return n > 1 ? Math.ceil(Math.log2(n)) : 1
+    return 0
+  }
+
+  // The next round's pairings before it starts (published for scheduled tournaments; staff
+  // can change them in the admin until then).
+  private async upcoming(
+    t: T,
+    state: State | null,
+    entrants: (Entrant & { seed: number })[],
+    games: Awaited<ReturnType<typeof loadGames>>,
+    withdrawn: Set<string>,
+    side: (id: string | null) => unknown
+  ) {
+    if (!state || (t.format !== "swiss" && t.format !== "round_robin")) return null
+    const waiting = state.phase === "locked" || (state.phase === "running" && (state.round === 0 || !!state.round_done_at))
+    if (!waiting) return null
+    const next = state.round + 1
+    const total = this.totalRounds(t, entrants.length)
+    if (next > total) return null
+    const planned = await loadPlan(t.id, next)
+    let pairs: { white: string; black: string | null }[] = planned
+    if (!pairs.length) {
+      if (t.format === "swiss") pairs = pairSwiss(swissTable(entrants, games, withdrawn, total), next)
+      else pairs = pairRoundRobin([...entrants].sort((a, b) => a.seed - b.seed).map((e) => e.id), next)
+    }
+    return { round: next, at: roundAt(t, next), fixed: planned.length > 0, games: pairs.map((p, i) => ({ board: i + 1, white: side(p.white), black: side(p.black) })) }
+  }
+
+  // Staff change the next round's pairings (admin → Tournaments → Pairings): swap two players.
+  async swapPlanned(idOrHandle: string, a: string, b: string, by: string) {
+    const t = await loadT(idOrHandle)
+    if (!t) return { ok: false as const, error: "not-found" }
+    const v = (await this.view(t.id)) as { upcoming?: { round: number; games: { white: { id: string } | null; black: { id: string } | null }[] } | null } | null
+    const up = v?.upcoming
+    if (!up) return { ok: false as const, error: "no-upcoming" }
+    const pairs = up.games.map((g) => ({ white: g.white?.id ?? null, black: g.black?.id ?? null }))
+    const swap = (id: string | null) => (id === a ? b : id === b ? a : id)
+    if (!pairs.some((p) => p.white === a || p.black === a) || !pairs.some((p) => p.white === b || p.black === b)) return { ok: false as const, error: "not-in-round" }
+    const next = pairs.map((p) => ({ white: swap(p.white)!, black: swap(p.black) }))
+    await pool.query("delete from play.t_plan where tournament_id = $1 and round = $2", [t.id, up.round])
+    for (const [i, p] of next.entries()) {
+      // A bye always sits as Black (null).
+      const [w, bl] = p.white == null ? [p.black!, null] : [p.white, p.black]
+      await pool.query("insert into play.t_plan (tournament_id, round, board, white_id, black_id, by) values ($1,$2,$3,$4,$5,$6)", [t.id, up.round, i + 1, w, bl, by])
+    }
+    this.changed(t.id)
+    return { ok: true as const }
+  }
+
+  // Back to the computed pairings for the next round.
+  async resetPlanned(idOrHandle: string) {
+    const t = await loadT(idOrHandle)
+    if (!t) return { ok: false as const, error: "not-found" }
+    const st = await loadState(t.id)
+    await pool.query("delete from play.t_plan where tournament_id = $1 and round = $2", [t.id, (st?.round ?? 0) + 1])
+    this.changed(t.id)
+    return { ok: true as const }
+  }
+
+  // Knockout before the start: swap two players' seeds (their places in the bracket).
+  async swapSeeds(idOrHandle: string, a: string, b: string) {
+    const t = await loadT(idOrHandle)
+    if (!t) return { ok: false as const, error: "not-found" }
+    const st = await loadState(t.id)
+    if (!st || st.round > 0) return { ok: false as const, error: "started" }
+    const { rows } = await pool.query("select player_id, seed from play.t_entrant where tournament_id = $1 and player_id = any($2)", [t.id, [a, b]])
+    if (rows.length !== 2) return { ok: false as const, error: "not-in-round" }
+    const [x, y] = rows
+    await pool.query("update play.t_entrant set seed = -1 where tournament_id = $1 and player_id = $2", [t.id, x.player_id])
+    await pool.query("update play.t_entrant set seed = $3 where tournament_id = $1 and player_id = $2", [t.id, y.player_id, x.seed])
+    await pool.query("update play.t_entrant set seed = $3 where tournament_id = $1 and player_id = $2", [t.id, x.player_id, y.seed])
+    this.changed(t.id)
+    return { ok: true as const }
+  }
+
+  // May the next round begin? Scheduled: at its time if one is set (and never before the
+  // break); otherwise after the break.
+  private roundDue(t: T, state: State, next: number, breakMs: number) {
+    if (!state.round_done_at) return false
+    const now = Date.now()
+    if (now - state.round_done_at < breakMs) return false
+    const at = roundAt(t, next)
+    return at == null || now >= at
+  }
+
   private async createGame(t: T, round: number, board: number, gameNo: number, white: Entrant, black: Entrant, armageddon: boolean) {
     const tc = parseTimeControl(t.time_control) ?? { initial_ms: 300_000, increment_ms: 3_000 }
     // Claim the board first, so two ticks never make the same game.
@@ -401,7 +546,8 @@ export class Tourneys {
     const g = await this.manager.createPaired({ id: white.id, name: white.name } as Player, { id: black.id, name: black.name } as Player, tc.initial_ms, tc.increment_ms, {
       mode: "arena",
       tournamentId: t.id,
-      readyMs: (await lobbyDefaults(t.id)).ready_seconds * 1000,
+      // Scheduled: the join window (players come at their match time); else the Ready time.
+      readyMs: t.start_mode === "scheduled" ? Math.max(1, t.join_minutes) * 60_000 : (await lobbyDefaults(t.id)).ready_seconds * 1000,
     })
     await pool.query("update play.t_game set game_id = $5 where tournament_id = $1 and round = $2 and board = $3 and game_no = $4", [t.id, round, board, gameNo, g.r.id])
     const payload = { tournament_id: t.id, handle: t.handle, game_id: g.r.id, round, board }
@@ -422,6 +568,20 @@ export class Tourneys {
     if (g.r.reason === "no-show") {
       // Didn't press Ready (the opponent did).
       absent = result === "1-0" ? row.black_id : row.white_id
+      forfeit = true
+    } else if (g.r.reason === "no-shows" && row.black_id) {
+      // Neither came. Swiss and round robin: a double forfeit, and both leave. A knockout
+      // match needs a winner, so it goes as if only White had missed it.
+      const { rows: tr } = await pool.query("select format from public.tournament where id = $1", [row.tournament_id])
+      if (tr[0]?.format === "swiss" || tr[0]?.format === "round_robin") {
+        await pool.query("update play.t_game set result = '0-0', forfeit = true, ended_at = now() where game_id = $1 and fixed_by is null", [g.r.id])
+        for (const id of [row.white_id, row.black_id]) await pool.query(`insert into play.t_withdrawn (tournament_id, player_id, reason) values ($1,$2,'no-show') on conflict do nothing`, [row.tournament_id, id])
+        this.changed(row.tournament_id)
+        void this.tick()
+        return
+      }
+      absent = row.white_id
+      result = "0-1"
       forfeit = true
     } else if (g.r.reason === "no-start" || (!result && g.r.status === "aborted")) {
       absent = g.r.moves.length === 0 ? row.white_id : row.black_id
@@ -515,6 +675,12 @@ export class Tourneys {
           }
         : null,
       entrants: entrants.map((e) => ({ ...e, withdrawn: withdrawn.has(e.id) })),
+      // Scheduled tournaments: when each round starts, and the next round's pairings.
+      start_mode: t.start_mode,
+      round_times: t.start_mode === "scheduled" ? Array.from({ length: Math.max(1, this.totalRounds(t, entrants.length)) }, (_, i) => roundAt(t, i + 1)) : [],
+      join_minutes: t.join_minutes,
+      locks_at: t.start_mode === "scheduled" ? lockAt(t) : null,
+      upcoming: await this.upcoming(t, state, entrants, games, withdrawn, side),
       live: boards,
       stats: await tournamentStats(t.id),
       games: await finishedGames(t.id),

@@ -17,6 +17,8 @@ export type Reason =
   | "agreement"
   | "aborted"
   | "no-start"
+  // A tournament game where neither player pressed Ready.
+  | "no-shows"
   // Didn't press Ready before a tournament game (the opponent did).
   | "no-show"
   | "abandoned"
@@ -151,7 +153,7 @@ export class Game {
   }
 
   private finish(result: Result | null, reason: Reason, now: number) {
-    this.r.status = reason === "aborted" || reason === "no-start" ? "aborted" : "finished"
+    this.r.status = reason === "aborted" || reason === "no-start" || reason === "no-shows" ? "aborted" : "finished"
     this.r.result = result
     this.r.reason = reason
     this.r.ended_at = now
@@ -175,7 +177,7 @@ export class Game {
       this.r.ready = null
       if (w && !b) this.finish("1-0", "no-show", now)
       else if (b && !w) this.finish("0-1", "no-show", now)
-      else this.finish(null, "no-start", now)
+      else this.finish(null, "no-shows", now)
       return true
     }
     if (this.ply < 2) {

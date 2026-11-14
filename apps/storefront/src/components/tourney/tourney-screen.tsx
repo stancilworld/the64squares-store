@@ -13,6 +13,7 @@ import { Bracket } from "./bracket"
 import { Countdown, useNow } from "./countdown"
 import { LiveBoards } from "./live-boards"
 import { PrizeClaim } from "./prize-claim"
+import { ScheduleCard } from "./schedule-card"
 import { ProfileDialog } from "./profile-dialog"
 import { trafficSource, visitorId } from "./source"
 import { TourneyStats } from "./stats"
@@ -160,6 +161,8 @@ export function TourneyScreen(props: Props) {
   }, [lobbyOpen, router, t.handle])
 
   const registered = ticket?.status === "confirmed"
+  // Scheduled: registered players are paired at the round times, no check-in.
+  const scheduled = t.mode === "online" && t.start_mode === "scheduled" && t.format !== "arena"
   const myLive = meId ? view?.live.find((b) => b.white?.id === meId || b.black?.id === meId) : undefined
   const myGame = myLive?.game_id ?? arenaYou?.game_id ?? null
 
@@ -313,7 +316,7 @@ export function TourneyScreen(props: Props) {
             <>
               {tick("You're registered")}
               <p className="mt-2 text-[14px] text-[var(--g-muted)]">
-                {t.check_in_minutes > 0 ? `Check in on this page in the ${t.check_in_minutes} minutes before the start. Players who don't check in aren't paired.` : "Come back when it starts: the Join button appears here."}
+                {scheduled ? `No check-in needed. ${view?.state ? "The pairings are out: your match is in the schedule below." : "The pairings come out when registration closes."} Be in the lobby at your match time (you get ${t.join_minutes ?? 5} minutes to press Ready).` : t.check_in_minutes > 0 ? `Check in on this page in the ${t.check_in_minutes} minutes before the start. Players who don't check in aren't paired.` : "Come back when it starts: the Join button appears here."}
               </p>
               <a href={ics(t)} className="g-btn mt-4 w-full">
                 Add to calendar
@@ -610,13 +613,14 @@ export function TourneyScreen(props: Props) {
               )}
             </div>
             <aside className="flex flex-col gap-4">
+              {scheduled && <ScheduleCard t={t} view={view} meId={meId} registered={registered} />}
               <div className="rounded-xl border border-[var(--g-line)] bg-[var(--g-panel)] p-5">
                 <p className="text-[16px] font-extrabold" style={{ color: colour }}>
                   How {t.format_label} works
                 </p>
                 <p className="mt-2 text-[14px] leading-relaxed text-white/80">{FORMAT_HOW[t.format] ?? ""}</p>
               </div>
-              <div className="rounded-xl border border-[var(--g-line)] bg-[var(--g-panel)] p-5">
+              {!scheduled && (<div className="rounded-xl border border-[var(--g-line)] bg-[var(--g-panel)] p-5">
                 <p className="text-[16px] font-extrabold">Schedule</p>
                 <ol className="mt-3 space-y-3 border-l border-[var(--g-line)] pl-4 text-[14px]">
                   <li>
@@ -640,7 +644,7 @@ export function TourneyScreen(props: Props) {
                     <span className="text-[var(--g-muted)]">Provisional at the end; final after the fair-play review (within 48 hours)</span>
                   </li>
                 </ol>
-              </div>
+              </div>)}
               <div className="rounded-xl border border-[var(--g-line)] bg-[var(--g-panel)] p-5 text-[14px] leading-relaxed text-white/80">
                 <p className="text-[16px] font-extrabold text-white">Fair play</p>
                 <p className="mt-2">Every game is checked for computer help. Real players only, never the computer. Leaving a game loses it.</p>

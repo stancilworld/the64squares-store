@@ -1,7 +1,8 @@
 // Swiss, round-robin and knockout tournaments: the pure rules (pairing, standings, tie-breaks,
 // brackets), kept apart from the database so they can be tested on their own.
 
-export type Result = "1-0" | "0-1" | "1/2-1/2"
+// "0-0": a double forfeit (neither player came), no points for either.
+export type Result = "1-0" | "0-1" | "1/2-1/2" | "0-0"
 // A tournament game (or a bye) as stored in play.t_game.
 export type TGame = {
   round: number
@@ -41,6 +42,7 @@ const pointsFor = (g: TGame, id: string) => {
   if (g.black_id === null) return g.white_id === id ? 1 : 0
   if (!g.result) return 0
   if (g.result === "1/2-1/2") return 0.5
+  if (g.result === "0-0") return 0
   return (g.result === "1-0") === (g.white_id === id) ? 1 : 0
 }
 

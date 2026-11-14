@@ -61,6 +61,20 @@ export const applyResult = (s: Standing, outcome: Outcome, colour: "w" | "b", op
 export const rank = (list: Standing[]) =>
   [...list].sort((a, b) => b.score - a.score || b.wins - a.wins || a.games - b.games || a.joined_at - b.joined_at)
 
+// Ranked with a minimum number of games: those who played enough come first (and only they
+// get a place); the rest follow, unranked.
+export const rankQualified = (list: Standing[], minGames: number) => {
+  const need = Math.max(1, minGames)
+  const sorted = rank(list)
+  const ok = sorted.filter((s) => s.games >= need)
+  const not = sorted.filter((s) => s.games < need)
+  return [...ok.map((s, i) => ({ s, rank: i + 1 as number | null })), ...not.map((s) => ({ s, rank: null as number | null }))]
+}
+
+// Challenges: at most this many games between the same two players in one arena.
+export const MAX_GAMES_SAME_PAIR = 2
+export const CHALLENGE_MS = 30_000
+
 // Pairs waiting players: closest in the standings first, never the same opponent twice in
 // a row while anyone else is free. Colours go to whoever has had fewer of them.
 export const pairPool = (waiting: Standing[]) => {

@@ -30,6 +30,14 @@ describe("registrationState", () => {
     expect(registrationState({ ...base, status: "completed" }, 0).reason).toMatch(/finished/)
   })
 
+  it("a scheduled online event closes an hour before the start (its pairings are made then)", () => {
+    const sched = { ...base, mode: "online", format: "swiss", start_mode: "scheduled", starts_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() }
+    expect(registrationState(sched, 0).open).toBe(false)
+    expect(registrationState({ ...sched, starts_at: new Date(Date.now() + 2 * HOUR).toISOString() }, 0).open).toBe(true)
+    expect(registrationState({ ...sched, format: "arena" }, 0).open).toBe(true)
+    expect(registrationState({ ...sched, start_mode: "checkin" }, 0).open).toBe(true)
+  })
+
   it("closes at the deadline, or at the start when there is none", () => {
     expect(registrationState({ ...base, registration_closes_at: new Date(Date.now() - HOUR).toISOString() }, 0).open).toBe(false)
     expect(registrationState({ ...base, starts_at: new Date(Date.now() - HOUR).toISOString() }, 0).open).toBe(false)

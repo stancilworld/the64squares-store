@@ -212,7 +212,7 @@ test("ready time up: the player who was ready wins by no-show; nobody ready, no 
   b.start(0, 30_000)
   assert.equal(b.tick(29_999), false)
   assert.equal(b.tick(30_000), true)
-  assert.equal(b.r.reason, "no-start")
+  assert.equal(b.r.reason, "no-shows")
   const c = make()
   c.start(0)
   assert.equal(c.r.ready, null)

@@ -1,3 +1,4 @@
+import crypto from "node:crypto"
 import http from "node:http"
 import { Server, type Socket } from "socket.io"
 import { playerFromToken } from "./auth.js"
@@ -137,6 +138,28 @@ const server = http.createServer(async (req, res) => {
       if (r) return json(res, r.status, r.body, origin)
     }
     if (path === "/health") return send(res, 200, JSON.stringify({ ok: true, live_games: manager.liveCount() }), "application/json", origin)
+    // Staff tools from the admin (through the backend, with the shared secret): a scheduled
+    // tournament's pairings before a round starts.
+    const tm = /^\/internal\/tourney\/([\w-]{3,80})\/(view|swap|seeds|reset)$/.exec(path)
+    if (tm) {
+      const want = config.internalSecret
+      const got = req.headers["x-t64-game-secret"]
+      if (!want || typeof got !== "string" || got.length !== want.length || !crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want))) return json(res, 401, { error: "not-allowed" })
+      const [, tid, action] = tm
+      if (action === "view" && req.method === "GET") return json(res, 200, { view: await tourneys.view(tid) })
+      if (req.method !== "POST") return json(res, 405, { error: "method" })
+      const raw = await readBody(req, 10_000)
+      let body: { a?: unknown; b?: unknown; by?: unknown } = {}
+      try {
+        body = JSON.parse(raw?.toString() || "{}")
+      } catch {}
+      const a = typeof body.a === "string" ? body.a : ""
+      const b = typeof body.b === "string" ? body.b : ""
+      const by = typeof body.by === "string" ? body.by.slice(0, 80) : "staff"
+      if (action === "reset") return json(res, 200, await tourneys.resetPlanned(tid))
+      if (!a || !b || a === b) return json(res, 400, { ok: false, error: "bad-request" })
+      return json(res, 200, action === "swap" ? await tourneys.swapPlanned(tid, a, b, by) : await tourneys.swapSeeds(tid, a, b))
+    }
     let m = /^\/games\/([A-Za-z0-9]{6,20})\.pgn$/.exec(path)
     if (m && req.method === "GET") {
       const pgn = await gamePgn(m[1])

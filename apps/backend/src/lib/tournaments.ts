@@ -32,12 +32,19 @@ export const checkInUrl = (code: string) => `${adminBase()}/app/tournaments/chec
 
 const time = (d: unknown) => (d ? new Date(d as string).getTime() : NaN)
 
-// Registration closes at the deadline, or when the event starts if there is none.
+// Registration closes at the deadline, or when the event starts if there is none. A scheduled
+// online event closes no later than an hour before (its pairings are made then).
+export const registrationClosesAt = (t: Row) => {
+  const starts = time(t.starts_at)
+  const set = time(t.registration_closes_at)
+  if (t.mode === "online" && t.start_mode === "scheduled" && t.format !== "arena") return Math.min(Number.isNaN(set) ? starts - 3600_000 : set, starts)
+  return Number.isNaN(set) ? starts : set
+}
 export const registrationState = (t: Row, confirmed: number, now = Date.now()) => {
   if (t.status === "cancelled") return { open: false, reason: "This tournament was cancelled." }
   if (t.status === "completed") return { open: false, reason: "This tournament has finished." }
   if (t.status !== "published") return { open: false, reason: "Registration is not open yet." }
-  const closes = time(t.registration_closes_at ?? t.starts_at)
+  const closes = registrationClosesAt(t)
   if (!Number.isNaN(closes) && now >= closes) return { open: false, reason: "Registration has closed." }
   if (t.capacity != null && confirmed >= t.capacity) return { open: false, reason: "All places are taken." }
   return { open: true, reason: null as string | null }
@@ -63,13 +70,15 @@ const PUBLIC_FIELDS = [
   "entry", "pass_cost", "check_in_minutes", "min_players", "round_break_seconds", "knockout_games", "armageddon",
   "age_min", "age_max", "prize_list", "category_prizes", "tagline", "accent", "featured", "stream_url", "paused",
   "cancel_reason", "results_final_at", "certificates", "lobby",
+  "start_mode", "round_times", "join_minutes", "arena_pairing", "min_games",
 ] as const
 
 // Check-in: opens `check_in_minutes` before the start and closes at the start.
 export const checkInWindow = (t: Row) => {
   const starts = time(t.starts_at)
   const minutes = Number(t.check_in_minutes ?? 0)
-  if (t.mode !== "online" || minutes <= 0 || Number.isNaN(starts)) return null
+  // Scheduled events have no check-in: registering is enough.
+  if (t.mode !== "online" || t.start_mode === "scheduled" || minutes <= 0 || Number.isNaN(starts)) return null
   return { opens: new Date(starts - minutes * 60_000).toISOString(), closes: new Date(starts).toISOString() }
 }
 
@@ -93,6 +102,11 @@ export const publicTournament = (t: Row, confirmed: number): Row => {
   const out: Row = {}
   for (const k of PUBLIC_FIELDS) out[k] = t[k] ?? null
   const state = registrationState(t, confirmed)
+  if (t.mode === "online" && t.start_mode === "scheduled") {
+    out.check_in_minutes = 0
+    const closes = registrationClosesAt(t)
+    if (!Number.isNaN(closes)) out.registration_closes_at = new Date(closes).toISOString()
+  }
   return {
     ...out,
     format_label: FORMAT_LABELS[t.format] ?? t.format,

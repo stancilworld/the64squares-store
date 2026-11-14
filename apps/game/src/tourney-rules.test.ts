@@ -224,3 +224,12 @@ describe("round robin", () => {
     for (let i = 1; i < table.length; i++) assert.ok(table[i - 1].points > table[i].points || (table[i - 1].points === table[i].points && table[i - 1].sb >= table[i].sb))
   })
 })
+
+test("swiss: a double forfeit (neither came) scores nothing for either player", () => {
+  const ps = players(4)
+  const t = swissTable(ps, [game(1, 1, "cus_1", "cus_2", "0-0", { forfeit: true }), game(1, 2, "cus_3", "cus_4", "1-0")], new Set(["cus_1", "cus_2"]), 2)
+  const by = new Map(t.map((r) => [r.id, r.points]))
+  assert.equal(by.get("cus_1"), 0)
+  assert.equal(by.get("cus_2"), 0)
+  assert.equal(by.get("cus_3"), 1)
+})

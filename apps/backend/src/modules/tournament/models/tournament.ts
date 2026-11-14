@@ -36,6 +36,18 @@ const Tournament = model.define("tournament", {
   check_in_minutes: model.number().default(30),
   // Fewer checked-in players than this at the start: cancelled and passes returned.
   min_players: model.number().default(4),
+  // How an online tournament starts. "checkin": players check in just before the start and
+  // only they are paired. "scheduled": everyone registered plays; the pairings are made and
+  // published before the start, and each round starts at its time (round_times).
+  start_mode: model.enum(["checkin", "scheduled"]).default("checkin"),
+  // Scheduled: the start time of each round, ["2026-11-20T13:30:00.000Z", ...] (round 1 is the start).
+  round_times: model.json().nullable(),
+  // Scheduled: minutes a player has to join and press Ready at their match time, or lose by no-show.
+  join_minutes: model.number().default(5),
+  // Arena: "auto" pairs players as games end; "challenge": players challenge each other.
+  arena_pairing: model.enum(["auto", "challenge"]).default("auto"),
+  // Arena: games needed to be ranked (and win a prize) at the end.
+  min_games: model.number().default(2),
   // Swiss and knockout: the pause between rounds.
   round_break_seconds: model.number().default(60),
   // Knockout: games per match, and a sudden-death decider (draw = Black goes through) if tied.

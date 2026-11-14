@@ -575,6 +575,11 @@ export const TournamentBody = z
     check_in_minutes: z.number().int().min(0).max(240).optional(),
     min_players: z.number().int().min(2).max(1000).optional(),
     round_break_seconds: z.number().int().min(0).max(3600).optional(),
+    start_mode: z.enum(["checkin", "scheduled"]).optional(),
+    round_times: z.array(z.string().datetime()).max(30).nullable().optional(),
+    join_minutes: z.number().int().min(1).max(60).optional(),
+    arena_pairing: z.enum(["auto", "challenge"]).optional(),
+    min_games: z.number().int().min(0).max(50).optional(),
     knockout_games: z.number().int().min(1).max(7).optional(),
     armageddon: z.boolean().optional(),
     age_min: optionalInt(4, 99),
@@ -1127,3 +1132,11 @@ export const CommentarySettingBody = z.object({
   voice: z.boolean(),
 })
 export type CommentarySettingBodyType = z.infer<typeof CommentarySettingBody>
+
+// A scheduled tournament's pairings from the admin.
+export const TournamentPairingsBody = z.object({
+  action: z.enum(["lock", "swap", "seeds", "reset"]),
+  a: z.string().regex(/^cus_[A-Za-z0-9]+$/).optional(),
+  b: z.string().regex(/^cus_[A-Za-z0-9]+$/).optional(),
+})
+export type TournamentPairingsBodyType = z.infer<typeof TournamentPairingsBody>

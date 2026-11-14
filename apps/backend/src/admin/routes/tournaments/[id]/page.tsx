@@ -7,6 +7,7 @@ import { BACKEND_URL, sdk } from "../../../lib/sdk"
 import { useStoreUrl } from "../../../lib/site"
 import { useMe } from "../../../lib/staff"
 import { LobbyPanel } from "../../../lib/tournament-lobby"
+import { PairingsPanel } from "../../../lib/tournament-pairings"
 import { ControlRoom, FunnelPanel, GamesPanel, MessagePanel, ResultsPanel, useEngine } from "../../../lib/tournament-live"
 import { formatEventDate, type Registration, STATUS_LABELS, type Tournament, TournamentDrawer } from "../../../lib/tournaments"
 
@@ -137,6 +138,7 @@ const TournamentPage = () => {
         </div>
       </Container>
 
+      {ev.mode === "online" && ev.format !== "arena" && ev.status !== "draft" && can("tournaments.manage") && <PairingsPanel t={ev} storeUrl={storeUrl} />}
       {ev.mode === "online" && can("tournaments.manage") && <ControlRoom t={ev} engine={engine.data} />}
       {ev.mode === "online" && can("tournaments.checkin") && <ResultsPanel t={ev} regs={all} storeUrl={storeUrl} />}
       {ev.mode === "online" && can("tournaments.manage") && <GamesPanel t={ev} engine={engine.data} storeUrl={storeUrl} />}

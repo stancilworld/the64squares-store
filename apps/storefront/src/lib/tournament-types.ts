@@ -44,6 +44,13 @@ export type Tournament = {
   cancel_reason: string | null
   results_final_at: string | null
   certificates: boolean
+  // "scheduled": players register, pairings are made when registration closes and each
+  // round starts at its time. "checkin": players check in before the start.
+  start_mode?: "checkin" | "scheduled"
+  round_times?: string[] | null
+  join_minutes?: number
+  arena_pairing?: "auto" | "challenge"
+  min_games?: number
 }
 
 export type Prize = { place: string; title: string; detail?: string | null; image_url?: string | null; product_handle?: string | null }
@@ -164,7 +171,7 @@ export type TourneyView = {
   format: string
   paused: boolean
   server_now: number
-  state: { phase: "running" | "finished" | "cancelled_low"; round: number; round_done_at: number | null; next_round_at: number | null; started_at: number; finished_at: number | null; note: string | null } | null
+  state: { phase: "locked" | "running" | "finished" | "cancelled_low"; round: number; round_done_at: number | null; next_round_at: number | null; started_at: number; finished_at: number | null; note: string | null } | null
   entrants: { id: string; name: string; rating: number; seed: number; withdrawn: boolean }[]
   live: LiveBoard[]
   stats: TStats
@@ -176,6 +183,11 @@ export type TourneyView = {
   pairings?: { round: number; games: { board: number; white: TSide; black: TSide; result: string | null; forfeit: boolean; game_id: string | null; live: boolean; fixed: boolean }[] }[]
   bracket?: { size: number; total_rounds: number; rounds: { round: number; name: string; matches: BracketMatch[] }[] }
   champion?: string | null
+  start_mode?: "checkin" | "scheduled"
+  round_times?: (number | null)[]
+  join_minutes?: number
+  locks_at?: number | null
+  upcoming?: { round: number; at: number | null; fixed: boolean; games: { board: number; white: TSide; black: TSide }[] } | null
 }
 export type TourneySummary = { id: string; phase: string | null; round: number; note: string | null; entrants: number; checked_in: number; live_games: number; leader: string | null }
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { applyResult, emptyStanding, pairPool, rank } from "./arena-rules.js"
+import { applyResult, emptyStanding, pairPool, rank, rankQualified } from "./arena-rules.js"
 
 test("scoring: 2 for a win, 1 for a draw, doubled after two wins in a row", () => {
   const s = emptyStanding("cus_a", "A", 0)
@@ -45,4 +45,10 @@ test("pairing: neighbours in the standings, no immediate rematch, fair colours",
 
   // Odd one out waits.
   assert.equal(pairPool([p("a", 1), p("b", 1), p("c", 1)]).length, 1)
+})
+
+test("with a minimum number of games, only those who played enough are ranked", () => {
+  const s = (id: string, score: number, games: number) => ({ ...emptyStanding(id, id, 0), score, games, wins: score / 2 })
+  const r = rankQualified([s("a", 8, 4), s("b", 6, 1), s("c", 4, 2), s("d", 0, 0)], 2)
+  assert.deepEqual(r.map((x) => [x.s.player_id, x.rank]), [["a", 1], ["c", 2], ["b", null], ["d", null]])
 })

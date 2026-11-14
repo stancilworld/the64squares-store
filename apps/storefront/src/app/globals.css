@@ -1244,3 +1244,11 @@ button.seat:hover { transform: translateY(-1px); border-color: #ff6b6b; }
 @media (min-width: 1280px) {
   .arena-left .lobby-feed, .arena-right .lobby-feed { height: calc(100vh - 360px); min-height: 280px; }
 }
+
+/* Challenge arenas: the Challenge button on a card, and a challenge to me. */
+.seat-challenge { margin-top: 6px; min-height: 32px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 800; background: var(--fc); color: #111; }
+.seat-challenge:disabled { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.challenge-box { position: fixed; z-index: 70; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 10px; width: min(420px, calc(100vw - 24px)); }
+.challenge-card { padding: 14px 16px; border-radius: 16px; background: #222; border: 1px solid var(--fc); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); }
+.challenge-title { font-size: 17px; font-weight: 800; }
+.challenge-meta { margin-top: 2px; font-size: 13px; color: var(--g-muted); }

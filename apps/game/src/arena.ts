@@ -1,7 +1,7 @@
 import { announce, lobbyDefaults } from "./lobby.js"
 import { banOf } from "./fairplay.js"
 import type { Server, Socket } from "socket.io"
-import { applyResult, emptyStanding, pairPool, rank, type Standing } from "./arena-rules.js"
+import { applyResult, CHALLENGE_MS, emptyStanding, MAX_GAMES_SAME_PAIR, pairPool, rankQualified, type Standing } from "./arena-rules.js"
 import { pool } from "./db.js"
 import { type Game, parseTimeControl, type Player } from "./game.js"
 import type { GameManager } from "./manager.js"
@@ -22,6 +22,10 @@ type Tournament = {
   ends_at: number
   // Staff paused it from the admin: no new games start (games being played carry on).
   paused: boolean
+  // "auto": paired as games end; "challenge": players challenge each other in the lobby.
+  pairing: "auto" | "challenge"
+  // Games needed to be ranked at the end.
+  min_games: number
 }
 
 type Arena = {
@@ -35,7 +39,13 @@ type Arena = {
   loadedAt: number
   // One pairing run at a time, so nobody is put in two games.
   pairing: boolean
+  // Challenges waiting for an answer: challenger -> { to, until }.
+  challenges: Map<string, { to: string; until: number }>
+  // Games each pair has played here ("a|b", sorted), to cap rematches in challenge arenas.
+  pairs: Map<string, number>
 }
+
+const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`)
 
 const DEFAULT_LENGTH_MS = 60 * 60 * 1000
 const arenas = new Map<string, Arena>()
@@ -66,7 +76,7 @@ export const migrateArena = async () => {
 
 const loadTournament = async (idOrHandle: string): Promise<Tournament | null> => {
   const { rows } = await pool.query(
-    `select id, title, handle, format, mode, status, time_control, starts_at, ends_at, paused
+    `select *
        from public.tournament
       where (id = $1 or handle = $1) and deleted_at is null and status <> 'draft'`,
     [idOrHandle]
@@ -85,6 +95,8 @@ const loadTournament = async (idOrHandle: string): Promise<Tournament | null> =>
     starts_at: starts,
     ends_at: r.ends_at ? new Date(r.ends_at).getTime() : starts + DEFAULT_LENGTH_MS,
     paused: !!r.paused,
+    pairing: r.arena_pairing === "challenge" ? "challenge" : "auto",
+    min_games: Number(r.min_games ?? 2),
   }
 }
 
@@ -134,6 +146,17 @@ const loadStandings = async (tid: string) => {
   )
 }
 
+// Games already played between each pair (from the tournament's finished games).
+const loadPairs = async (tid: string) => {
+  const { rows } = await pool.query(
+    "select white_id, black_id, count(*)::int as n from play.game where tournament_id = $1 and mode = 'arena' and status = 'finished' group by 1, 2",
+    [tid]
+  )
+  const m = new Map<string, number>()
+  for (const r of rows) m.set(pairKey(r.white_id, r.black_id), (m.get(pairKey(r.white_id, r.black_id)) ?? 0) + r.n)
+  return m
+}
+
 const getArena = async (idOrHandle: string): Promise<Arena | null> => {
   const cached = [...arenas.values()].find((a) => a.t.id === idOrHandle || a.t.handle === idOrHandle)
   // Re-read the tournament every minute in case the admin changed its times.
@@ -154,6 +177,8 @@ const getArena = async (idOrHandle: string): Promise<Arena | null> => {
     paused: new Set(),
     loadedAt: Date.now(),
     pairing: false,
+    challenges: new Map(),
+    pairs: await loadPairs(t.id),
   }
   arenas.set(t.id, a)
   return a
@@ -172,10 +197,12 @@ const view = (a: Arena, now = Date.now()) => ({
   phase: phase(a, now),
   paused: a.t.paused,
   server_now: now,
-  standings: rank([...a.standings.values()])
+  pairing: a.t.pairing,
+  min_games: a.t.min_games,
+  standings: rankQualified([...a.standings.values()], a.t.min_games)
     .slice(0, 100)
-    .map((s, i) => ({
-      rank: i + 1,
+    .map(({ s, rank }) => ({
+      rank,
       player_id: s.player_id,
       name: s.name,
       score: s.score,
@@ -252,6 +279,68 @@ export const registerArena = (
     void pairArena(io, manager, a)
   })
 
+  // Challenge arenas: a player in the arena (not playing) challenges another; they accept or
+  // decline within CHALLENGE_MS. At most MAX_GAMES_SAME_PAIR games between the same two.
+  socket.on("arena:challenge", async (input: { tid?: unknown; to?: unknown }, ack: unknown) => {
+    if (typeof ack !== "function" || limited(socket, ack)) return
+    const p = me()
+    if (!p) return ack({ ok: false, error: "sign-in" })
+    if (typeof input?.tid !== "string" || typeof input.to !== "string" || input.to === p.id) return ack({ ok: false, error: "bad-request" })
+    const a = await getArena(input.tid)
+    if (!a || a.t.pairing !== "challenge") return ack({ ok: false, error: "not-challenge" })
+    if (phase(a) !== "live" || a.t.paused) return ack({ ok: false, error: phase(a) === "before" ? "not-started" : "over" })
+    const free = (id: string) => a.waiting.has(id) && !a.playing.has(id) && online.has(id)
+    if (!free(p.id)) return ack({ ok: false, error: "join-first" })
+    if (!free(input.to)) return ack({ ok: false, error: "busy" })
+    if ((a.pairs.get(pairKey(p.id, input.to)) ?? 0) >= MAX_GAMES_SAME_PAIR) return ack({ ok: false, error: "played-enough" })
+    const until = Date.now() + CHALLENGE_MS
+    a.challenges.set(p.id, { to: input.to, until })
+    const from = a.standings.get(p.id)
+    io.to(`player:${input.to}`).emit("arena:challenged", { tournament_id: a.t.id, from: { id: p.id, name: from?.name ?? p.name, score: from?.score ?? 0, games: from?.games ?? 0 }, until })
+    ack({ ok: true, until })
+  })
+
+  socket.on("arena:answer", async (input: { tid?: unknown; from?: unknown; accept?: unknown }, ack: unknown) => {
+    if (typeof ack !== "function" || limited(socket, ack)) return
+    const p = me()
+    if (!p || typeof input?.tid !== "string" || typeof input.from !== "string") return ack({ ok: false, error: "bad-request" })
+    const a = await getArena(input.tid)
+    if (!a) return ack({ ok: false, error: "not-found" })
+    const c = a.challenges.get(input.from)
+    if (!c || c.to !== p.id || c.until < Date.now()) return ack({ ok: false, error: "expired" })
+    a.challenges.delete(input.from)
+    if (input.accept !== true) {
+      io.to(`player:${input.from}`).emit("arena:challenge-answer", { tournament_id: a.t.id, by: p.name, accepted: false })
+      return ack({ ok: true })
+    }
+    const free = (id: string) => a.waiting.has(id) && !a.playing.has(id) && online.has(id)
+    if (!free(p.id) || !free(input.from) || phase(a) !== "live" || a.t.paused) return ack({ ok: false, error: "busy" })
+    if (a.pairing) return ack({ ok: false, error: "busy" })
+    a.pairing = true
+    try {
+      const x = a.standings.get(input.from)!
+      const y = a.standings.get(p.id)!
+      // Colours to whoever has had fewer Whites.
+      const [white, black] = (x?.whites ?? 0) <= (y?.whites ?? 0) ? [x, y] : [y, x]
+      a.waiting.delete(white.player_id)
+      a.waiting.delete(black.player_id)
+      // Their other challenges are off.
+      for (const [from, ch] of a.challenges) if (from === white.player_id || from === black.player_id || ch.to === white.player_id || ch.to === black.player_id) a.challenges.delete(from)
+      const g = await manager.createPaired({ id: white.player_id, name: white.name }, { id: black.player_id, name: black.name }, a.initial_ms, a.increment_ms, {
+        mode: "arena",
+        tournamentId: a.t.id,
+        readyMs: (await lobbyDefaults(a.t.id)).ready_seconds * 1000,
+      })
+      a.playing.set(white.player_id, g.r.id)
+      a.playing.set(black.player_id, g.r.id)
+      io.to(`player:${white.player_id}`).to(`player:${black.player_id}`).emit("arena:paired", { tournament_id: a.t.id, game_id: g.r.id })
+      broadcast(io, a)
+      ack({ ok: true, game_id: g.r.id })
+    } finally {
+      a.pairing = false
+    }
+  })
+
   socket.on("arena:pause", async (tid: unknown, ack: unknown) => {
     if (typeof ack !== "function" || limited(socket, ack) || typeof tid !== "string") return
     const p = me()
@@ -267,7 +356,7 @@ export const registerArena = (
 const broadcast = (io: Server, a: Arena) => io.to(`arena:${a.t.id}`).emit("arena:state", view(a))
 
 const pairArena = async (io: Server, manager: GameManager, a: Arena) => {
-  if (phase(a) !== "live" || a.pairing || a.t.paused) return
+  if (phase(a) !== "live" || a.pairing || a.t.paused || a.t.pairing === "challenge") return
   a.pairing = true
   try {
     await pairNow(io, manager, a)
@@ -307,6 +396,7 @@ const onArenaGameEnd = (io: Server, manager: GameManager) => async (g: Game) => 
   a.playing.delete(b)
   const sw = a.standings.get(w)
   const sb = a.standings.get(b)
+  if (g.r.status === "finished") a.pairs.set(pairKey(w, b), (a.pairs.get(pairKey(w, b)) ?? 0) + 1)
   if (g.r.status === "finished" && sw && sb) {
     const res = g.r.result
     applyResult(sw, res === "1-0" ? "win" : res === "0-1" ? "loss" : "draw", "w", b)
@@ -315,7 +405,7 @@ const onArenaGameEnd = (io: Server, manager: GameManager) => async (g: Game) => 
     await saveStanding(tid, sb)
   }
   // Whoever missed their first move sits out until they press Join again.
-  const noShow = g.r.reason === "no-show" ? (g.r.result === "1-0" ? b : w) : g.r.reason === "no-start" ? (g.r.moves.length === 0 ? w : b) : null
+  const noShow = g.r.reason === "no-show" ? (g.r.result === "1-0" ? b : w) : g.r.reason === "no-start" || g.r.reason === "no-shows" ? (g.r.moves.length === 0 ? w : b) : null
   for (const id of [w, b]) {
     if (id === noShow) a.paused.add(id)
     else if (phase(a) === "live" && online.has(id) && !a.paused.has(id)) a.waiting.add(id)
@@ -349,7 +439,13 @@ export const startArenas = async (io: Server, manager: GameManager) => {
         if (p === "over") a.waiting.clear()
         // Not on the first look after a restart (the phase was already this).
         if (prev !== undefined) {
-          if (p === "live") announce(a.t.id, "The arena is open! Press Join the arena: you're paired as soon as a game ends, until the clock runs out.")
+          if (p === "live")
+            announce(
+              a.t.id,
+              a.t.pairing === "challenge"
+                ? `The arena is open! Press Join the arena, then challenge anyone available (Challenge on their card). Play at least ${Math.max(1, a.t.min_games)} games to be ranked.`
+                : `The arena is open! Press Join the arena: you're paired as soon as a game ends, until the clock runs out.${a.t.min_games > 1 ? ` Play at least ${a.t.min_games} games to be ranked.` : ""}`
+            )
           if (p === "over") announce(a.t.id, "Time! The arena is over. Games still going count. Final standings are on the Leaderboard tab.")
         }
         broadcast(io, a)

@@ -1,5 +1,6 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
+import { internalSecret } from "./commentary"
 
 // What staff see while running an online tournament: the engine's state and every game
 // (to correct a result), and the funnel from page visits to players who played.
@@ -63,4 +64,42 @@ export const tournamentFunnel = async (c: MedusaContainer, tournamentId: string)
   const sources = [...by.values()].sort((a, b) => b.visits + b.registered - (a.visits + a.registered))
   const total = sources.reduce((t, s) => ({ source: "All", visits: t.visits + s.visits, registered: t.registered + s.registered, joined: t.joined + s.joined, played: t.played + s.played }), { source: "All", visits: 0, registered: 0, joined: 0, played: 0 })
   return { total, sources }
+}
+
+// ---------------------------------------------------------------- scheduled pairings
+
+// The game server runs tournaments; staff change a scheduled one's pairings through it.
+const gameServer = () => (process.env.GAME_SERVER_URL || `http://localhost:${process.env.GAME_PORT || 9200}`).replace(/\/$/, "")
+
+const callGame = async (path: string, body?: Record<string, unknown>) => {
+  const secret = internalSecret()
+  if (!secret) throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "The game server key isn't set up. Run the update script once.")
+  let r: Response
+  try {
+    r = await fetch(`${gameServer()}${path}`, {
+      method: body ? "POST" : "GET",
+      headers: { "content-type": "application/json", "x-t64-game-secret": secret },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(8000),
+    })
+  } catch {
+    throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, "Couldn't reach the game server. Is it running?")
+  }
+  if (!r.ok) throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, `The game server refused (${r.status}).`)
+  return (await r.json()) as Record<string, unknown>
+}
+
+// The tournament as the game server sees it: the field, the next round's pairings, round times.
+export const pairingsView = async (tournamentId: string) => (await callGame(`/internal/tourney/${encodeURIComponent(tournamentId)}/view`)).view ?? null
+
+const PAIRING_ERRORS: Record<string, string> = {
+  "no-upcoming": "There's no round waiting to start right now.",
+  "not-in-round": "Both players must be in the round.",
+  started: "The knockout has started; seeds can't change now.",
+  "not-found": "The game server doesn't know this tournament yet (make the pairings first).",
+}
+
+export const changePairings = async (tournamentId: string, action: "swap" | "seeds" | "reset", a?: string, b?: string, by?: string) => {
+  const r = await callGame(`/internal/tourney/${encodeURIComponent(tournamentId)}/${action}`, { a, b, by })
+  if (r.ok !== true) throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PAIRING_ERRORS[String(r.error)] ?? "That change didn't work.")
 }
