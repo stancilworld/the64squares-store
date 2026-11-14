@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { clockText, fallbackLine, firstName, type Facts, lowTimeMark, materialOf, type MoveInfo, momentsOf, openingOf, shouldSpeak } from "./commentary-rules.js"
+import { clockText, fallbackLine, firstName, timeControlWords, type Facts, lowTimeMark, materialOf, type MoveInfo, momentsOf, openingOf, shouldSpeak } from "./commentary-rules.js"
 
 const mv = (o: Partial<MoveInfo>): MoveInfo => ({ ply: 10, side: "w", san: "Nf3", piece: "n", captured: null, to: "f3", promotion: null, check: false, castle: null, ...o })
 const ctx = (o: Partial<{ leftMs: number; initialMs: number; said: Set<string>; opening: string | null }> = {}) => ({ leftMs: 170_000, initialMs: 180_000, said: new Set<string>(), opening: null, ...o })
@@ -29,7 +29,8 @@ test("low time: under a minute, then under 10 seconds, once each", () => {
   assert.equal(lowTimeMark(9_000, 180_000), "very-low")
   assert.equal(lowTimeMark(14_000, 60_000), "low")
   assert.equal(lowTimeMark(20_000, 60_000), null)
-  assert.deepEqual(momentsOf(mv({}), null, ctx({ leftMs: 50_000 })), ["low-time"])
+  // No clock talk during the game.
+  assert.deepEqual(momentsOf(mv({}), null, ctx({ leftMs: 50_000 })), [])
   assert.deepEqual(momentsOf(mv({}), null, ctx({ leftMs: 50_000, said: new Set(["low-w"]) })), [])
 })
 
@@ -91,4 +92,10 @@ test("plain lines only describe what happened", () => {
 test("first names only", () => {
   assert.equal(firstName("Pradyuman Singh Rajawat"), "Pradyuman")
   assert.equal(firstName("  Asha "), "Asha")
+})
+
+test("the start names the game type and time control", () => {
+  assert.equal(timeControlWords("3+2"), "Blitz, 3 minutes plus 2 seconds a move")
+  assert.equal(timeControlWords("10+0"), "Rapid, 10 minutes")
+  assert.equal(timeControlWords("1+0"), "Bullet, 1 minute")
 })

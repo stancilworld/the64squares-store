@@ -28,22 +28,33 @@ export const COMMENTARY_ACCOUNT = "_commentary"
 const SYSTEM = [
   "You are the live commentator for The 64 Squares, an Indian online chess site. Your words are read and spoken aloud to spectators while the game is still being played.",
   "Write ONE very short sentence, at most 12 words, lively, in simple Indian English, like a quick TV chess commentator. Shorter is better: three to eight words is ideal.",
-  "You are a narrator, not an analyst: say ONLY what just happened on the board (who moved or took which piece, check, castling, promotion), a clock running low, who is ahead on material, the opening's name and the result.",
+  "You are a narrator, not an analyst: say ONLY what just happened on the board (who moved or took which piece, check, castling, promotion), who is ahead on material, the opening's name and the result.",
   "NEVER judge a move or a position: no words like good, bad, strong, weak, mistake, blunder, brilliant, clever, risky, winning, losing, better, worse, advantage, edge, pressure, danger, threat, attack, chance.",
   "NEVER say or hint what a player should, could or might play, plan or look for, or what may happen next.",
   "Use only the facts you are given. Never invent players' history, titles, ratings, prizes or events.",
-  "Use only the players' first names, exactly as given. Talk about the players and the pieces, like a TV commentator, not about squares: name a square (like e6) or write a move (like Bxf6) only when the line makes no sense without it, which is rare. Keep numbers to a minimum: no ratings, no move numbers, no clock times unless a clock is running low. No emojis, no hashtags, no quotation marks, no markdown.",
+  "Use only the players' first names, exactly as given. Talk about the players and the pieces, like a TV commentator, not about squares: name a square (like e6) or write a move (like Bxf6) only when the line makes no sense without it, which is rare. Keep numbers to a minimum: no ratings, no move numbers, and never the clocks or time left. Only at the start, say the kind of game and its time control. No emojis, no hashtags, no quotation marks, no markdown.",
 ].join(" ")
 
+// "3+2" → "Blitz, 3 minutes plus 2 seconds a move" (as the game server says it).
+const timeControlWords = (tc: string) => {
+  const m = /^(\d+(?:\.\d+)?)\+(\d+)$/.exec(tc.trim())
+  if (!m) return null
+  const mins = Number(m[1])
+  const inc = Number(m[2])
+  const est = mins * 60 + 40 * inc
+  const speed = est < 180 ? "Bullet" : est < 480 ? "Blitz" : est < 1500 ? "Rapid" : "Classical"
+  const minutes = mins === 1 ? "1 minute" : mins < 1 ? `${Math.round(mins * 60)} seconds` : `${mins} minutes`
+  return `${speed}, ${minutes}${inc ? ` plus ${inc} second${inc === 1 ? "" : "s"} a move` : ""}`
+}
+
 const MOMENT: Record<string, string> = {
-  start: "The game has just started. Name both players and welcome the viewers.",
+  start: "The game has just started. Name both players, and say the kind of game and its time control in words, as given in game_type (for example: a blitz game, three minutes plus two seconds a move).",
   opening: "Say which opening is on the board, by its name only.",
   capture: "A piece was just taken. Say who took which piece, and who is ahead on material.",
   trade: "A piece was just taken back on the same square, so pieces were exchanged. Say so, and the material count.",
   promotion: "A pawn just reached the last rank and was promoted. Say who and to what.",
   check: "A check was just given. Say who gave it. Keep it short.",
   castle: "A player just castled. Say who and which side. Keep it short.",
-  "low-time": "A player's clock is running low. Say who and how much time is left, building excitement without judging anything.",
   milestone: "A quick update on how many moves have been played (in words) and who is ahead on material.",
   end: "The game has just ended. Give the result and how it ended.",
 }
@@ -58,11 +69,11 @@ export const writeCommentary = async (c: MedusaContainer, input: { facts: Record
   let text = input.fallback
   if (keys.ai.length) {
     const f = input.facts
-    // Squares, notation, ratings and clock times stay out of what the writer sees unless the
-    // moment needs them, so the lines are about players and pieces.
+    // Squares, notation, ratings and clocks stay out of what the writer sees, so the lines are
+    // about players and pieces. The start gets the kind of game and its time control in words.
     const keep: Record<string, unknown> = { ...f }
-    for (const k of ["san", "square", "white_rating", "black_rating", "time_control"]) delete keep[k]
-    if (f.moment !== "low-time") for (const k of ["clocks", "mover_clock"]) delete keep[k]
+    for (const k of ["san", "square", "white_rating", "black_rating", "time_control", "clocks", "mover_clock"]) delete keep[k]
+    if (f.moment === "start") keep.game_type = timeControlWords(String(f.time_control ?? ""))
     const prompt = [`Moment: ${MOMENT[String(f.moment)] ?? MOMENT.milestone}`, `Facts: ${JSON.stringify(keep)}`].join("\n")
     const answer = await askAi(c, keys.ai, SYSTEM, prompt, { temperature: 0.8, maxTokens: 120, timeoutMs: 8_000, label: "Live commentary" })
     const line = answer?.text.replace(/^["'“”]+|["'“”]+$/g, "").replace(/\s+/g, " ").trim()

@@ -173,8 +173,7 @@ export const momentsOf = (m: MoveInfo, prev: MoveInfo | null, o: { leftMs: numbe
   // A piece (not a pawn) taken back on the same square at once is a trade.
   if (m.captured && m.captured !== "p" && prev?.captured && prev.to === m.to) out.push("trade")
   else if (m.captured && m.captured !== "p") out.push("capture")
-  const mark = lowTimeMark(o.leftMs, o.initialMs)
-  if (mark && !o.said.has(`${mark}-${m.side}`)) out.push("low-time")
+  // No clock talk during the game (the time control is said once, at the start).
   if (o.opening && m.ply >= 6 && m.ply <= 16 && !o.said.has("opening")) out.push("opening")
   if (m.check) out.push("check")
   if (m.castle) out.push("castle")
@@ -192,6 +191,18 @@ export const shouldSpeak = (m: Moment, sinceLastMs: number, pliesSinceLast: numb
 export const lowTimeKey = (leftMs: number, initialMs: number, side: "w" | "b") => `${lowTimeMark(leftMs, initialMs)}-${side}`
 
 // "Pradyuman Singh Rajawat" → "Pradyuman": lines stay short.
+// "3+2" → "Blitz, 3 minutes plus 2 seconds a move" (said once, when the game starts).
+export const timeControlWords = (tc: string) => {
+  const m = /^(\d+(?:\.\d+)?)\+(\d+)$/.exec(tc.trim())
+  if (!m) return null
+  const mins = Number(m[1])
+  const inc = Number(m[2])
+  const est = mins * 60 + 40 * inc
+  const speed = est < 180 ? "Bullet" : est < 480 ? "Blitz" : est < 1500 ? "Rapid" : "Classical"
+  const minutes = mins === 1 ? "1 minute" : mins < 1 ? `${Math.round(mins * 60)} seconds` : `${mins} minutes`
+  return `${speed}, ${minutes}${inc ? ` plus ${inc} second${inc === 1 ? "" : "s"} a move` : ""}`
+}
+
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] || name
 
 // A plain line, for when the AI writer isn't connected or its line isn't safe to use. Short on
@@ -199,7 +210,7 @@ export const firstName = (name: string) => name.trim().split(/\s+/)[0] || name
 export const fallbackLine = (f: Facts, leftMs = 0) => {
   switch (f.moment) {
     case "start":
-      return `${f.white} against ${f.black}. Here we go!`
+      return `${f.white} against ${f.black}${timeControlWords(f.time_control) ? `. ${timeControlWords(f.time_control)}` : ""}. Here we go!`
     case "opening":
       return `It's the ${f.opening}.`
     case "capture":
