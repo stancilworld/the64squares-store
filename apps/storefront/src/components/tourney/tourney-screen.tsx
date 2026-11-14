@@ -110,14 +110,14 @@ export function TourneyScreen(props: Props) {
     const go = (p: { game_id: string; tournament_id: string }) => {
       if (p.tournament_id !== t.id) return
       setPaired(p.game_id)
-      router.push(`/play/${p.game_id}`)
+      router.push(`/play/tournaments/${t.handle}/lobby?game=${p.game_id}`)
     }
     s.on("tourney:paired", go)
     if (t.format === "arena") s.on("arena:paired", go)
     return () => {
       s.disconnect()
     }
-  }, [t.id, t.format, token, meId, router])
+  }, [t.id, t.handle, t.format, token, meId, router])
 
   // One visit per visitor, with where they came from (the organisers' funnel report).
   useEffect(() => {
@@ -149,16 +149,6 @@ export function TourneyScreen(props: Props) {
     const end = view?.state?.finished_at ?? (t.ends_at ? new Date(t.ends_at).getTime() : null) ?? starts + 6 * 3600_000
     return at >= starts - Math.max(30, t.check_in_minutes ?? 0) * 60_000 && at < end + 3600_000
   })()
-
-  // While the lobby is open, the tournament happens there: go straight in (the lobby's
-  // "Tournament details" link comes back here with ?details=1).
-  useEffect(() => {
-    if (!lobbyOpen) return
-    try {
-      if (new URLSearchParams(window.location.search).has("details")) return
-    } catch {}
-    router.replace(`/play/tournaments/${t.handle}/lobby`)
-  }, [lobbyOpen, router, t.handle])
 
   const registered = ticket?.status === "confirmed"
   // Scheduled: registered players are paired at the round times, no check-in.
@@ -338,7 +328,7 @@ export function TourneyScreen(props: Props) {
             ))}
           {live &&
             (myGame ? (
-              <Link href={`/play/${myGame}`} className="mt-4 flex h-[54px] w-full items-center justify-center rounded-lg bg-[#ff3b3b] text-[18px] font-extrabold text-white">
+              <Link href={`/play/tournaments/${t.handle}/lobby?game=${myGame}`} className="mt-4 flex h-[54px] w-full items-center justify-center rounded-lg bg-[#ff3b3b] text-[18px] font-extrabold text-white">
                 Go to your board
               </Link>
             ) : t.format === "arena" ? (
@@ -520,7 +510,7 @@ export function TourneyScreen(props: Props) {
       {paired && (
         <p role="status" className="mt-4 rounded-lg bg-[#ff3b3b] px-4 py-3 text-center font-bold text-white">
           Your game is ready.{" "}
-          <Link href={`/play/${paired}`} className="underline">
+          <Link href={`/play/tournaments/${t.handle}/lobby?game=${paired}`} className="underline">
             Go to the board
           </Link>
         </p>
