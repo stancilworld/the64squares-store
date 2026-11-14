@@ -94,7 +94,7 @@ export const KEY_DEFS: KeyDef[] = [
   { name: "LIVEKIT_API_SECRET", group: "livekit", label: "LiveKit API secret", secret: true, pattern: /^[\w-]{20,120}$/, hint: "Shown once when you create the key in LiveKit Cloud. Empty for your own VPS." },
   { name: "ELEVENLABS_MODEL", group: "voice", label: "Voice model", secret: false, pattern: /^[\w.-]{3,60}$/, hint: "Empty for eleven_flash_v2_5 (fastest, half the cost per character). eleven_v4 is the newest and most natural; eleven_v4_turbo is v4 made for speed." },
   { name: "GROQ_API_KEY", group: "ai", label: "Groq API key (free)", secret: true, pattern: /^gsk_[A-Za-z0-9]{20,}$/, hint: "From console.groq.com → API Keys. Starts with gsk_" },
-  { name: "GROQ_MODEL", group: "ai", label: "Groq model", secret: false, pattern: /^[\w./:-]{3,80}$/, hint: "Leave empty for llama-3.3-70b-versatile" },
+  { name: "GROQ_MODEL", group: "ai", label: "Groq model", secret: false, pattern: /^[\w./:-]{3,80}$/, hint: "Leave empty for openai/gpt-oss-120b (or openai/gpt-oss-20b, qwen/qwen3.6-27b)" },
   { name: "GEMINI_API_KEY", group: "ai", label: "Google Gemini API key (free, spare)", secret: true, pattern: /^[\w-]{30,60}$/, hint: "From aistudio.google.com → Get API key. Starts with AIza" },
   { name: "GEMINI_MODEL", group: "ai", label: "Gemini model", secret: false, pattern: /^[\w./:-]{3,80}$/, hint: "Leave empty for gemini-flash-lite-latest" },
   { name: "META_CAPI_TOKEN", group: "marketing", label: "Meta Conversions API access token", secret: true, pattern: /^[A-Za-z0-9]{40,400}$/, hint: "From Meta Events Manager → your Pixel → Settings → Conversions API → Generate access token" },
@@ -178,6 +178,21 @@ export const loadStored = async (container?: MedusaContainer): Promise<Stored> =
 
 // Older setups keep one Razorpay key pair in .env (RAZORPAY_KEY_ID etc.); its prefix says
 // whether it's the test or the live pair.
+// Groq's free plan dropped the Llama models on 16 Aug 2026; their saved names move to the
+// official replacements.
+const GROQ_RETIRED: Record<string, string> = { "llama-3.3-70b-versatile": "openai/gpt-oss-120b", "llama-3.1-8b-instant": "openai/gpt-oss-20b" }
+export const GROQ_DEFAULT_MODEL = "openai/gpt-oss-120b"
+const groqModel = (saved: string | undefined) => (saved ? (GROQ_RETIRED[saved] ?? saved) : GROQ_DEFAULT_MODEL)
+
+// Groq's reasoning models think before answering: keep that short so it doesn't use up the
+// answer's length, and leave room for it.
+export const groqOptions = (model: string, maxTokens: number) =>
+  model.startsWith("openai/gpt-oss")
+    ? { max_tokens: maxTokens + 400, reasoning_effort: "low", include_reasoning: false }
+    : model.startsWith("qwen/")
+      ? { max_tokens: maxTokens + 200, reasoning_effort: "none", reasoning_format: "hidden" }
+      : { max_tokens: maxTokens }
+
 const envFor = (name: KeyName): string | undefined => {
   const env = process.env
   const envMode = (env.RAZORPAY_KEY_ID || "").startsWith("rzp_live_") ? "LIVE" : env.RAZORPAY_KEY_ID ? "TEST" : null
@@ -305,7 +320,7 @@ export const keysFromStored = (stored: Stored): ServiceKeys => {
       return { url, key, secret, apiUrl: own && process.env.LIVEKIT_API_URL ? process.env.LIVEKIT_API_URL : url.replace(/^wss:/, "https:").replace(/\/$/, "") }
     })(),
     ai: [
-      ...(get("GROQ_API_KEY") ? [{ provider: "groq" as const, key: get("GROQ_API_KEY")!, model: get("GROQ_MODEL") || "llama-3.3-70b-versatile" }] : []),
+      ...(get("GROQ_API_KEY") ? [{ provider: "groq" as const, key: get("GROQ_API_KEY")!, model: groqModel(get("GROQ_MODEL")) }] : []),
       ...(get("GEMINI_API_KEY") ? [{ provider: "gemini" as const, key: get("GEMINI_API_KEY")!, model: get("GEMINI_MODEL") || "gemini-flash-lite-latest" }] : []),
     ],
   }

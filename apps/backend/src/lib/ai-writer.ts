@@ -1,6 +1,6 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
-import { getServiceKeys } from "./service-keys"
+import { getServiceKeys, groqOptions } from "./service-keys"
 
 // The writing helper in admin → Content. Uses the same free AI keys as the chat bot (Groq,
 // then Google Gemini; Settings → Payments & delivery → Keys). It drafts; a person edits.
@@ -62,7 +62,7 @@ export const askAi = async (
         const r = await fetch(`${base}/openai/v1/chat/completions`, {
           method: "POST",
           headers: { "content-type": "application/json", authorization: `Bearer ${p.key}` },
-          body: JSON.stringify({ model: p.model, temperature: o.temperature, max_tokens: o.maxTokens, messages: [{ role: "system", content: system }, { role: "user", content: prompt }] }),
+          body: JSON.stringify({ model: p.model, temperature: o.temperature, ...groqOptions(p.model, o.maxTokens), messages: [{ role: "system", content: system }, { role: "user", content: prompt }] }),
           signal,
         })
         if (!r.ok) throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, `Groq ${r.status}`)

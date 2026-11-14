@@ -4,7 +4,7 @@ import { CONTENT_MODULE } from "../modules/content"
 import type ContentModuleService from "../modules/content/service"
 import { loadCheckoutSettings } from "./checkout-settings"
 import { loadContactPage } from "./contact-page"
-import { getServiceKeys } from "./service-keys"
+import { getServiceKeys, groqOptions } from "./service-keys"
 
 // The website's chat bot (admin → Website → Chat bot).
 //
@@ -344,7 +344,7 @@ const callProvider = async (p: Provider, system: string, history: Turn[], questi
       body: JSON.stringify({
         model: p.model,
         temperature: 0.3,
-        max_tokens: 450,
+        ...groqOptions(p.model, 450),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: system },
