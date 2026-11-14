@@ -380,8 +380,8 @@ export function KeysEditor() {
       </Block>
 
       <Block
-        title="Chat bot AI (free)"
-        intro="Optional. Lets the website's chat bot answer in its own words. Both have free plans with no card needed: Groq is tried first, Gemini is the spare. Without a key the bot still answers from your questions, Help pages and products."
+        title="AI writing (free)"
+        intro="Optional. Used by the chat bot (answers in its own words), live commentary (livelier lines) and the writing helper. Both have free plans with no card needed: Groq is tried first, Gemini is the spare. Without a key everything still works with plain built-in wording."
       >
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">{rows("ai").map(field)}</div>
         <Text size="xsmall" className="text-ui-fg-subtle">
