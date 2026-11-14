@@ -1,26 +1,31 @@
-// Live commentary rules (pure; tested in commentary-rules.test.ts): what a move was, what's
-// worth saying about it, and a plain line to say when the AI writer isn't available.
-// Nothing here ever names a better move: spectators hear it 25 seconds late, but the game
-// is still being played.
+// Live commentary rules (pure; tested in commentary-rules.test.ts).
+//
+// The commentator only says what happened on the board: who took what, checks, castling,
+// promotions, the clocks, the material count, the opening's name and the result. It never
+// judges a move (no "blunder", "good", "winning") and never uses a chess engine, so
+// nothing it says, even 25 seconds late, can tell anyone what the players should do.
 
 export const DELAY_MS = 25_000
 
-export type Moment =
-  | "start"
-  | "opening"
-  | "blunder"
-  | "mistake"
-  | "turnaround"
-  | "check"
-  | "big-capture"
-  | "promotion"
-  | "castle"
-  | "time-trouble"
-  | "decisive"
-  | "quiet"
-  | "end"
+export type Moment = "start" | "opening" | "capture" | "trade" | "promotion" | "check" | "castle" | "low-time" | "milestone" | "end"
 
-// What the writer is told about one moment (facts only, no best moves).
+export type PieceKey = "p" | "n" | "b" | "r" | "q" | "k"
+export const PIECE: Record<PieceKey, string> = { p: "pawn", n: "knight", b: "bishop", r: "rook", q: "queen", k: "king" }
+
+// One move, as chess.js reports it.
+export type MoveInfo = {
+  ply: number
+  side: "w" | "b"
+  san: string
+  piece: PieceKey
+  captured: PieceKey | null
+  to: string
+  promotion: PieceKey | null
+  check: boolean
+  castle: "kingside" | "queenside" | null
+}
+
+// What the writer is told about one moment: facts only.
 export type Facts = {
   moment: Moment
   white: string
@@ -30,55 +35,48 @@ export type Facts = {
   time_control: string
   tournament: string | null
   move_no: number
-  side: "White" | "Black"
   mover: string
+  opponent: string
   san: string
-  recent: string[]
+  piece: string | null
+  captured: string | null
+  square: string | null
+  castle: "kingside" | "queenside" | null
+  promoted_to: string | null
+  check: boolean
   opening: string | null
-  eval_white: number | null
   material: string
-  clocks: { white_s: number; black_s: number }
+  clocks: { white: string; black: string }
+  mover_clock: string
   result?: string | null
   reason?: string | null
-  featured: boolean
-}
-
-// How much a move lost, from the mover's side, in centipawns (evals are for White).
-export const lossOf = (side: "w" | "b", before: number, after: number) => (side === "w" ? before - after : after - before)
-
-export const classify = (loss: number, before: number, after: number, side: "w" | "b"): Moment | null => {
-  const mine = (x: number) => (side === "w" ? x : -x)
-  // Already lost or already winning by a mile: small slips don't matter.
-  if (Math.abs(before) >= 900 && Math.abs(after) >= 900 && Math.sign(before) === Math.sign(after)) return null
-  if (mine(before) > -150 && mine(after) < -150 && loss >= 250) return "turnaround"
-  if (loss >= 300) return "blunder"
-  if (loss >= 150) return "mistake"
-  return null
-}
-
-// White's advantage in words.
-export const evalWords = (cp: number | null, white: string, black: string) => {
-  if (cp == null) return "unclear"
-  const who = cp > 0 ? white : black
-  const a = Math.abs(cp)
-  if (a >= 900) return `${who} is winning`
-  if (a >= 300) return `${who} is clearly better`
-  if (a >= 120) return `${who} is a little better`
-  return "roughly level"
 }
 
 const VALUE: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9 }
-export const materialOf = (fen: string) => {
-  const board = fen.split(" ")[0]
+
+// The material count (a count of pieces, not an opinion).
+export const materialOf = (fen: string, white = "White", black = "Black") => {
   let w = 0
   let b = 0
-  for (const ch of board) {
+  for (const ch of fen.split(" ")[0]) {
     const v = VALUE[ch.toLowerCase()]
     if (!v) continue
     if (ch === ch.toUpperCase()) w += v
     else b += v
   }
-  return { w, b, text: w === b ? "material is level" : `${w > b ? "White" : "Black"} is up ${Math.abs(w - b)} point${Math.abs(w - b) === 1 ? "" : "s"} of material` }
+  const d = Math.abs(w - b)
+  return { w, b, text: d === 0 ? "Material is level" : `${w > b ? white : black} has ${d} more point${d === 1 ? "" : "s"} of material` }
+}
+
+export const clockText = (ms: number) => {
+  const s = Math.max(0, Math.ceil(ms / 1000))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
+}
+const secondsWords = (ms: number) => {
+  const s = Math.max(0, Math.ceil(ms / 1000))
+  if (s < 60) return `${s} seconds`
+  const m = Math.floor(s / 60)
+  return `${m} minute${m === 1 ? "" : "s"}${s % 60 ? ` ${s % 60} seconds` : ""}`
 }
 
 // The commonest openings, by their first moves (longest match wins).
@@ -94,7 +92,6 @@ const OPENINGS: [string, string][] = [
   ["e4 e5 f4", "King's Gambit"],
   ["e4 e5 Nc3", "Vienna Game"],
   ["e4 e5 Bc4", "Bishop's Opening"],
-  ["e4 e5 Qh5", "an early queen attack"],
   ["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6", "Sicilian Najdorf"],
   ["e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6", "Sicilian Dragon"],
   ["e4 c5 Nf3 Nc6", "Sicilian Defence"],
@@ -139,63 +136,79 @@ export const openingOf = (moves: string[]) => {
   return best
 }
 
-// Is this moment worth a line? Priority (higher wins when lines queue up) and a minimum
-// gap since the last line, so the commentator talks about once every 10-20 seconds.
+// Higher wins when several things happen in one move, and decides how soon after the last
+// line the commentator may speak again.
 export const PRIORITY: Record<Moment, number> = {
   end: 10,
   start: 9,
-  turnaround: 8,
-  blunder: 8,
-  decisive: 7,
-  mistake: 6,
-  "time-trouble": 6,
-  promotion: 5,
-  "big-capture": 4,
+  promotion: 8,
+  // A recapture is always said, so the material count just announced is never left wrong.
+  trade: 8,
+  capture: 6,
+  "low-time": 6,
   opening: 4,
-  check: 2,
-  castle: 1,
-  quiet: 0,
+  check: 3,
+  castle: 2,
+  milestone: 1,
 }
+
+// The low-time warnings: below a minute (a quarter of the start time in 1-minute games), then
+// below 10 seconds; once each per player.
+export const lowTimeMark = (leftMs: number, initialMs: number): "low" | "very-low" | null => {
+  if (!initialMs) return null
+  if (leftMs < 10_000) return "very-low"
+  if (leftMs < (initialMs <= 60_000 ? initialMs * 0.25 : 60_000)) return "low"
+  return null
+}
+
+// The things worth a line in this move (most important first).
+export const momentsOf = (m: MoveInfo, prev: MoveInfo | null, o: { leftMs: number; initialMs: number; said: Set<string>; opening: string | null }): Moment[] => {
+  const out: Moment[] = []
+  if (m.ply === 1 && !o.said.has("start")) out.push("start")
+  if (m.promotion) out.push("promotion")
+  // A piece (not a pawn) taken back on the same square at once is a trade.
+  if (m.captured && m.captured !== "p" && prev?.captured && prev.to === m.to) out.push("trade")
+  else if (m.captured && m.captured !== "p") out.push("capture")
+  const mark = lowTimeMark(o.leftMs, o.initialMs)
+  if (mark && !o.said.has(`${mark}-${m.side}`)) out.push("low-time")
+  if (o.opening && m.ply >= 6 && m.ply <= 16 && !o.said.has("opening")) out.push("opening")
+  if (m.check) out.push("check")
+  if (m.castle) out.push("castle")
+  if (m.ply % 20 === 0) out.push("milestone")
+  return out.sort((a, b) => PRIORITY[b] - PRIORITY[a])
+}
+
 export const shouldSpeak = (m: Moment, sinceLastMs: number, pliesSinceLast: number) => {
   if (PRIORITY[m] >= 8) return true
-  if (PRIORITY[m] >= 5) return sinceLastMs >= 6_000
-  if (PRIORITY[m] >= 2) return sinceLastMs >= 14_000
+  if (PRIORITY[m] >= 5) return sinceLastMs >= 5_000
+  if (PRIORITY[m] >= 2) return sinceLastMs >= 12_000
   return sinceLastMs >= 25_000 && pliesSinceLast >= 8
 }
 
-const secs = (s: number) => (s >= 60 ? `${Math.floor(s / 60)} minute${s >= 120 ? "s" : ""}` : `${Math.max(0, Math.round(s))} seconds`)
+export const lowTimeKey = (leftMs: number, initialMs: number, side: "w" | "b") => `${lowTimeMark(leftMs, initialMs)}-${side}`
 
-// A plain line for when the AI writer isn't connected or doesn't answer.
-export const fallbackLine = (f: Facts) => {
-  const state = evalWords(f.eval_white, f.white, f.black)
+// A plain line, for when the AI writer isn't connected or its line isn't safe to use.
+export const fallbackLine = (f: Facts, leftMs = 0) => {
   switch (f.moment) {
     case "start":
-      return `${f.white}${f.white_rating ? ` (${f.white_rating})` : ""} with White against ${f.black}${f.black_rating ? ` (${f.black_rating})` : ""}, ${f.time_control}${f.tournament ? ` in the ${f.tournament}` : ""}. Let's see how this one goes.`
+      return `${f.white}${f.white_rating ? ` (${f.white_rating})` : ""} has White against ${f.black}${f.black_rating ? ` (${f.black_rating})` : ""}, ${f.time_control}${f.tournament ? ` in the ${f.tournament}` : ""}.`
     case "opening":
-      return `We're in the ${f.opening}. Both players know this ground.`
-    case "blunder":
-      return `${f.san} from ${f.mover}... that's a serious slip. Now ${state}.`
-    case "turnaround":
-      return `What a turn! After ${f.san}, ${state}.`
-    case "mistake":
-      return `${f.mover} plays ${f.san}, and that gives something away. ${state[0].toUpperCase()}${state.slice(1)}.`
-    case "decisive":
-      return `${state[0].toUpperCase()}${state.slice(1)} now, and ${f.material}.`
-    case "time-trouble": {
-      const left = f.side === "White" ? f.clocks.white_s : f.clocks.black_s
-      return `${f.mover} is down to ${secs(left)} on the clock. Every second counts now.`
-    }
+      return `The opening is the ${f.opening}.`
+    case "capture":
+      return `${f.mover} takes ${f.opponent}'s ${f.captured} on ${f.square}${f.check ? ", with check" : ""}. ${f.material}.`
+    case "trade":
+      return `${f.mover} takes back on ${f.square}${f.check ? " with check" : ""}, and pieces come off the board. ${f.material}.`
     case "promotion":
-      return `${f.mover} promotes with ${f.san}!`
-    case "big-capture":
-      return `${f.san}, a big capture by ${f.mover}. ${f.material[0].toUpperCase()}${f.material.slice(1)}.`
+      return `${f.mover}'s pawn reaches ${f.square} and becomes a ${f.promoted_to}!`
     case "check":
       return `${f.san}, check from ${f.mover}.`
     case "castle":
-      return `${f.mover} castles to safety.`
+      return `${f.mover} castles ${f.castle}.`
+    case "low-time":
+      return `${f.mover} has ${leftMs ? secondsWords(leftMs) : f.mover_clock} left on the clock.`
+    case "milestone":
+      return `Move ${f.move_no}. ${f.material}. On the clocks, ${f.white} ${f.clocks.white}, ${f.black} ${f.clocks.black}.`
     case "end":
       return `And that's the game: ${f.result === "1/2-1/2" ? "a draw" : `${f.result === "1-0" ? f.white : f.black} wins`}${f.reason ? ` by ${f.reason.replace(/-/g, " ")}` : ""}. Well played, both.`
-    default:
-      return `Move ${f.move_no}. ${state[0].toUpperCase()}${state.slice(1)}, and ${f.material}.`
   }
 }

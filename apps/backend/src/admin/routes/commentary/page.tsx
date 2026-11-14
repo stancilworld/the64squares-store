@@ -68,7 +68,7 @@ const CommentaryPage = () => {
       <div>
         <Heading level="h1">Live commentary</Heading>
         <Text size="small" className="mt-1 max-w-[760px] text-ui-fg-subtle">
-          An AI commentator for spectators: it follows the game with the chess engine and describes the moments that matter. Spectators get it 25 seconds behind the game, and the two players never see or hear it. It never says what a player should play. Featured games are voiced by ElevenLabs; the rest are text.
+          An AI commentator for spectators that narrates what happens on the board: captures, trades, checks, castling, promotions, the clocks, the material count, the opening and the result. It never judges a move (no "blunder", no "winning") and never says what anyone should play. Spectators get it 25 seconds behind the game, and the two players never see or hear it. Featured games are voiced by ElevenLabs; the rest are text.
         </Text>
       </div>
 

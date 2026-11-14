@@ -3,17 +3,17 @@ import pg from "pg"
 import type { Server, Socket } from "socket.io"
 import { config } from "./config.js"
 import { pool } from "./db.js"
-import { Engine } from "./engine.js"
 import type { Player } from "./game.js"
 import type { GameManager } from "./manager.js"
-import { classify, DELAY_MS, evalWords, type Facts, fallbackLine, lossOf, materialOf, type Moment, openingOf, PRIORITY, shouldSpeak } from "./commentary-rules.js"
+import { clockText, DELAY_MS, type Facts, fallbackLine, lowTimeKey, materialOf, type Moment, type MoveInfo, momentsOf, openingOf, PIECE, type PieceKey, shouldSpeak } from "./commentary-rules.js"
 
 // Live commentary, with no person involved. Staff switch it on for a game or a whole
 // tournament in the admin (play.commentary; scope "site", "tourney:<id>" or "game:<id>").
-// For each commentated game this server follows the moves with a chess engine, decides
-// what's worth saying (a blunder, time trouble, the opening, the result…) and asks the
-// backend to write the line with the AI keys and, for featured games, to voice it. If the
-// backend can't, a plain line is used.
+// For each commentated game this server follows the moves and picks what's worth saying:
+// only what happened (captures, trades, checks, castling, promotions, the clocks, the
+// material count, the opening's name, the result). No engine and no judgement of moves,
+// so nothing said can help a player. The backend writes the line with the AI keys and,
+// for featured games, voices it; if it can't, a plain line is used.
 //
 // Spectators get the moves and the lines DELAY_MS late, on their own delayed board, so the
 // commentary can't help anyone still playing; the two players can't open it at all.
@@ -35,14 +35,13 @@ type G = {
   tournament: string | null
   chess: Chess
   ply: number
-  evals: Map<number, number>
+  prev: MoveInfo | null
   lastLineAt: number
   lastLinePly: number
   said: Set<string>
   queue: Item[]
   shown: { moves: Extract<Item, { kind: "move" }>[]; lines: Extract<Item, { kind: "line" }>[]; end: Extract<Item, { kind: "end" }> | null }
   chain: Promise<void>
-  pending: number
   over: boolean
   clocks: { w: number; b: number }
 }
@@ -67,7 +66,6 @@ let seq = 0
 export class Commentary {
   private settings = new Map<string, Setting>()
   private games = new Map<string, G>()
-  private engine: Engine | null = null
 
   constructor(
     private io: Server,
@@ -139,10 +137,19 @@ export class Commentary {
       const clocks = v.clocks as { w: number; b: number }
       g.clocks = clocks
       g.queue.push({ kind: "move", release: at + DELAY_MS, ply, san, fen, from: mv.from, to: mv.to, clocks })
-      const captured = mv.captured ?? null
-      const promotion = !!mv.promotion
-      const side = mv.color as "w" | "b"
-      g.chain = g.chain.then(() => this.analyse(g!, { ply, san, fen, at, side, captured, promotion, clocks, castle: san.startsWith("O-O") }))
+      const info: MoveInfo = {
+        ply,
+        side: mv.color as "w" | "b",
+        san,
+        piece: mv.piece as PieceKey,
+        captured: (mv.captured as PieceKey | undefined) ?? null,
+        to: mv.to,
+        promotion: (mv.promotion as PieceKey | undefined) ?? null,
+        check: san.includes("+") || san.includes("#"),
+        castle: san.startsWith("O-O-O") ? "queenside" : san.startsWith("O-O") ? "kingside" : null,
+      }
+      const history = g.chess.history()
+      g.chain = g.chain.then(() => this.consider(g!, info, at, clocks, history))
     }
     if ((v.status === "finished" || v.status === "aborted") && !g.over) {
       g.over = true
@@ -167,14 +174,13 @@ export class Commentary {
       tournament: null,
       chess: new Chess(),
       ply: 0,
-      evals: new Map([[0, 30]]),
+      prev: null,
       lastLineAt: 0,
       lastLinePly: 0,
       said: new Set(),
       queue: [],
       shown: { moves: [], lines: [], end: null },
       chain: Promise.resolve(),
-      pending: 0,
       over: false,
       clocks: v.clocks as { w: number; b: number },
     }
@@ -191,7 +197,6 @@ export class Commentary {
         }
       }
       g.said.add("start").add("opening")
-      g.evals = new Map()
       g.lastLinePly = g.ply
     }
     if (g.tournamentId)
@@ -210,65 +215,27 @@ export class Commentary {
     this.games.delete(g.id)
   }
 
-  private evaluate(fen: string) {
-    if (!this.engine) this.engine = new Engine({ background: true })
-    return this.engine.evaluate(fen, 200)
-  }
-
-  private async analyse(
-    g: G,
-    m: { ply: number; san: string; fen: string; at: number; side: "w" | "b"; captured: string | null; promotion: boolean; clocks: { w: number; b: number }; castle: boolean }
-  ) {
+  private async consider(g: G, m: MoveInfo, at: number, clocks: { w: number; b: number }, history: string[]) {
     if (g.over && !this.games.has(g.id)) return
-    // The engine's view (skipped when it's falling behind).
-    let after: number | null = null
-    if (g.pending < 3) {
-      g.pending++
-      try {
-        const e = await this.evaluate(m.fen)
-        after = m.fen.split(" ")[1] === "w" ? e.cp : -e.cp
-        g.evals.set(m.ply, after)
-      } catch {
-        // No engine: fewer moments, still commentary.
-      } finally {
-        g.pending--
-      }
-    }
-    const before = g.evals.get(m.ply - 1)
-    const moments: Moment[] = []
-    if (m.ply === 1 && !g.said.has("start")) moments.push("start")
-    if (m.ply >= 6 && m.ply <= 16 && !g.said.has("opening")) {
-      const name = openingOf(g.chess.history())
-      const next = openingOf(g.chess.history().concat("__"))
-      if (name && (m.ply >= 10 || name === next)) moments.push("opening")
-    }
-    if (after != null && before != null) {
-      const c = classify(lossOf(m.side, before, after), before, after, m.side)
-      if (c) moments.push(c)
-      if (Math.abs(after) >= 900 && !g.said.has(`decisive${Math.sign(after)}`)) moments.push("decisive")
-    }
-    if (m.promotion) moments.push("promotion")
-    if (m.captured === "q" || m.captured === "r") moments.push("big-capture")
-    const left = m.side === "w" ? m.clocks.w : m.clocks.b
-    if (g.initialMs && left < Math.max(20_000, g.initialMs * 0.1) && !g.said.has(`time-${m.side}`)) moments.push("time-trouble")
-    if (m.san.includes("+")) moments.push("check")
-    if (m.castle) moments.push("castle")
-    moments.push("quiet")
-    const moment = moments.sort((a, b) => PRIORITY[b] - PRIORITY[a])[0]
-    if (!shouldSpeak(moment, m.at - g.lastLineAt, m.ply - g.lastLinePly)) return
-    if (moment === "start") g.said.add("start")
-    if (moment === "opening") g.said.add("opening")
-    if (moment === "decisive" && after != null) g.said.add(`decisive${Math.sign(after)}`)
-    if (moment === "time-trouble") g.said.add(`time-${m.side}`)
-    await this.say(g, moment, m.ply, m.at, null, m.side, m.san)
+    const prev = g.prev
+    g.prev = m
+    const leftMs = m.side === "w" ? clocks.w : clocks.b
+    const moments = momentsOf(m, prev, { leftMs, initialMs: g.initialMs, said: g.said, opening: openingOf(history) })
+    const moment = moments[0]
+    if (!moment || !shouldSpeak(moment, at - g.lastLineAt, m.ply - g.lastLinePly)) return
+    if (moment === "start" || moment === "opening") g.said.add(moment)
+    if (moment === "low-time") g.said.add(lowTimeKey(leftMs, g.initialMs, m.side))
+    await this.say(g, moment, m.ply, at, null, m, history, leftMs)
   }
 
-  private async say(g: G, moment: Moment, ply: number, at: number, end: { result: string | null; reason: string | null } | null, side: "w" | "b" = "w", san = "") {
+  private async say(g: G, moment: Moment, ply: number, at: number, end: { result: string | null; reason: string | null } | null, m: MoveInfo | null = null, history?: string[], leftMs = 0) {
     g.lastLineAt = at
     g.lastLinePly = ply
     const s = this.settingFor(g.id, g.tournamentId)
-    const fen = g.chess.fen()
-    const last = [...g.evals.keys()].sort((a, b) => b - a)[0]
+    const moves = history ?? g.chess.history()
+    const side = m?.side ?? "w"
+    const mover = side === "w" ? g.white.name : g.black.name
+    const opponent = side === "w" ? g.black.name : g.white.name
     const c = g.clocks
     const facts: Facts = {
       moment,
@@ -279,38 +246,43 @@ export class Commentary {
       time_control: g.tc,
       tournament: g.tournament,
       move_no: Math.ceil(ply / 2),
-      side: side === "w" ? "White" : "Black",
-      mover: side === "w" ? g.white.name : g.black.name,
-      san,
-      recent: g.chess.history().slice(-8),
-      opening: openingOf(g.chess.history()),
-      eval_white: last != null ? (g.evals.get(last) ?? null) : null,
-      material: materialOf(fen).text,
-      clocks: { white_s: Math.round(c.w / 1000), black_s: Math.round(c.b / 1000) },
+      mover,
+      opponent,
+      san: m?.san ?? "",
+      piece: m ? PIECE[m.piece] : null,
+      captured: m?.captured ? PIECE[m.captured] : null,
+      square: m?.to ?? null,
+      castle: m?.castle ?? null,
+      promoted_to: m?.promotion ? PIECE[m.promotion] : null,
+      check: !!m?.check,
+      opening: openingOf(moves),
+      material: materialOf(g.chess.fen(), g.white.name, g.black.name).text,
+      clocks: { white: clockText(c.w), black: clockText(c.b) },
+      mover_clock: clockText(side === "w" ? c.w : c.b),
       result: end?.result ?? null,
       reason: end?.reason ?? null,
-      featured: s.voice,
     }
-    const written = await this.write(facts, s.voice)
+    const written = await this.write(facts, s.voice, leftMs)
     g.queue.push({ kind: "line", release: Math.max(at + DELAY_MS, Date.now()), id: `${g.id}-${ply}-${(seq++).toString(36)}`, ply, moment, text: written.text, audio_url: written.audio_url })
   }
 
   // The backend writes (and voices) the line; a plain line if it can't.
-  private async write(f: Facts, voice: boolean): Promise<{ text: string; audio_url: string | null }> {
-    if (!config.internalSecret) return { text: fallbackLine(f), audio_url: null }
+  private async write(f: Facts, voice: boolean, leftMs: number): Promise<{ text: string; audio_url: string | null }> {
+    const plain = fallbackLine(f, leftMs)
+    if (!config.internalSecret) return { text: plain, audio_url: null }
     try {
       const r = await fetch(`${config.backendUrl}/internal/commentary`, {
         method: "POST",
         headers: { "content-type": "application/json", "x-t64-game-secret": config.internalSecret },
-        body: JSON.stringify({ facts: { ...f, eval_view: evalWords(f.eval_white, f.white, f.black) }, fallback: fallbackLine(f), voice }),
+        body: JSON.stringify({ facts: f, fallback: plain, voice }),
         signal: AbortSignal.timeout(15_000),
       })
       if (!r.ok) throw new Error(`backend ${r.status}`)
       const d = (await r.json()) as { text?: string; audio_url?: string | null }
-      return { text: (d.text || fallbackLine(f)).slice(0, 400), audio_url: d.audio_url ?? null }
+      return { text: (d.text || plain).slice(0, 400), audio_url: d.audio_url ?? null }
     } catch (e) {
       console.warn("commentary writer:", (e as Error).message)
-      return { text: fallbackLine(f), audio_url: null }
+      return { text: plain, audio_url: null }
     }
   }
 

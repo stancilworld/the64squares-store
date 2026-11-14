@@ -7,7 +7,8 @@ import { indiaDay } from "./coach-voice"
 import { getServiceKeys } from "./service-keys"
 
 // Live commentary lines, asked for by the game server (apps/game/src/commentary.ts) with the
-// facts of a moment in a game. Written by the free AI keys (Groq, then Gemini) and, for
+// facts of a moment in a game. The commentator only narrates what happened; it never judges
+// a move or advises, and any line that does is replaced by the plain one. Written by the free AI keys (Groq, then Gemini) and, for
 // featured games, voiced by ElevenLabs within a daily allowance. Without keys, the game
 // server's own plain line is used.
 
@@ -26,31 +27,30 @@ export const COMMENTARY_ACCOUNT = "_commentary"
 
 const SYSTEM = [
   "You are the live commentator for The 64 Squares, an Indian online chess site. Your words are read and spoken aloud to spectators while the game is still being played.",
-  "Write ONE or TWO short sentences, at most 35 words in all, lively and warm, in simple Indian English, like a friendly TV chess commentator.",
+  "Write ONE or TWO short sentences, at most 30 words in all, lively and warm, in simple Indian English, like a friendly TV chess commentator.",
+  "You are a narrator, not an analyst: say ONLY what just happened on the board (which piece moved or was taken, on which square, check, castling, promotion), the clocks, the material count you are given, the opening's name and the result.",
+  "NEVER judge a move or a position: no words like good, bad, strong, weak, mistake, blunder, brilliant, clever, risky, winning, losing, better, worse, advantage, edge, pressure, danger, threat, attack, chance.",
+  "NEVER say or hint what a player should, could or might play, plan or look for, or what may happen next.",
   "Use only the facts you are given. Never invent players' history, titles, ratings, prizes or events.",
-  "NEVER suggest, name or hint at a move a player should play, could have played, or what the best move is. Never say what is threatened next. Describe what happened and how the game stands.",
-  "Describe the engine's view in words (level, slightly better, clearly better, winning); never say numbers like +1.5 or centipawns.",
-  "Use the players' names. Say moves as they're written (e.g. Nf3) only for the move just played. No emojis, no hashtags, no quotation marks, no markdown.",
+  "Use the players' names. Say the move as written (e.g. Bxf6) only for the move just played. No emojis, no hashtags, no quotation marks, no markdown.",
 ].join(" ")
 
 const MOMENT: Record<string, string> = {
-  start: "The game has just started. Introduce the players and the time control.",
-  opening: "Name the opening being played and say something short and general about its character.",
-  blunder: "The move just played was a serious mistake. React with surprise, and say how the game now stands.",
-  mistake: "The move just played gave something away. Say so gently and how the game stands.",
-  turnaround: "The move just played turned the game around. React with excitement.",
-  decisive: "One side is now winning. Say who, and how.",
-  "time-trouble": "A player is running short of time. Build the tension.",
-  promotion: "A pawn was just promoted. React.",
-  "big-capture": "A big piece was just captured. React and mention the material.",
-  check: "A check was just given. Keep it short.",
-  castle: "A player just castled. Keep it short.",
-  quiet: "Nothing dramatic just happened. Give a short update on how the game stands.",
-  end: "The game has just ended. Give the result and congratulate the players.",
+  start: "The game has just started. Introduce the players, their ratings and the time control.",
+  opening: "Say which opening is on the board, by its name only.",
+  capture: "A piece was just taken. Say who took which piece on which square, and the material count.",
+  trade: "A piece was just taken back on the same square, so pieces were exchanged. Say so, and the material count.",
+  promotion: "A pawn just reached the last rank and was promoted. Say who and to what.",
+  check: "A check was just given. Say who gave it. Keep it short.",
+  castle: "A player just castled. Say who and which side. Keep it short.",
+  "low-time": "A player's clock is running low. Say who and how much time is left, building excitement without judging anything.",
+  milestone: "Give a short update: the move number, the material count and both clocks.",
+  end: "The game has just ended. Give the result and how it ended, and congratulate both players.",
 }
 
-// Lines that slip into advice are thrown away (the plain line is used instead).
-const ADVICE = /\b(should|could|must|ought to|needs? to|best|better (?:was|is|would)|missed|instead|threatens?|look(?:ing)? for)\b/i
+// Anything that judges or advises is thrown away (the plain line is used instead).
+const JUDGEMENT =
+  /\b(should|could|would|might|must|ought|needs? to|best|better|worse|mistake|blunder|error|inaccura\w*|good|bad|strong|weak|brilliant|clever|careless|risky|winning|losing|advantage|edge|pressure|danger\w*|threat\w*|attack\w*|missed|instead|plan\w*|idea|chance\w*|trouble|crush\w*|dominat\w*|decisive)\b/i
 
 export const writeCommentary = async (c: MedusaContainer, input: { facts: Record<string, unknown>; fallback: string; voice: boolean }) => {
   const logger = c.resolve(ContainerRegistrationKeys.LOGGER)
@@ -58,10 +58,10 @@ export const writeCommentary = async (c: MedusaContainer, input: { facts: Record
   let text = input.fallback
   if (keys.ai.length) {
     const f = input.facts
-    const prompt = [`Moment: ${MOMENT[String(f.moment)] ?? MOMENT.quiet}`, `Facts: ${JSON.stringify({ ...f, eval_white: undefined, engine_view: f.eval_view })}`].join("\n")
+    const prompt = [`Moment: ${MOMENT[String(f.moment)] ?? MOMENT.milestone}`, `Facts: ${JSON.stringify(f)}`].join("\n")
     const answer = await askAi(c, keys.ai, SYSTEM, prompt, { temperature: 0.8, maxTokens: 120, timeoutMs: 8_000, label: "Live commentary" })
     const line = answer?.text.replace(/^["'“”]+|["'“”]+$/g, "").replace(/\s+/g, " ").trim()
-    if (line && line.length <= 320 && !ADVICE.test(line)) text = line
+    if (line && line.length <= 280 && !JUDGEMENT.test(line)) text = line
   }
   let audio_url: string | null = null
   if (input.voice && keys.voice) {
