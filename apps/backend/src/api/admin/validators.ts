@@ -221,6 +221,7 @@ export const SiteFeaturesBody = z.object({
   share_buttons: z.object({ enabled: z.boolean() }).partial().optional(),
   push: z.object({ enabled: z.boolean(), prompt_after_seconds: z.number().int().min(0).max(600) }).partial().optional(),
   business_profile: z.object({ enabled: z.boolean(), url: optionalUrl, label: sfText(40) }).partial().optional(),
+  lobby_voice: z.object({ enabled: z.boolean() }).partial().optional(),
 })
 export type SiteFeaturesBodyType = z.infer<typeof SiteFeaturesBody>
 
