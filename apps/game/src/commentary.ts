@@ -309,14 +309,44 @@ export class Commentary {
       .map((g) => ({ game_id: g.id, tournament_id: g.tournamentId, white: g.white, black: g.black, tc: g.tc, voice: this.settingFor(g.id, g.tournamentId).voice }))
   }
 
+  // Registered in this tournament, which isn't over yet (moderators excepted). Cached a minute.
+  private playing = new Map<string, { at: number; yes: boolean }>()
+  private async playingIn(tournamentId: string, playerId: string) {
+    const key = `${tournamentId}|${playerId}`
+    const hit = this.playing.get(key)
+    if (hit && Date.now() - hit.at < 60_000) return hit.yes
+    let yes = false
+    try {
+      const { rows } = await pool.query(
+        `select 1 from public.tournament_registration r
+           join public.tournament t on t.id = r.tournament_id
+           left join play.t_state s on s.tournament_id = t.id
+          where r.tournament_id = $1 and r.customer_id = $2 and r.status = 'confirmed' and r.deleted_at is null
+            and t.status <> 'completed' and s.finished_at is null
+            and not exists (select 1 from play.moderator m where m.player_id = $2 and m.scope in ('*', $1))
+          limit 1`,
+        [tournamentId, playerId]
+      )
+      yes = rows.length > 0
+    } catch {
+      yes = true
+    }
+    if (this.playing.size > 5000) this.playing.clear()
+    this.playing.set(key, { at: Date.now(), yes })
+    return yes
+  }
+
   register(socket: Socket, me: () => Player | null, limited: (s: Socket, ack?: unknown) => boolean) {
-    socket.on("commentary:watch", (id: unknown, ack: unknown) => {
+    socket.on("commentary:watch", async (id: unknown, ack: unknown) => {
       if (typeof ack !== "function" || limited(socket, ack) || typeof id !== "string" || !/^[A-Za-z0-9]{6,20}$/.test(id)) return
       const g = this.games.get(id)
       if (!g) return ack({ ok: false, error: "off" })
       const p = me()
-      // The players never get the commentary of their own game.
+      // The players never get the commentary of their own game, and nobody playing in the
+      // same tournament gets any of its commentary until the tournament is over.
       if (p && (p.id === g.white.id || p.id === g.black.id)) return ack({ ok: false, error: "player" })
+      if (p && g.tournamentId && (await this.playingIn(g.tournamentId, p.id))) return ack({ ok: false, error: "player" })
+      if (!this.games.has(id)) return ack({ ok: false, error: "off" })
       socket.join(`commentary:${id}`)
       ack({
         ok: true,
