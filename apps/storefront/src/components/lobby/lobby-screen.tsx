@@ -499,6 +499,18 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
       else setError(res.error === "not-registered" ? "You're not registered for this tournament." : "That didn't work. Please try again.")
     })
 
+  // Entering the lobby of a running arena puts a registered player in it straight away, so
+  // they can challenge and be challenged (players had to find "Join the arena" first). Not
+  // someone taking a break: they come back with "Join again".
+  const autoJoined = useRef(false)
+  useEffect(() => {
+    if (autoJoined.current || t.format !== "arena" || arena?.phase !== "live" || !ticket || !arenaYou || arenaYou.joined || arenaYou.paused) return
+    autoJoined.current = true
+    socket.current?.emit("arena:join", t.id, (res: { ok: boolean; you?: ArenaYou }) => {
+      if (res.ok) setArenaYou(res.you ?? null)
+    })
+  }, [t.format, t.id, arena?.phase, ticket, arenaYou])
+
   // Players always choose their opponents in an arena.
   const challengeMode = t.format === "arena"
   const answerOffer = (accept: boolean) => {
@@ -789,7 +801,7 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
             <div className="challenge-card challenge-offer">
               <p className="challenge-title">♟ Match found: {liveOffer.opponent.name}</p>
               <p className="challenge-meta">
-                {liveOffer.opponent.score} pts · {liveOffer.opponent.games} games · {Math.max(0, Math.ceil((liveOffer.until - (n - offset)) / 1000))} s to accept
+                {liveOffer.opponent.score} pts · {liveOffer.opponent.games} game{liveOffer.opponent.games === 1 ? "" : "s"} · {Math.max(0, Math.ceil((liveOffer.until - (n - offset)) / 1000))} s to accept
                 {liveOffer.theyAccepted ? " · they've accepted" : ""}
               </p>
               {liveOffer.accepted ? (
@@ -810,7 +822,7 @@ export function LobbyScreen({ t, initialView, pass, ticket: initialTicket, chapt
             <div key={c.from.id} className="challenge-card">
               <p className="challenge-title">♟ {c.from.name} challenges you</p>
               <p className="challenge-meta">
-                {c.from.score} pts · {c.from.games} games · {Math.max(0, Math.ceil((c.until - (n - offset)) / 1000))} s to answer
+                {c.from.score} pts · {c.from.games} game{c.from.games === 1 ? "" : "s"} · {Math.max(0, Math.ceil((c.until - (n - offset)) / 1000))} s to answer
               </p>
               <div className="mt-2 flex gap-2">
                 <button type="button" className="ready-go !min-h-[42px] !px-5 !text-[15px]" onClick={() => answer(c.from.id, true)}>
