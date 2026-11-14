@@ -36,6 +36,7 @@ export const migrateLobby = async () => {
       spectator_chat text not null default 'open',
       pinned text,
       voice_on boolean not null default false,
+      players_voice boolean not null default false,
       updated_by text,
       updated_at timestamptz not null default now()
     );
@@ -53,6 +54,14 @@ export const migrateLobby = async () => {
       deleted_at timestamptz,
       deleted_by text
     );
+    alter table play.lobby_settings add column if not exists players_voice boolean not null default false;
+    create table if not exists play.lobby_voice_allow (
+      tournament_id text not null,
+      player_id text not null,
+      by text,
+      at timestamptz not null default now(),
+      primary key (tournament_id, player_id)
+    );
     create index if not exists lobby_msg_t_idx on play.lobby_msg (tournament_id, created_at desc);
     create table if not exists play.lobby_mute (
       tournament_id text not null,
@@ -69,7 +78,7 @@ export const migrateLobby = async () => {
 type T = { id: string; title: string; handle: string; format: string; starts_at: number; ends_at: number | null; check_in_minutes: number; status: string; finished_at: number | null }
 type Msg = { id: string; channel: Channel; thread: string | null; kind: Kind; text: string; at: number; author: { id: string; name: string; role: Role } }
 type Here = { id: string; name: string; role: Role }
-type WhoRow = Who & { at: number; mutedUntil: number | null }
+export type WhoRow = Who & { at: number; mutedUntil: number | null; adult: boolean }
 
 const ms = (d: unknown) => (d ? new Date(d as string).getTime() : null)
 
@@ -90,7 +99,20 @@ export class Lobbies {
   private presenceTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private lastSent = new Map<string, number>()
 
+  // Lobby voice, when the site has it (set by index.ts).
+  voiceSite: () => Promise<boolean> = async () => false
+
   constructor(private io: Server) {}
+
+  // The role a socket joined this lobby with (null if it hasn't joined).
+  roleIn(tid: string, socketId: string): Role | null {
+    return this.here.get(tid)?.get(socketId)?.role ?? null
+  }
+
+  async lobbyOpen(tid: string) {
+    const t = await this.loadT(tid)
+    return !!t && isOpen(this.windowOf(t), Date.now())
+  }
 
   // Changes made in the admin (settings, deleted messages, moderators, mutes).
   async listen() {
@@ -137,14 +159,14 @@ export class Lobbies {
   async getSettings(tid: string): Promise<Settings> {
     const hit = this.settings.get(tid)
     if (hit && Date.now() - hit.at < 30_000) return hit.s
-    const { rows } = await pool.query("select players_chat, spectator_chat, pinned, voice_on from play.lobby_settings where tournament_id = $1", [tid])
+    const { rows } = await pool.query("select players_chat, spectator_chat, pinned, voice_on, players_voice from play.lobby_settings where tournament_id = $1", [tid])
     const s: Settings = rows[0] ? { ...DEFAULT_SETTINGS, ...rows[0] } : DEFAULT_SETTINGS
     this.settings.set(tid, { at: Date.now(), s })
     return s
   }
 
-  private async who(tid: string, p: Player | null): Promise<WhoRow> {
-    if (!p) return { role: "spectator", signedIn: false, minor: false, muted: false, removed: false, at: Date.now(), mutedUntil: null }
+  async who(tid: string, p: Player | null): Promise<WhoRow> {
+    if (!p) return { role: "spectator", signedIn: false, minor: false, adult: false, muted: false, removed: false, at: Date.now(), mutedUntil: null }
     const key = `${tid}|${p.id}`
     const hit = this.whos.get(key)
     if (hit && Date.now() - hit.at < 30_000) {
@@ -153,6 +175,7 @@ export class Lobbies {
     }
     let role: Role = "spectator"
     let minor = false
+    let adult = false
     if (!isGuest(p.id)) {
       const [mod, reg, cust] = await Promise.all([
         pool.query("select 1 from play.moderator where player_id = $1 and scope in ('*', $2) limit 1", [p.id, tid]),
@@ -164,6 +187,7 @@ export class Lobbies {
       role = mod.rows.length ? "moderator" : reg.rows.length ? "player" : "spectator"
       const age = ageOn(cust.rows[0]?.dob)
       minor = age != null && age < 18
+      adult = age != null && age >= 18
     }
     const { rows } = await pool.query("select until, removed from play.lobby_mute where tournament_id = $1 and player_id = $2", [tid, p.id])
     const mutedUntil = ms(rows[0]?.until)
@@ -171,6 +195,7 @@ export class Lobbies {
       role,
       signedIn: !isGuest(p.id),
       minor,
+      adult,
       removed: !!rows[0]?.removed,
       mutedUntil,
       muted: mutedUntil != null && mutedUntil > Date.now(),
@@ -276,6 +301,7 @@ export class Lobbies {
           role: w.role,
           me: p ? { id: p.id, name: p.name, guest: isGuest(p.id), minor: w.minor, muted_until: w.muted ? w.mutedUntil : null, removed: w.removed } : null,
           settings: await this.getSettings(t.id),
+          voice_site: await this.voiceSite().catch(() => false),
           quick: LOBBY_QUICK,
           messages: await this.history(t.id, w.role, p?.id ?? null),
           presence: await this.presence(t.id),
@@ -412,12 +438,12 @@ export class Lobbies {
     })
   }
 
-  private async saveSettings(tid: string, s: Settings, by: string) {
+  async saveSettings(tid: string, s: Settings, by: string) {
     await pool.query(
-      `insert into play.lobby_settings (tournament_id, players_chat, spectator_chat, pinned, voice_on, updated_by) values ($1,$2,$3,$4,$5,$6)
+      `insert into play.lobby_settings (tournament_id, players_chat, spectator_chat, pinned, voice_on, players_voice, updated_by) values ($1,$2,$3,$4,$5,$6,$7)
        on conflict (tournament_id) do update set players_chat = excluded.players_chat, spectator_chat = excluded.spectator_chat,
-         pinned = excluded.pinned, voice_on = excluded.voice_on, updated_by = excluded.updated_by, updated_at = now()`,
-      [tid, s.players_chat, s.spectator_chat, s.pinned, s.voice_on, by]
+         pinned = excluded.pinned, voice_on = excluded.voice_on, players_voice = excluded.players_voice, updated_by = excluded.updated_by, updated_at = now()`,
+      [tid, s.players_chat, s.spectator_chat, s.pinned, s.voice_on, s.players_voice, by]
     )
     this.settings.set(tid, { at: Date.now(), s })
     this.io.to(`lobby:${tid}`).emit("lobby:settings", { tid, settings: s })

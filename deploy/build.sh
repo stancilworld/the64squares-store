@@ -63,6 +63,9 @@ INTERNAL_SECRET=$(tr -d '[:space:]' < "$INTERNAL_FILE")
 if ! grep -q '^GAME_INTERNAL_SECRET=' "$SERVER/.env"; then
   printf '\nGAME_INTERNAL_SECRET=%s\n' "$INTERNAL_SECRET" >> "$SERVER/.env"
 fi
+# Lobby voice server (LiveKit); never stops the rest of the update.
+BASE="$BASE" APP="$APP" APP_USER="$APP_USER" SERVER="$SERVER" API_DOMAIN="$API_DOMAIN" bash "$APP/deploy/voice.sh" ||
+  echo "Warning: the lobby voice server couldn't be set up (everything else carries on). See the lines above."
 # No separate install here: the built server lives inside the repo, so it uses the packages
 # already installed above from package-lock.json.
 rm -rf "$SERVER/node_modules"

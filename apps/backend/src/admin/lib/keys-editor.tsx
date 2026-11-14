@@ -9,7 +9,7 @@ import { sdk } from "./sdk"
 
 type KeyRow = {
   name: string
-  group: "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai" | "voice"
+  group: "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai" | "voice" | "livekit"
   label: string
   secret: boolean
   hint: string
@@ -27,7 +27,7 @@ type View = {
   payu_webhook_url: string
   google_redirect_url: string
 }
-type TestService = "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "delhivery" | "mailbox" | "ai" | "voice"
+type TestService = "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "delhivery" | "mailbox" | "ai" | "voice" | "livekit"
 
 const QUERY = ["service-keys"]
 
@@ -392,11 +392,19 @@ export function KeysEditor() {
       </Block>
 
       <Block
-        title="Game review coach voice (ElevenLabs)"
-        intro="Optional. The game review's coach reads its explanations aloud in this voice, for signed-in players (each sentence is made once and kept, so repeats cost nothing). Without a key, players hear their browser's own voice."
+        title="Coach and commentary voice (ElevenLabs)"
+        intro="Optional. The game review's coach and featured live commentary are read aloud in this voice (each sentence is made once and kept, so repeats cost nothing). Without a key, people hear their browser's own voice."
       >
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">{rows("voice").map(field)}</div>
         <TestButton service="voice" label="Test the voice" />
+      </Block>
+
+      <Block
+        title="Lobby voice (LiveKit)"
+        intro="Voice chat in tournament lobbies. Leave all three empty to use the voice server on your own VPS (the update script sets it up). For more people, use LiveKit Cloud: add its URL, key and secret. Switch lobby voice on in Website → Site features."
+      >
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">{rows("livekit").map(field)}</div>
+        <TestButton service="livekit" label="Test the voice server" />
       </Block>
 
       <Block title="Sign in with Google" intro="Optional. Shoppers can always sign in with an email code or password.">

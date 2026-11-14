@@ -43,6 +43,8 @@ export type SiteFeatures = {
   share_buttons: { enabled: boolean }
   push: { enabled: boolean; prompt_after_seconds: number }
   business_profile: { enabled: boolean; url: string; label: string }
+  // Voice chat in tournament lobbies (moderators switch it on per lobby too).
+  lobby_voice: { enabled: boolean }
 }
 
 export const DEFAULT_SITE_FEATURES: SiteFeatures = {
@@ -80,6 +82,7 @@ export const DEFAULT_SITE_FEATURES: SiteFeatures = {
   share_buttons: { enabled: true },
   push: { enabled: false, prompt_after_seconds: 30 },
   business_profile: { enabled: false, url: "", label: "Find us on Google" },
+  lobby_voice: { enabled: false },
 }
 
 // Fills in anything missing (new switches added later get their defaults).

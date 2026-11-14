@@ -12,8 +12,10 @@ export type Kind = "text" | "quick" | "announce" | "system"
 //   spectator_chat: open / slow (one message every 15 s each) / off
 export type PlayersChat = "open" | "quick" | "off"
 export type SpectatorChat = "open" | "slow" | "off"
-export type Settings = { players_chat: PlayersChat; spectator_chat: SpectatorChat; pinned: string | null; voice_on: boolean }
-export const DEFAULT_SETTINGS: Settings = { players_chat: "quick", spectator_chat: "open", pinned: null, voice_on: false }
+// voice_on: the moderator's switch for this lobby's voice; players_voice: adult players may
+// take the mic (children only when a moderator allows them by name).
+export type Settings = { players_chat: PlayersChat; spectator_chat: SpectatorChat; pinned: string | null; voice_on: boolean; players_voice: boolean }
+export const DEFAULT_SETTINGS: Settings = { players_chat: "quick", spectator_chat: "open", pinned: null, voice_on: false, players_voice: false }
 
 export const LOBBY_QUICK = ["Good luck everyone!", "Have fun!", "Ready!", "Good game!", "Well played!", "Thanks!", "Congratulations!", "When does the next round start?", "👋", "👍", "🔥", "👏", "♟️"] as const
 
@@ -65,4 +67,25 @@ export const ageOn = (dob: unknown, now = new Date()) => {
   let age = now.getUTCFullYear() - y
   if (now.getUTCMonth() + 1 < m || (now.getUTCMonth() + 1 === m && now.getUTCDate() < d)) age--
   return age
+}
+
+// ---------------------------------------------------------------- lobby voice
+
+// At most this many people talking at once in a lobby, listening in a lobby, and listening
+// across the whole site (the VPS has 2 cores).
+export const VOICE_SPEAKERS = 6
+export const VOICE_LOBBY_LISTENERS = 150
+export const VOICE_SITE_LISTENERS = 200
+
+// May this person take the mic? Moderators always; players when the moderator lets players
+// talk and they're adults, or when the moderator allowed them by name (how a child gets the
+// mic); spectators never. Muted or removed people don't.
+export const canTalk = (w: { role: Role; adult: boolean; muted: boolean; removed: boolean }, s: Settings, allowedByName: boolean): string | null => {
+  if (!s.voice_on) return "voice-off"
+  if (w.role === "moderator") return null
+  if (w.removed || w.muted) return "muted"
+  if (w.role !== "player") return "listen-only"
+  if (allowedByName) return null
+  if (!s.players_voice) return "not-allowed"
+  return w.adult ? null : "ask-moderator"
 }

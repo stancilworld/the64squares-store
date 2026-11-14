@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { ageOn, canWrite, DEFAULT_SETTINGS, isOpen, lobbyWindow, readable, type Who } from "./lobby-rules.js"
+import { ageOn, canTalk, canWrite, DEFAULT_SETTINGS, isOpen, lobbyWindow, readable, type Who } from "./lobby-rules.js"
 
 const who = (o: Partial<Who> = {}): Who => ({ role: "player", signedIn: true, minor: false, muted: false, removed: false, ...o })
 const s = DEFAULT_SETTINGS
@@ -54,4 +54,17 @@ test("age from a date of birth", () => {
   assert.equal(ageOn("2008-11-14", now), 18)
   assert.equal(ageOn("2008-11-15", now), 17)
   assert.equal(ageOn("bad", now), null)
+})
+
+test("lobby voice: moderators talk; adult players when allowed; children by name; spectators listen", () => {
+  const on = { ...DEFAULT_SETTINGS, voice_on: true }
+  const p = { role: "player" as const, adult: true, muted: false, removed: false }
+  assert.equal(canTalk({ ...p, role: "moderator" }, on, false), null)
+  assert.equal(canTalk(p, on, false), "not-allowed")
+  assert.equal(canTalk(p, { ...on, players_voice: true }, false), null)
+  assert.equal(canTalk({ ...p, adult: false }, { ...on, players_voice: true }, false), "ask-moderator")
+  assert.equal(canTalk({ ...p, adult: false }, on, true), null)
+  assert.equal(canTalk({ ...p, role: "spectator" }, { ...on, players_voice: true }, true), "listen-only")
+  assert.equal(canTalk({ ...p, muted: true }, { ...on, players_voice: true }, true), "muted")
+  assert.equal(canTalk({ ...p, role: "moderator" }, DEFAULT_SETTINGS, false), "voice-off")
 })

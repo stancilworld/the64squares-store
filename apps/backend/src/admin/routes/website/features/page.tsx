@@ -37,6 +37,7 @@ type Features = {
   share_buttons: { enabled: boolean }
   push: { enabled: boolean; prompt_after_seconds: number }
   business_profile: { enabled: boolean; url: string; label: string }
+  lobby_voice: { enabled: boolean }
 }
 type Key = keyof Features
 
@@ -54,6 +55,7 @@ const ROWS: { key: Key; title: string; text: string }[] = [
   { key: "share_buttons", title: "Share buttons", text: "Share on WhatsApp, Facebook and X on products, blog posts and news." },
   { key: "push", title: "Browser notifications", text: "Asks visitors if they'd like notifications for sales and tournaments." },
   { key: "business_profile", title: "Google Business Profile link", text: "A link to your Google listing in the footer (and your address details for Google)." },
+  { key: "lobby_voice", title: "Lobby voice chat", text: "Voice in tournament lobbies: moderators talk, players when a moderator allows, spectators listen. Moderators switch it on in each lobby. Off: nobody can join voice anywhere." },
 ]
 
 const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -289,7 +291,7 @@ const FeaturesPage = () => {
       </div>
       {ROWS.map((r) => {
         const value = f[r.key]
-        const editable = !["countdowns", "coupon_box", "back_in_stock", "breadcrumbs", "faq", "share_buttons"].includes(r.key)
+        const editable = !["countdowns", "coupon_box", "back_in_stock", "breadcrumbs", "faq", "share_buttons", "lobby_voice"].includes(r.key)
         return (
           <div key={r.key} className="px-6 py-4">
             <div className="flex items-start justify-between gap-4">

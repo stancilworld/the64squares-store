@@ -1,0 +1,19 @@
+[Unit]
+Description=The 64 Squares lobby voice (LiveKit)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=the64squares
+# Written by deploy/voice.sh.
+ExecStart=/usr/local/bin/livekit-server --config /etc/the64squares/livekit.yaml
+Restart=always
+RestartSec=3
+# At most one of the two CPU cores, and a fixed memory ceiling.
+CPUQuota=100%
+MemoryMax=600M
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

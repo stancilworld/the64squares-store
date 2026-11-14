@@ -54,10 +54,13 @@ export type KeyName =
   | "ELEVENLABS_API_KEY"
   | "ELEVENLABS_VOICE_ID"
   | "ELEVENLABS_MODEL"
+  | "LIVEKIT_URL"
+  | "LIVEKIT_API_KEY"
+  | "LIVEKIT_API_SECRET"
 
 export type KeyDef = {
   name: KeyName
-  group: "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai" | "marketing" | "voice"
+  group: "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "google" | "delhivery" | "mailbox" | "ai" | "marketing" | "voice" | "livekit"
   label: string
   secret: boolean
   pattern: RegExp
@@ -86,6 +89,9 @@ export const KEY_DEFS: KeyDef[] = [
   { name: "GOOGLE_CLIENT_SECRET", group: "google", label: "Google Client Secret", secret: true, pattern: /^[\w-]{10,}$/, hint: "Usually starts with GOCSPX-" },
   { name: "ELEVENLABS_API_KEY", group: "voice", label: "ElevenLabs API key", secret: true, pattern: /^[\w-]{20,100}$/, hint: "From elevenlabs.io → Developers → API keys. Give it Text to Speech and User read access." },
   { name: "ELEVENLABS_VOICE_ID", group: "voice", label: "Coach voice ID", secret: false, pattern: /^[A-Za-z0-9]{10,40}$/, hint: "From elevenlabs.io → Voices → the voice's ⋯ menu → Copy voice ID. Empty for George." },
+  { name: "LIVEKIT_URL", group: "livekit", label: "LiveKit server URL", secret: false, pattern: /^wss:\/\/[\w.-]+(:\d+)?\/?$/, hint: "Empty to use the voice server on your own VPS (set up by the update script). For LiveKit Cloud: Project settings → URL, like wss://your-project.livekit.cloud" },
+  { name: "LIVEKIT_API_KEY", group: "livekit", label: "LiveKit API key", secret: false, pattern: /^[\w-]{6,80}$/, hint: "LiveKit Cloud → Settings → API keys → Create key. Empty for your own VPS." },
+  { name: "LIVEKIT_API_SECRET", group: "livekit", label: "LiveKit API secret", secret: true, pattern: /^[\w-]{20,120}$/, hint: "Shown once when you create the key in LiveKit Cloud. Empty for your own VPS." },
   { name: "ELEVENLABS_MODEL", group: "voice", label: "Voice model", secret: false, pattern: /^[\w.-]{3,60}$/, hint: "Empty for eleven_flash_v2_5 (fastest, half the cost per character). eleven_v4 is the newest and most natural; eleven_v4_turbo is v4 made for speed." },
   { name: "GROQ_API_KEY", group: "ai", label: "Groq API key (free)", secret: true, pattern: /^gsk_[A-Za-z0-9]{20,}$/, hint: "From console.groq.com → API Keys. Starts with gsk_" },
   { name: "GROQ_MODEL", group: "ai", label: "Groq model", secret: false, pattern: /^[\w./:-]{3,80}$/, hint: "Leave empty for llama-3.3-70b-versatile" },
@@ -229,6 +235,8 @@ export type ServiceKeys = {
   ai: { provider: "groq" | "gemini"; key: string; model: string }[]
   // The game review coach's voice (ElevenLabs).
   voice: { key: string; voiceId: string; model: string } | null
+  // Lobby voice (LiveKit): wss URL for browsers, https URL for the server API.
+  livekit: { url: string; key: string; secret: string; apiUrl: string } | null
 }
 
 export const getServiceKeys = async (container?: MedusaContainer): Promise<ServiceKeys> =>
@@ -286,6 +294,16 @@ export const keysFromStored = (stored: Stored): ServiceKeys => {
     voice: get("ELEVENLABS_API_KEY")
       ? { key: get("ELEVENLABS_API_KEY")!, voiceId: get("ELEVENLABS_VOICE_ID") || "JBFqnCBsd6RMkjVDRZzb", model: get("ELEVENLABS_MODEL") || "eleven_flash_v2_5" }
       : null,
+    // Lobby voice: LiveKit Cloud keys from the admin, or the VPS's own server (from .env).
+    livekit: (() => {
+      const url = get("LIVEKIT_URL")
+      const key = get("LIVEKIT_API_KEY")
+      const secret = get("LIVEKIT_API_SECRET")
+      if (!url || !key || !secret) return null
+      // The VPS's own server is reached directly; LiveKit Cloud over https.
+      const own = url === process.env.LIVEKIT_URL && key === process.env.LIVEKIT_API_KEY
+      return { url, key, secret, apiUrl: own && process.env.LIVEKIT_API_URL ? process.env.LIVEKIT_API_URL : url.replace(/^wss:/, "https:").replace(/\/$/, "") }
+    })(),
     ai: [
       ...(get("GROQ_API_KEY") ? [{ provider: "groq" as const, key: get("GROQ_API_KEY")!, model: get("GROQ_MODEL") || "llama-3.3-70b-versatile" }] : []),
       ...(get("GEMINI_API_KEY") ? [{ provider: "gemini" as const, key: get("GEMINI_API_KEY")!, model: get("GEMINI_MODEL") || "gemini-flash-lite-latest" }] : []),

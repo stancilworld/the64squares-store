@@ -667,6 +667,27 @@ html[data-focus] .play-main {
 .commentary-move { color: var(--g-muted); font-variant-numeric: tabular-nums; }
 .commentary-end { font-weight: 700; }
 
+/* Lobby voice */
+.lobby-voice { border-radius: 14px; background: var(--g-panel); border: 1px solid var(--g-line); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.lobby-voice-head { display: flex; align-items: center; justify-content: space-between; }
+.lobby-voice-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 15px; }
+.lobby-voice-count { font-size: 12.5px; color: var(--g-muted); }
+.lobby-voice-speakers { display: flex; flex-direction: column; gap: 4px; }
+.lobby-voice-speakers li { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; padding: 4px 8px; border-radius: 8px; transition: background 0.15s; }
+.lobby-voice-speakers li.is-speaking { background: color-mix(in srgb, var(--fc) 22%, transparent); }
+.lobby-voice-speakers li.is-speaking .lobby-voice-dot { box-shadow: 0 0 0 4px color-mix(in srgb, var(--fc) 40%, transparent); }
+.lobby-voice-dot { width: 9px; height: 9px; border-radius: 99px; background: var(--fc); flex: none; }
+.lobby-voice-dot-moderator { background: #ffd36a; }
+.lobby-voice-mini { margin-left: auto; font-size: 12px; font-weight: 600; color: #ff8a80; }
+.lobby-voice-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.lobby-voice-talk { min-height: 42px; padding: 0 18px; border-radius: 999px; font-weight: 800; font-size: 14.5px; background: rgba(255, 255, 255, 0.1); }
+.lobby-voice-talk.is-on { background: #2fd27a; color: #0d2a19; }
+.lobby-voice-allow { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
+.lobby-voice-allow li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13.5px; }
+.lobby-voice-allow button { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--g-line); }
+.lobby-voice-allow button[aria-pressed="true"] { background: #2fd27a; color: #0d2a19; border-color: transparent; }
+@media (prefers-reduced-motion: reduce) { .lobby-voice-speakers li { transition: none; } }
+
 /* Rule book (/play/rules): chapter list beside the page, chips on phones. */
 .rule-book { display: grid; gap: 16px; }
 @media (min-width: 900px) { .rule-book { grid-template-columns: 240px 1fr; align-items: start; } .rule-toc { position: sticky; top: 16px; flex-direction: column; } }

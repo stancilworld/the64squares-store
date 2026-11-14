@@ -17,6 +17,7 @@ import { checkInToTournament } from "@/lib/tournament-actions"
 import { eventTime, type LiveBoard, speedLabel, type Ticket, type Tournament, type TourneyView } from "@/lib/tournament-types"
 import { CommentaryPanel } from "@/components/commentary/commentary-panel"
 import { LobbyChat } from "./lobby-chat"
+import { LobbyVoice } from "./lobby-voice"
 import { type Channel, type LobbyJoin, type LobbyMe, type LobbyMsg, type LobbySettings, type Person, type Presence, ROLE_LABEL, type Role, SEND_ERROR } from "./lobby-types"
 
 export type RuleChapter = { handle: string; label: string; title: string; body: string }
@@ -501,6 +502,7 @@ export function LobbyScreen({ t, initialView, token, me: pass, ticket: initialTi
           </div>
         </div>
         <aside className={`lobby-side ${tab === "chat" ? "lobby-side-open" : ""}`}>
+          {join?.voice_site && settings && join.window.open && <LobbyVoice socket={sock} tid={t.id} role={role} settings={settings} players={presence?.players ?? []} />}
           {join && settings ? (
             <LobbyChat role={role} me={meL} settings={settings} quick={join.quick} messages={messages} open={join.window.open} send={send} mod={mod} />
           ) : (

@@ -1,6 +1,7 @@
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { testAiProviders } from "../../../../lib/chatbot"
 import { testVoice } from "../../../../lib/coach-voice"
+import { testLivekit } from "../../../../lib/livekit"
 import { sendEmail } from "../../../../lib/emails"
 import { testMailbox } from "../../../../lib/mailbox"
 import { requireOwner } from "../../../../lib/owner-check"
@@ -8,7 +9,7 @@ import { OWNER_EMAIL } from "../../../../lib/permissions"
 import { verifyPayments } from "../../../../modules/payu/payu"
 import { clearServiceKeyCache, getServiceKeys } from "../../../../lib/service-keys"
 
-type Service = "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "delhivery" | "mailbox" | "ai" | "voice"
+type Service = "razorpay_test" | "razorpay_live" | "payu_test" | "payu_live" | "resend" | "delhivery" | "mailbox" | "ai" | "voice" | "livekit"
 
 const timeout = (ms: number) => {
   const c = new AbortController()
@@ -80,6 +81,10 @@ export const POST = async (req: AuthenticatedMedusaRequest<{ service: Service }>
     if (service === "voice") {
       if (!keys.voice) return res.json({ ok: false, message: "Add the ElevenLabs API key first, then Save." })
       return res.json(await testVoice(keys.voice))
+    }
+    if (service === "livekit") {
+      if (!keys.livekit) return res.json({ ok: false, message: "No voice server yet: run the update script on the VPS, or add LiveKit Cloud's URL, key and secret, then Save." })
+      return res.json(await testLivekit(keys.livekit))
     }
     if (service === "ai") {
       return res.json(await testAiProviders(req.scope))

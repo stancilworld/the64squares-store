@@ -5,7 +5,7 @@ export type Channel = "players" | "spectators" | "arbiter" | "all"
 export type Kind = "text" | "quick" | "announce" | "system"
 export type PlayersChat = "open" | "quick" | "off"
 export type SpectatorChat = "open" | "slow" | "off"
-export type LobbySettings = { players_chat: PlayersChat; spectator_chat: SpectatorChat; pinned: string | null; voice_on: boolean }
+export type LobbySettings = { players_chat: PlayersChat; spectator_chat: SpectatorChat; pinned: string | null; voice_on: boolean; players_voice: boolean }
 
 export type LobbyMsg = { id: string; channel: Channel; thread: string | null; kind: Kind; text: string; at: number; author: { id: string; name: string; role: Role } }
 export type Person = { id: string; name: string; avatar_url: string | null; username: string | null }
@@ -20,6 +20,8 @@ export type LobbyJoin = {
   role: Role
   me: LobbyMe | null
   settings: LobbySettings
+  // Lobby voice is switched on for the website (and a voice server is set up).
+  voice_site: boolean
   quick: string[]
   messages: LobbyMsg[]
   presence: Presence
